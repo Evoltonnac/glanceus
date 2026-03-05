@@ -77,7 +77,7 @@ Decisions are logged in PROJECT.md Key Decisions / constraints. Current high-imp
 - [Init] 默认调度策略：30m（通用）/60m（webview,curl），按 source 可覆盖
 - [Init] 超时策略：http/fetch=10s，webview=30s
 - [Init] OAuth 回归代表源：GitHub OAuth
-- [Phase 08]: Set GridStack margin constant to 16 in App.tsx to enforce high-density gap-4 dashboard spacing.
+- [Phase 08]: Set GridStack margin constant to 12 in App.tsx to enforce high-density gap-3 dashboard spacing.
 - [Phase 08]: Standardized icon-first page controls with focus-visible ring-brand/50 across Dashboard, Integrations, and Settings.
 - [Phase 08]: Applied data-[state=checked]:bg-brand for Settings switches to keep semantic brand state consistency.
 

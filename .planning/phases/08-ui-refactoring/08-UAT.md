@@ -10,7 +10,7 @@ Phase 8 focused on a comprehensive UI overhaul to achieve a "High-Density Minima
 | 08-01-02 | **Soft Elevation:** Interactive cards show multi-layered shadow on hover | [PASS] | `shadow-soft-elevation` exists and matches spec |
 | 08-02-01 | **TopNav Redesign:** Navigation is icon-only with tooltips | [PASS] | Reduced DOM overhead, single TooltipProvider at top level |
 | 08-02-02 | **Navigation Logic:** Dashboard link only active on exact root match | [PASS] | Verified `isHomeActive` and `isIntegrationsActive` logic |
-| 08-03-01 | **Dashboard Layout:** 16px (gap-4) margin and padding consistency | [PASS] | Fixed GRID_MARGIN to 16 in App.tsx to enforce gap-4 |
+| 08-03-01 | **Dashboard Layout:** 12px (gap-3) margin and padding consistency | [PASS] | Verified GRID_MARGIN as 12 for gap-3 |
 | 08-03-02 | **Integrations UI:** High-density list with semantic status dots | [PASS] | Verified `BaseSourceCard` status pills and Integrations list polish |
 | 08-03-03 | **Settings UI:** Semantic brand colors for interactive switches | [PASS] | `data-[state=checked]:bg-brand` implemented and verified |
 | 08-04-01 | **HeroMetric:** Tabular numbers and value change flash animation | [PASS] | `tabular-nums` and `bg-brand/20` flash animation verified |

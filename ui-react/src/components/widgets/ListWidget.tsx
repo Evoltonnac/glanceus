@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ListWidgetConfig } from "../../types/config";
-import { getFieldFromPath } from "../../lib/utils";
+import { getFieldFromPath, cn } from "../../lib/utils";
 import { WidgetRenderer } from "./WidgetRenderer";
 
 interface Props {
@@ -24,9 +24,6 @@ export function ListWidget({ widget, data }: Props) {
     // Filter
     if (widget.filter) {
         try {
-            // A very simple evaluator for basic string expressions like: "item.usage > 0"
-            // We just construct a function that returns the evaluated string safely
-            // Note: This is simplified. In a real secured env, use a safe expression parser.
             processedArray = processedArray.filter((item, index) => {
                 const ctx = {
                     ...data,
@@ -34,7 +31,6 @@ export function ListWidget({ widget, data }: Props) {
                     [`${alias}_index`]: index,
                 };
 
-                // Extremely simple "field operator value" parser
                 const match = widget.filter?.match(
                     /^([a-zA-Z0-9_.[\]]+)\s*([><!=]+)\s*(.+)$/,
                 );
@@ -46,27 +42,18 @@ export function ListWidget({ widget, data }: Props) {
                         : Number(valueStr);
 
                     switch (operator) {
-                        case ">":
-                            return fieldVal > cmpVal;
-                        case "<":
-                            return fieldVal < cmpVal;
-                        case ">=":
-                            return fieldVal >= cmpVal;
-                        case "<=":
-                            return fieldVal <= cmpVal;
-                        case "==":
-                            return fieldVal == cmpVal;
-                        case "!=":
-                            return fieldVal != cmpVal;
-                        case "===":
-                            return fieldVal === cmpVal;
-                        case "!==":
-                            return fieldVal !== cmpVal;
-                        default:
-                            return true;
+                        case ">": return fieldVal > cmpVal;
+                        case "<": return fieldVal < cmpVal;
+                        case ">=": return fieldVal >= cmpVal;
+                        case "<=": return fieldVal <= cmpVal;
+                        case "==": return fieldVal == cmpVal;
+                        case "!=": return fieldVal != cmpVal;
+                        case "===": return fieldVal === cmpVal;
+                        case "!==": return fieldVal !== cmpVal;
+                        default: return true;
                     }
                 }
-                return true; // Fallback if expression isn't parsed
+                return true;
             });
         } catch (e) {
             console.warn("Failed to apply filter", e);
@@ -112,14 +99,14 @@ export function ListWidget({ widget, data }: Props) {
     const getLayoutClasses = () => {
         switch (widget.layout) {
             case "row":
-                return "flex flex-row flex-wrap gap-4";
+                return "flex flex-row flex-wrap gap-2";
             case "grid":
                 return widget.columns
-                    ? "grid gap-4"
-                    : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4";
+                    ? "grid gap-2"
+                    : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2";
             case "col":
             default:
-                return "flex flex-col gap-4";
+                return "flex flex-col gap-2";
         }
     };
 
@@ -133,25 +120,25 @@ export function ListWidget({ widget, data }: Props) {
     const renderPaginationControls = () => {
         if (!isPagination || totalPages <= 1) return null;
         return (
-            <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/50">
                 <button
                     onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                     disabled={actualPage === 1}
-                    className="px-3 py-1 text-sm border border-border rounded hover:bg-muted disabled:opacity-50 transition-colors"
+                    className="px-2 py-1 text-xs font-medium border border-border rounded hover:bg-muted disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
                 >
-                    上一页
+                    Prev
                 </button>
-                <span className="text-sm text-muted-foreground">
-                    第 {actualPage} 页 / 共 {totalPages} 页
+                <span className="text-xs text-muted-foreground tabular-nums">
+                    {actualPage} / {totalPages}
                 </span>
                 <button
                     onClick={() =>
                         setCurrentPage((p) => Math.min(p + 1, totalPages))
                     }
                     disabled={actualPage === totalPages}
-                    className="px-3 py-1 text-sm border border-border rounded hover:bg-muted disabled:opacity-50 transition-colors"
+                    className="px-2 py-1 text-xs font-medium border border-border rounded hover:bg-muted disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
                 >
-                    下一页
+                    Next
                 </button>
             </div>
         );
@@ -159,12 +146,12 @@ export function ListWidget({ widget, data }: Props) {
 
     return (
         <div className="w-full h-full flex flex-col min-h-0 overflow-hidden">
-            {/* Scrollable list area */}
             <div
-                className={
-                    getLayoutClasses() +
-                    " w-full flex-1 overflow-y-auto min-h-0 pr-1"
-                }
+                className={cn(
+                    getLayoutClasses(),
+                    "w-full flex-1 overflow-y-auto min-h-0 pr-1",
+                    "[&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-full"
+                )}
                 style={listStyle}
             >
                 {processedArray.map((item, index) => {
@@ -178,27 +165,28 @@ export function ListWidget({ widget, data }: Props) {
                         ? widget.render
                         : [widget.render];
 
-                    const isGridItem =
-                        !!widget.layout_config?.grid_template_areas;
+                    const isGridItem = !!widget.layout_config?.grid_template_areas;
                     const gridAreas = widget.layout_config?.grid_template_areas
                         ?.map((a) => `"${a}"`)
                         .join(" ");
-                    const gridColumns =
-                        widget.layout_config?.grid_template_columns;
+                    const gridColumns = widget.layout_config?.grid_template_columns;
 
                     const wrapperStyle: React.CSSProperties = isGridItem
                         ? {
                               display: "grid",
                               gridTemplateAreas: gridAreas,
                               gridTemplateColumns: gridColumns,
-                              gap: "0.5rem",
+                              gap: "0.25rem",
                           }
                         : {};
 
                     return (
                         <div
                             key={index}
-                            className={`w-full h-full border border-border/50 rounded-md p-2 bg-secondary/10 ${isGridItem ? "" : "flex flex-col gap-1.5"}`}
+                            className={cn(
+                                "w-full h-full border border-border/50 rounded-md p-1.5 bg-surface hover:bg-muted/30 transition-colors min-w-0 truncate",
+                                !isGridItem && "flex flex-col gap-1"
+                            )}
                             style={wrapperStyle}
                         >
                             {renders.map((childWidget, i) => (
@@ -209,7 +197,7 @@ export function ListWidget({ widget, data }: Props) {
                                             ? { gridArea: childWidget.area }
                                             : undefined
                                     }
-                                    className="w-full h-full flex flex-col min-h-0 min-w-0"
+                                    className="w-full h-full flex flex-col min-h-0 min-w-0 truncate"
                                 >
                                     <WidgetRenderer
                                         widget={childWidget}
@@ -221,7 +209,6 @@ export function ListWidget({ widget, data }: Props) {
                     );
                 })}
             </div>
-            {/* Pagination controls — fixed at bottom, outside scroll area */}
             {renderPaginationControls()}
         </div>
     );

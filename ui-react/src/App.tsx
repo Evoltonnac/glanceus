@@ -30,8 +30,9 @@ import {
     CardTitle,
     CardDescription,
 } from "./components/ui/card";
-import { Badge } from "./components/ui/badge";
+import { Badge, badgeVariants } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
+import { cn } from "./lib/utils";
 
 
 import {
@@ -689,18 +690,59 @@ function Dashboard() {
         );
     }
 
+    const getStatusConfig = (source: SourceSummary) => {
+        if ((source.status as string) === "refreshing") {
+            return {
+                label: "刷新中",
+                variant: "info" as const,
+                colorClass: "bg-blue-500/10 text-blue-500",
+                icon: RefreshCw,
+            };
+        }
+        if ((source.status as string) === "suspended") {
+            return {
+                label: "需操作",
+                variant: "warning" as const,
+                colorClass: "bg-warning/20 text-warning",
+                icon: Wrench,
+            };
+        }
+        if (source.error) {
+            return {
+                label: "错误",
+                variant: "error" as const,
+                colorClass: "bg-error/20 text-error",
+                icon: AlertTriangle,
+            };
+        }
+        if (source.has_data) {
+            return {
+                label: "正常",
+                variant: "success" as const,
+                colorClass: "bg-success/20 text-success",
+                icon: Database,
+            };
+        }
+        return {
+            label: "等待",
+            variant: "secondary" as const,
+            colorClass: "bg-secondary text-secondary-foreground",
+            icon: Database,
+        };
+    };
+
     const statusCounts = {
-        normal: sources.filter(s => s.has_data && !s.error && s.status !== 'refreshing').length,
-        refreshing: sources.filter(s => s.status === 'refreshing').length,
-        error: sources.filter(s => s.error).length,
-        suspended: sources.filter(s => s.status === 'suspended').length,
+        normal: sources.filter((s) => s.has_data && !s.error && s.status !== "refreshing").length,
+        refreshing: sources.filter((s) => s.status === "refreshing").length,
+        error: sources.filter((s) => s.error).length,
+        suspended: sources.filter((s) => s.status === "suspended").length,
     };
 
     return (
         <TooltipProvider>
             <div className="h-full bg-background text-foreground flex overflow-hidden">
                 {/* Sidebar */}
-                <aside className={`border-r border-border bg-surface/30 flex-col hidden md:flex transition-all duration-300 ${sidebarCollapsed ? 'w-14' : 'w-64'}`}>
+                <aside className={`border-r border-border bg-surface/30 flex-col hidden md:flex transition-all duration-300 ${sidebarCollapsed ? "w-14" : "w-64"}`}>
                     <div className="p-3 border-b border-border flex items-center justify-between gap-2">
                         {!sidebarCollapsed && (
                             <>
@@ -720,7 +762,7 @@ function Dashboard() {
                                 </button>
                             </TooltipTrigger>
                             <TooltipContent side="right">
-                                {sidebarCollapsed ? '展开' : '收起'}
+                                {sidebarCollapsed ? "展开" : "收起"}
                             </TooltipContent>
                         </Tooltip>
                     </div>
@@ -729,7 +771,7 @@ function Dashboard() {
                         <div className="flex-1 flex flex-col items-center gap-3 p-2 overflow-y-auto">
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <div className="flex flex-col items-center gap-1 p-2 rounded bg-green-500/10 text-green-600 w-full">
+                                    <div className="flex flex-col items-center gap-1 p-2 rounded bg-success/20 text-success w-full">
                                         <Database className="h-4 w-4" />
                                         <span className="text-xs font-bold">{statusCounts.normal}</span>
                                     </div>
@@ -739,7 +781,7 @@ function Dashboard() {
                             {statusCounts.refreshing > 0 && (
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <div className="flex flex-col items-center gap-1 p-2 rounded bg-blue-500/10 text-blue-600 w-full">
+                                        <div className="flex flex-col items-center gap-1 p-2 rounded bg-blue-500/10 text-blue-500 w-full">
                                             <RefreshCw className="h-4 w-4" />
                                             <span className="text-xs font-bold">{statusCounts.refreshing}</span>
                                         </div>
@@ -750,7 +792,7 @@ function Dashboard() {
                             {statusCounts.error > 0 && (
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <div className="flex flex-col items-center gap-1 p-2 rounded bg-red-500/10 text-red-600 w-full">
+                                        <div className="flex flex-col items-center gap-1 p-2 rounded bg-error/20 text-error w-full">
                                             <AlertTriangle className="h-4 w-4" />
                                             <span className="text-xs font-bold">{statusCounts.error}</span>
                                         </div>
@@ -761,7 +803,7 @@ function Dashboard() {
                             {statusCounts.suspended > 0 && (
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <div className="flex flex-col items-center gap-1 p-2 rounded bg-yellow-500/10 text-yellow-600 w-full">
+                                        <div className="flex flex-col items-center gap-1 p-2 rounded bg-warning/20 text-warning w-full">
                                             <Wrench className="h-4 w-4" />
                                             <span className="text-xs font-bold">{statusCounts.suspended}</span>
                                         </div>
@@ -772,116 +814,103 @@ function Dashboard() {
                         </div>
                     ) : (
                         <>
-                        <div className="space-y-1.5 p-2 overflow-y-auto flex-1">
-                        {sources.map((source) => (
-                            <Card
-                                key={source.id}
-                                className="bg-surface border-border/50 transition-shadow duration-150 hover:shadow-soft-elevation"
-                            >
-                                <CardContent className="p-3">
-                                    <div className="flex items-center justify-between gap-1">
-                                        <div className="flex items-center gap-2 overflow-hidden min-w-0 flex-1">
-                                            <span className="font-medium text-sm truncate">
-                                                {source.name}
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-1 shrink-0">
-                                            <Badge
-                                                variant={
-                                                    (source.status as string) ===
-                                                    "refreshing"
-                                                        ? "default"
-                                                        : source.has_data
-                                                          ? "success"
-                                                          : source.error
-                                                            ? "destructive"
-                                                            : "secondary"
-                                                }
-                                            >
-                                                {(source.status as string) ===
-                                                "refreshing"
-                                                    ? "刷新中"
-                                                    : source.has_data
-                                                      ? "正常"
-                                                      : source.error
-                                                        ? "错误"
-                                                        : (source.status as string) ===
-                                                            "suspended"
-                                                          ? "需操作"
-                                                          : "等待"}
-                                            </Badge>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <button
-                                                        className="h-6 w-6 inline-flex items-center justify-center rounded text-muted-foreground hover:bg-foreground hover:text-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
-                                                        onClick={() =>
-                                                            handleRefreshSource(
-                                                                source.id,
-                                                            )
-                                                        }
-                                                    >
-                                                        <RefreshCw className="h-3 w-3" />
-                                                    </button>
-                                                </TooltipTrigger>
-                                                <TooltipContent side="top">
-                                                    <p>刷新</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <button
-                                                        className="h-6 w-6 inline-flex items-center justify-center rounded text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
-                                                        onClick={() =>
-                                                            setDeletingSourceId(
-                                                                source.id,
-                                                            )
-                                                        }
-                                                    >
-                                                        <Trash2 className="h-3 w-3" />
-                                                    </button>
-                                                </TooltipTrigger>
-                                                <TooltipContent side="top">
-                                                    <p>删除</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </div>
-                                    </div>
-                                    {source.status === "suspended" && (
-                                        <button
-                                            className="w-full mt-2 h-7 text-xs font-medium rounded border border-brand/30 bg-brand/5 text-brand hover:bg-foreground hover:text-background hover:border-foreground transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 flex items-center justify-center gap-1"
-                                            onClick={() =>
-                                                setInteractSource(source)
-                                            }
+                            <div className="space-y-1.5 p-2 overflow-y-auto flex-1">
+                                {sources.map((source) => {
+                                    const statusConfig = getStatusConfig(source);
+                                    return (
+                                        <Card
+                                            key={source.id}
+                                            className="bg-surface border-border/50 transition-shadow duration-150 hover:shadow-soft-elevation"
                                         >
-                                            <Wrench className="h-3 w-3" />
-                                            {source.interaction?.type ===
-                                            "webview_scrape"
-                                                ? "加入抓取队列"
-                                                : "解决问题"}
-                                        </button>
-                                    )}
-                                    {source.error && (
-                                        <div className="mt-2">
-                                            <p className="text-xs text-destructive line-clamp-2">
-                                                {source.error}
-                                            </p>
-                                            <button
-                                                className="w-full mt-2 h-7 text-xs font-medium rounded bg-destructive text-destructive-foreground hover:bg-foreground hover:text-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 flex items-center justify-center gap-1"
-                                                onClick={() =>
-                                                    setInteractSource(source)
-                                                }
-                                            >
-                                                <AlertTriangle className="h-3 w-3" />
-                                                重试 / 详情
-                                            </button>
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
+                                            <CardContent className="p-3">
+                                                <div className="flex items-center justify-between gap-1">
+                                                    <div className="flex items-center gap-2 overflow-hidden min-w-0 flex-1">
+                                                        <span className="font-medium text-sm truncate">
+                                                            {source.name}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1 shrink-0">
+                                                        {source.status === "suspended" ? (
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <button
+                                                                        className={cn(badgeVariants({ variant: "warning" }), "gap-1 px-1.5 py-0 h-6 shrink-0 cursor-pointer hover:bg-warning/30")}
+                                                                        onClick={() => setInteractSource(source)}
+                                                                    >
+                                                                        <Wrench className="h-3 w-3" />
+                                                                        <span>需操作</span>
+                                                                    </button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent side="top">
+                                                                    <p>
+                                                                        {source.interaction?.type === "webview_scrape"
+                                                                            ? "加入抓取队列"
+                                                                            : "解决问题"}
+                                                                    </p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        ) : (
+                                                            <Badge variant={statusConfig.variant}>
+                                                                {statusConfig.label}
+                                                            </Badge>
+                                                        )}
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <button
+                                                                    className="h-6 w-6 inline-flex items-center justify-center rounded text-muted-foreground hover:bg-foreground hover:text-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+                                                                    onClick={() =>
+                                                                        handleRefreshSource(
+                                                                            source.id,
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <RefreshCw className="h-3 w-3" />
+                                                                </button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent side="top">
+                                                                <p>刷新</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <button
+                                                                    className="h-6 w-6 inline-flex items-center justify-center rounded text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+                                                                    onClick={() =>
+                                                                        setDeletingSourceId(
+                                                                            source.id,
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <Trash2 className="h-3 w-3" />
+                                                                </button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent side="top">
+                                                                <p>删除</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </div>
+                                                </div>
+                                                {source.error && (
+                                                    <div className="mt-2">
+                                                        <p className="text-xs text-destructive line-clamp-2">
+                                                            {source.error}
+                                                        </p>
+                                                        <button
+                                                            className="w-full mt-2 h-7 text-xs font-medium rounded bg-destructive text-destructive-foreground hover:bg-foreground hover:text-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 flex items-center justify-center gap-1"
+                                                            onClick={() => setInteractSource(source)}
+                                                        >
+                                                            <AlertTriangle className="h-3 w-3" />
+                                                            重试 / 详情
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    );
+                                })}
+                            </div>
 
-                    <Dialog
+                            <Dialog
                         open={deletingSourceId !== null}
                         onOpenChange={(open) =>
                             !open && setDeletingSourceId(null)

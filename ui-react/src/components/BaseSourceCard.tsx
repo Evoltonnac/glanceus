@@ -15,10 +15,10 @@ interface BaseSourceCardProps {
 
 // Semantic status color indicator for server-rack style pill
 const statusPillColorMap: Record<string, string> = {
-    active: "bg-success shadow-[0_0_8px_var(--color-success)]",
-    refreshing: "bg-brand animate-pulse shadow-[0_0_8px_var(--color-brand)]",
-    suspended: "bg-warning shadow-[0_0_8px_var(--color-warning)]",
-    error: "bg-error shadow-[0_0_8px_var(--color-error)]",
+    success: "bg-success shadow-[0_0_8px_hsl(var(--success)/0.5)]",
+    info: "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] animate-pulse",
+    warning: "bg-warning shadow-[0_0_8px_hsl(var(--warning)/0.5)]",
+    error: "bg-error shadow-[0_0_8px_hsl(var(--error)/0.5)]",
     disabled: "bg-muted-foreground opacity-50",
 };
 
@@ -35,21 +35,20 @@ export function BaseSourceCard({
 
     // Determine status for indicator
     const rawStatus = sourceSummary?.status || "disabled";
-    let dotStatus: "active" | "refreshing" | "error" | "suspended" | "disabled";
+    let pillKey: "success" | "info" | "error" | "warning" | "disabled";
     if ((rawStatus as string) === "refreshing") {
-        dotStatus = "refreshing";
-    } else if (sourceData?.error || sourceSummary?.error) {
-        dotStatus = "error";
+        pillKey = "info";
+    } else if (sourceSummary?.error || sourceData?.error) {
+        pillKey = "error";
     } else if (rawStatus === "suspended") {
-        dotStatus = "suspended";
-    } else if (sourceSummary?.has_data && rawStatus === "active") {
-        dotStatus = "active";
+        pillKey = "warning";
+    } else if (sourceSummary?.has_data) {
+        pillKey = "success";
     } else {
-        dotStatus = rawStatus as any;
+        pillKey = "disabled";
     }
 
-    const pillClass =
-        statusPillColorMap[dotStatus] || statusPillColorMap.disabled;
+    const pillClass = statusPillColorMap[pillKey] || statusPillColorMap.disabled;
 
     // Decide if we have data to show
     const hasWidgetData =
@@ -76,7 +75,7 @@ export function BaseSourceCard({
                 {/* Absolute positioned server rack style indicator light in top-left */}
                 <div
                     className={`absolute left-2 top-1/2 -translate-y-1/2 w-[4px] h-3 rounded-full flex-shrink-0 transition-all duration-500 z-20 ${pillClass}`}
-                    title={`Status: ${dotStatus}`}
+                    title={`Status: ${pillKey}`}
                 />
             </div>
 

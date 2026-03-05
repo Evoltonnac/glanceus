@@ -57,7 +57,7 @@ export function TopNav() {
                             </div>
                             <div>
                                 <h1 className="text-lg font-bold leading-none tracking-tight">
-                                    Quota Board
+                                    Glancier
                                 </h1>
                                 <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wider font-semibold">
                                     资源总览

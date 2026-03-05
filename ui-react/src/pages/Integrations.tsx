@@ -35,12 +35,14 @@ import {
     Plus,
     Trash2,
     Save,
-    RefreshCw,
     MoreVertical,
     FileJson,
     Database,
     AlertCircle,
     CheckCircle,
+    RotateCcw,
+    ChevronLeft,
+    ChevronRight,
 } from "lucide-react";
 import { Badge } from "../components/ui/badge";
 
@@ -52,6 +54,7 @@ export default function IntegrationsPage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
     // Source management
     const [sources, setSources] = useState<any[]>([]);
@@ -234,26 +237,29 @@ export default function IntegrationsPage() {
         <TooltipProvider>
             <div className="flex h-full bg-background text-foreground">
                 {/* Sidebar */}
-                <aside className="w-64 border-r border-border bg-surface/30 flex flex-col">
-                    <div className="p-4 border-b border-border">
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-sm font-semibold uppercase tracking-wider flex items-center gap-2">
+                <aside className={`border-r border-border bg-surface/30 flex flex-col transition-all duration-300 ${sidebarCollapsed ? 'w-14' : 'w-64'}`}>
+                    <div className="p-3 border-b border-border flex items-center justify-between gap-2">
+                        {!sidebarCollapsed && (
+                            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2 flex-1">
                                 <FileJson className="w-4 h-4" />
                                 Integrations
                             </h2>
-                            <Dialog
-                                open={showNewIntegrationDialog}
-                                onOpenChange={setShowNewIntegrationDialog}
-                            >
-                                <DialogTrigger asChild>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8"
-                                    >
-                                        <Plus className="h-4 w-4" />
-                                    </Button>
-                                </DialogTrigger>
+                        )}
+                        <div className="flex items-center gap-1">
+                            {!sidebarCollapsed && (
+                                <Dialog
+                                    open={showNewIntegrationDialog}
+                                    onOpenChange={setShowNewIntegrationDialog}
+                                >
+                                    <DialogTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 text-muted-foreground hover:bg-foreground hover:text-background transition-colors duration-150"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                        </Button>
+                                    </DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>
                                         <DialogTitle>
@@ -291,17 +297,65 @@ export default function IntegrationsPage() {
                                     </DialogFooter>
                                 </DialogContent>
                             </Dialog>
+                            )}
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <button
+                                        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                                        className="h-6 w-6 inline-flex items-center justify-center rounded text-muted-foreground hover:bg-foreground hover:text-background transition-colors duration-150"
+                                    >
+                                        {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+                                    </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="right">
+                                    {sidebarCollapsed ? '展开' : '收起'}
+                                </TooltipContent>
+                            </Tooltip>
                         </div>
                     </div>
 
+                    {sidebarCollapsed ? (
+                        <div className="flex-1 flex flex-col items-center gap-3 p-2 overflow-y-auto">
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-muted-foreground hover:bg-foreground hover:text-background transition-colors duration-150"
+                                        onClick={() => setShowNewIntegrationDialog(true)}
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="right">
+                                    New Integration
+                                </TooltipContent>
+                            </Tooltip>
+                            {integrations.map((file) => (
+                                <Tooltip key={file}>
+                                    <TooltipTrigger asChild>
+                                        <button
+                                            onClick={() => loadIntegrationContent(file)}
+                                            className={`h-10 w-10 flex items-center justify-center rounded-md transition-colors duration-150 ${selectedFile === file ? "bg-brand/20 text-brand" : "hover:bg-foreground hover:text-background text-muted-foreground"}`}
+                                        >
+                                            <FileJson className="h-5 w-5" />
+                                        </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right">
+                                        {file}
+                                    </TooltipContent>
+                                </Tooltip>
+                            ))}
+                        </div>
+                    ) : (
                     <div className="flex-1 overflow-y-auto p-2">
                         {integrations.map((file) => (
                             <div
                                 key={file}
-                                className={`group flex items-center justify-between p-2 rounded-md cursor-pointer mb-1 ${
+                                className={`group flex items-center justify-between p-2 rounded-md cursor-pointer mb-1 transition-colors duration-150 ${
                                     selectedFile === file
-                                        ? "bg-primary/10 text-primary"
-                                        : "hover:bg-secondary/50"
+                                        ? "bg-brand/10 text-brand"
+                                        : "hover:bg-foreground hover:text-background"
                                 }`}
                                 onClick={() => loadIntegrationContent(file)}
                             >
@@ -311,7 +365,7 @@ export default function IntegrationsPage() {
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                                            className={`h-6 w-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-brand/50 ${selectedFile === file ? "hover:bg-brand/20 text-brand" : ""}`}
                                             onClick={(e) => e.stopPropagation()}
                                         >
                                             <MoreVertical className="h-3 w-3" />
@@ -338,6 +392,7 @@ export default function IntegrationsPage() {
                             </p>
                         )}
                     </div>
+                    )}
                 </aside>
 
                 {/* Main Content */}
@@ -373,15 +428,15 @@ export default function IntegrationsPage() {
                                         <TooltipTrigger asChild>
                                             <Button
                                                 variant="outline"
-                                                size="sm"
+                                                size="icon"
+                                                className="h-8 w-8 hover:bg-foreground hover:text-background transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand/50"
                                                 onClick={() =>
                                                     loadIntegrationContent(
                                                         selectedFile,
                                                     )
                                                 }
                                             >
-                                                <RefreshCw className="h-4 w-4 mr-1" />
-                                                Reload
+                                                <RotateCcw className="h-4 w-4" />
                                             </Button>
                                         </TooltipTrigger>
                                         <TooltipContent>
@@ -391,19 +446,19 @@ export default function IntegrationsPage() {
                                     <Tooltip>
                                         <TooltipTrigger asChild>
                                             <Button
-                                                size="sm"
+                                                size="icon"
+                                                className="h-8 w-8 bg-brand text-primary-foreground hover:bg-foreground hover:text-background transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand/50"
                                                 onClick={handleSave}
                                                 disabled={
                                                     saving ||
                                                     content === originalContent
                                                 }
                                             >
-                                                <Save className="h-4 w-4 mr-1" />
-                                                {saving ? "Saving..." : "Save"}
+                                                <Save className="h-4 w-4" />
                                             </Button>
                                         </TooltipTrigger>
                                         <TooltipContent>
-                                            Save (Ctrl+S)
+                                            {saving ? "Saving..." : "Save (Ctrl+S)"}
                                         </TooltipContent>
                                     </Tooltip>
                                 </div>
@@ -533,19 +588,18 @@ export default function IntegrationsPage() {
                                             {sources.map((source) => (
                                                 <Card
                                                     key={source.id}
-                                                    className="bg-surface border-border hover:border-foreground/20 transition-colors"
+                                                    className="w-full bg-surface border-border hover:border-foreground/20 hover:shadow-soft-elevation transition-all duration-150"
                                                 >
                                                     <CardContent className="p-3 flex items-center justify-between">
-                                                        <div>
-                                                            <span className="font-medium">
+                                                        <div className="min-w-0">
+                                                            <span className="font-medium block truncate">
                                                                 {source.name}
                                                             </span>
-                                                            <span className="text-xs text-muted-foreground ml-2">
-                                                                (ID: {source.id}
-                                                                )
+                                                            <span className="text-xs text-muted-foreground ml-0 md:ml-2 inline-block">
+                                                                (ID: {source.id})
                                                             </span>
                                                             {source.integration_id && (
-                                                                <span className="text-xs text-muted-foreground ml-2">
+                                                                <span className="text-xs text-muted-foreground ml-0 md:ml-2 inline-block">
                                                                     via{" "}
                                                                     {
                                                                         source.integration_id
@@ -556,7 +610,7 @@ export default function IntegrationsPage() {
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="h-8 w-8 text-destructive"
+                                                            className="h-8 w-8 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand/50"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 setDeletingSourceId(

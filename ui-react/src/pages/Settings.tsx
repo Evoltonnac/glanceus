@@ -121,7 +121,7 @@ export default function SettingsPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => navigate("/")}
-                        className="h-9 w-9 rounded-full hover:bg-secondary focus:bg-secondary active:scale-95 transition-all text-muted-foreground hover:text-foreground"
+                        className="h-9 w-9 rounded-full hover:bg-foreground hover:text-background active:scale-95 transition-all text-muted-foreground focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:outline-none"
                     >
                         <ChevronLeft className="w-5 h-5" />
                     </Button>
@@ -167,7 +167,7 @@ export default function SettingsPage() {
                                             <Palette className="w-4 h-4 text-brand" />
                                             外观主题
                                         </div>
-                                        <div className="space-y-4 rounded-xl border border-border px-5 py-4 bg-surface hover:border-foreground/20 transition-colors">
+                                        <div className="space-y-4 rounded-xl border border-border px-5 py-4 bg-surface hover:border-foreground/20 hover:shadow-soft-elevation transition-all duration-150">
                                             <div>
                                                 <p className="text-sm font-medium text-muted-foreground">
                                                     选择应用的外观主题，立即生效。
@@ -217,7 +217,7 @@ export default function SettingsPage() {
                                             <MonitorPlay className="w-4 h-4 text-brand" />
                                             窗口行为
                                         </div>
-                                        <div className="flex items-center justify-between rounded-xl border border-border px-5 py-4 bg-surface hover:border-foreground/20 transition-colors">
+                                        <div className="flex items-center justify-between rounded-xl border border-border px-5 py-4 bg-surface hover:border-foreground/20 hover:shadow-soft-elevation transition-all duration-150">
                                             <div>
                                                 <p className="text-sm font-medium">
                                                     开机自启
@@ -229,6 +229,7 @@ export default function SettingsPage() {
                                             </div>
                                             <Switch
                                                 checked={settings.autostart}
+                                                className="data-[state=checked]:bg-brand focus-visible:ring-2 focus-visible:ring-brand/50"
                                                 onCheckedChange={async (v) => {
                                                     const newSettings = {
                                                         ...settings,
@@ -268,7 +269,7 @@ export default function SettingsPage() {
                                                 <Network className="w-5 h-5 text-primary" />
                                                 代理设置
                                             </div>
-                                            <div className="space-y-3 rounded-lg border border-border px-5 py-4 bg-background">
+                                            <div className="space-y-3 rounded-lg border border-border px-5 py-4 bg-background hover:shadow-soft-elevation transition-shadow duration-150">
                                                 <div>
                                                     <Label
                                                         htmlFor="proxy"
@@ -306,7 +307,7 @@ export default function SettingsPage() {
                                                 <Shield className="w-5 h-5 text-primary" />
                                                 密钥加密
                                             </div>
-                                            <div className="flex items-center justify-between rounded-lg border border-border px-5 py-4 bg-background">
+                                            <div className="flex items-center justify-between rounded-lg border border-border px-5 py-4 bg-background hover:shadow-soft-elevation transition-shadow duration-150">
                                                 <div>
                                                     <p className="text-sm font-medium">
                                                         本地 AES-256 加密存储
@@ -322,6 +323,7 @@ export default function SettingsPage() {
                                                     checked={
                                                         settings.encryption_enabled
                                                     }
+                                                    className="data-[state=checked]:bg-brand focus-visible:ring-2 focus-visible:ring-brand/50"
                                                     onCheckedChange={(v) =>
                                                         setSettings((s) => ({
                                                             ...s,
@@ -424,7 +426,7 @@ export default function SettingsPage() {
                                             <Button
                                                 onClick={handleSave}
                                                 disabled={saving || loading}
-                                                className="px-8 bg-brand hover:bg-brand/90 text-primary-foreground rounded-full"
+                                                className="px-8 bg-brand hover:bg-foreground hover:text-background text-primary-foreground rounded-full transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand/50"
                                             >
                                                 {saving
                                                     ? "保存中..."
@@ -458,7 +460,7 @@ export default function SettingsPage() {
                                         <div className="pt-8">
                                             <Button
                                                 variant="outline"
-                                                className="rounded-full px-6 gap-2"
+                                                className="rounded-full px-6 gap-2 hover:bg-foreground hover:text-background transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand/50"
                                                 onClick={() =>
                                                     alert("当前已是最新版本")
                                                 }

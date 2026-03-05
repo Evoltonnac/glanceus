@@ -140,12 +140,14 @@ Plans:
 2. The user experience for managing integrations, sources, and views is intuitive and streamlined.
 3. Dashboard rendering is visually polished, responsive, and performs well under load.
 4. No existing functionality is broken during the refactoring process.
-**Plans**: 3 plans
+**Plans**: 5 plans
 
 Plans:
-- [ ] 08-01-PLAN.md — Establish unified design system and component library guidelines.
-- [ ] 08-02-PLAN.md — Refactor core layout, navigation, and settings views.
-- [ ] 08-03-PLAN.md — Redesign dashboard widget presentation and source card interactions.
+- [x] 08-01-PLAN.md — Establish unified design system and component library guidelines.
+- [x] 08-02-PLAN.md — Refactor core baseline components (TopNav, BaseSourceCard, QuotaBar).
+- [x] 08-03-PLAN.md — Refactor Pages and Layouts (App.tsx, Integrations.tsx, Settings.tsx).
+- [ ] 08-04-PLAN.md — Refactor Data Widgets (HeroMetric, KeyValueGrid, ListWidget).
+- [ ] 08-05-PLAN.md — Refactor Dialogs and Flows (AddWidgetDialog, FlowHandler).
 
 ## Progress
 
@@ -158,4 +160,4 @@ Plans:
 | 5. View Runtime Architecture | 3/3 | Completed | Yes |
 | 6. Desktop Secure Acquisition | 3/3 | Completed | Yes |
 | 7. Multi-Topology Delivery | 2/2 | Completed | Yes |
-| 8. UI Refactoring | 2/3 | In Progress|  |
+| 8. UI Refactoring | 3/5 | In Progress|  |

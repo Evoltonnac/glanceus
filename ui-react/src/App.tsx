@@ -15,9 +15,13 @@ import type {
 import {
     RefreshCw,
     Database,
-    MoreVertical,
     Trash2,
     ExternalLink,
+    Wrench,
+    AlertTriangle,
+    ChevronLeft,
+    ChevronRight,
+    Plus,
 } from "lucide-react";
 import {
     Card,
@@ -29,13 +33,7 @@ import {
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "./components/ui/dropdown-menu";
+
 import {
     Dialog,
     DialogContent,
@@ -44,7 +42,12 @@ import {
     DialogDescription,
     DialogFooter,
 } from "./components/ui/dialog";
-import { TooltipProvider } from "./components/ui/tooltip";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "./components/ui/tooltip";
 import { FlowHandler } from "./components/auth/FlowHandler";
 import { OAuthCallback } from "./components/auth/OAuthCallback";
 import { BaseSourceCard } from "./components/BaseSourceCard";
@@ -55,7 +58,7 @@ import { TopNav } from "./components/TopNav";
 
 // GridStack layout constants — keep in sync with --qb-row-height / --qb-grid-margin in index.css
 const GRID_ROW_HEIGHT = 60;
-const GRID_MARGIN = 8;
+const GRID_MARGIN = 12;
 
 // Delete button — absolute positioned at top-right corner of card
 function DeleteBtn({ onDelete }: { onDelete?: () => void }) {
@@ -112,6 +115,9 @@ function Dashboard() {
     const [deletingSourceId, setDeletingSourceId] = useState<string | null>(
         null,
     );
+
+    // Sidebar collapse state
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
     // GridStack ref
     const gridRef = useRef<HTMLDivElement>(null);
@@ -683,27 +689,98 @@ function Dashboard() {
         );
     }
 
+    const statusCounts = {
+        normal: sources.filter(s => s.has_data && !s.error && s.status !== 'refreshing').length,
+        refreshing: sources.filter(s => s.status === 'refreshing').length,
+        error: sources.filter(s => s.error).length,
+        suspended: sources.filter(s => s.status === 'suspended').length,
+    };
+
     return (
         <TooltipProvider>
             <div className="h-full bg-background text-foreground flex overflow-hidden">
                 {/* Sidebar */}
-                <aside className="w-64 border-r border-border bg-card/30 flex-col hidden md:flex">
-                    <div className="p-4 border-b border-border flex items-center gap-2">
-                        <Database className="w-4 h-4 text-muted-foreground" />
-                        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                            数据源状态
-                        </h2>
+                <aside className={`border-r border-border bg-surface/30 flex-col hidden md:flex transition-all duration-300 ${sidebarCollapsed ? 'w-14' : 'w-64'}`}>
+                    <div className="p-3 border-b border-border flex items-center justify-between gap-2">
+                        {!sidebarCollapsed && (
+                            <>
+                                <Database className="w-4 h-4 text-muted-foreground" />
+                                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex-1">
+                                    数据源状态
+                                </h2>
+                            </>
+                        )}
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button
+                                    onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                                    className="h-6 w-6 inline-flex items-center justify-center rounded text-muted-foreground hover:bg-foreground hover:text-background transition-colors duration-150"
+                                >
+                                    {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="right">
+                                {sidebarCollapsed ? '展开' : '收起'}
+                            </TooltipContent>
+                        </Tooltip>
                     </div>
 
-                    <div className="space-y-2 p-4 overflow-y-auto flex-1">
+                    {sidebarCollapsed ? (
+                        <div className="flex-1 flex flex-col items-center gap-3 p-2 overflow-y-auto">
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div className="flex flex-col items-center gap-1 p-2 rounded bg-green-500/10 text-green-600 w-full">
+                                        <Database className="h-4 w-4" />
+                                        <span className="text-xs font-bold">{statusCounts.normal}</span>
+                                    </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="right">正常: {statusCounts.normal}</TooltipContent>
+                            </Tooltip>
+                            {statusCounts.refreshing > 0 && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div className="flex flex-col items-center gap-1 p-2 rounded bg-blue-500/10 text-blue-600 w-full">
+                                            <RefreshCw className="h-4 w-4" />
+                                            <span className="text-xs font-bold">{statusCounts.refreshing}</span>
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right">刷新中: {statusCounts.refreshing}</TooltipContent>
+                                </Tooltip>
+                            )}
+                            {statusCounts.error > 0 && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div className="flex flex-col items-center gap-1 p-2 rounded bg-red-500/10 text-red-600 w-full">
+                                            <AlertTriangle className="h-4 w-4" />
+                                            <span className="text-xs font-bold">{statusCounts.error}</span>
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right">错误: {statusCounts.error}</TooltipContent>
+                                </Tooltip>
+                            )}
+                            {statusCounts.suspended > 0 && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div className="flex flex-col items-center gap-1 p-2 rounded bg-yellow-500/10 text-yellow-600 w-full">
+                                            <Wrench className="h-4 w-4" />
+                                            <span className="text-xs font-bold">{statusCounts.suspended}</span>
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right">需操作: {statusCounts.suspended}</TooltipContent>
+                                </Tooltip>
+                            )}
+                        </div>
+                    ) : (
+                        <>
+                        <div className="space-y-1.5 p-2 overflow-y-auto flex-1">
                         {sources.map((source) => (
                             <Card
                                 key={source.id}
-                                className="bg-secondary/50 border-border/50"
+                                className="bg-surface border-border/50 transition-shadow duration-150 hover:shadow-soft-elevation"
                             >
                                 <CardContent className="p-3">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2 overflow-hidden max-w-[120px]">
+                                    <div className="flex items-center justify-between gap-1">
+                                        <div className="flex items-center gap-2 overflow-hidden min-w-0 flex-1">
                                             <span className="font-medium text-sm truncate">
                                                 {source.name}
                                             </span>
@@ -733,75 +810,70 @@ function Dashboard() {
                                                           ? "需操作"
                                                           : "等待"}
                                             </Badge>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-6 w-6"
-                                                    >
-                                                        <MoreVertical className="h-3 w-3" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem
-                                                        onSelect={(e) => {
-                                                            e.preventDefault();
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <button
+                                                        className="h-6 w-6 inline-flex items-center justify-center rounded text-muted-foreground hover:bg-foreground hover:text-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+                                                        onClick={() =>
                                                             handleRefreshSource(
                                                                 source.id,
-                                                            );
-                                                        }}
+                                                            )
+                                                        }
                                                     >
-                                                        <RefreshCw className="mr-2 h-4 w-4" />
-                                                        刷新
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem
-                                                        onSelect={(e) => {
-                                                            e.preventDefault();
+                                                        <RefreshCw className="h-3 w-3" />
+                                                    </button>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="top">
+                                                    <p>刷新</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <button
+                                                        className="h-6 w-6 inline-flex items-center justify-center rounded text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+                                                        onClick={() =>
                                                             setDeletingSourceId(
                                                                 source.id,
-                                                            );
-                                                        }}
-                                                        className="text-destructive focus:bg-destructive focus:text-destructive-foreground"
+                                                            )
+                                                        }
                                                     >
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        删除
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                                                        <Trash2 className="h-3 w-3" />
+                                                    </button>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="top">
+                                                    <p>删除</p>
+                                                </TooltipContent>
+                                            </Tooltip>
                                         </div>
                                     </div>
                                     {source.status === "suspended" && (
-                                        <Button
-                                            variant="default"
-                                            size="sm"
-                                            className="w-full mt-2"
+                                        <button
+                                            className="w-full mt-2 h-7 text-xs font-medium rounded border border-brand/30 bg-brand/5 text-brand hover:bg-foreground hover:text-background hover:border-foreground transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 flex items-center justify-center gap-1"
                                             onClick={() =>
                                                 setInteractSource(source)
                                             }
                                         >
+                                            <Wrench className="h-3 w-3" />
                                             {source.interaction?.type ===
                                             "webview_scrape"
                                                 ? "加入抓取队列"
                                                 : "解决问题"}
-                                        </Button>
+                                        </button>
                                     )}
                                     {source.error && (
                                         <div className="mt-2">
                                             <p className="text-xs text-destructive line-clamp-2">
                                                 {source.error}
                                             </p>
-                                            <Button
-                                                variant="destructive"
-                                                size="sm"
-                                                className="w-full mt-2 h-7"
+                                            <button
+                                                className="w-full mt-2 h-7 text-xs font-medium rounded bg-destructive text-destructive-foreground hover:bg-foreground hover:text-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 flex items-center justify-center gap-1"
                                                 onClick={() =>
                                                     setInteractSource(source)
-                                                } // Allow opening generic handler or specialized retry
+                                                }
                                             >
+                                                <AlertTriangle className="h-3 w-3" />
                                                 重试 / 详情
-                                            </Button>
+                                            </button>
                                         </div>
                                     )}
                                 </CardContent>
@@ -841,34 +913,36 @@ function Dashboard() {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
+                        </>
+                    )}
                 </aside>
 
                 {/* Main Content */}
-                <main className="flex-1 p-6 overflow-y-auto">
-                    <div className="flex items-center justify-between mb-6">
+                <main className="flex-1 p-4 overflow-y-auto">
+                    <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg font-semibold">监控视图</h2>
                         <div className="flex gap-2">
-                            <Button
-                                variant="default"
-                                size="sm"
+                            <button
+                                className="h-8 px-3 flex items-center gap-1.5 text-sm font-medium rounded-md bg-brand text-primary-foreground hover:bg-foreground hover:text-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
                                 onClick={() => setIsAddDialogOpen(true)}
                             >
-                                + 添加小组件
-                            </Button>
+                                <Plus className="w-4 h-4" />
+                                添加小组件
+                            </button>
                         </div>
                     </div>
 
                     {!viewConfig || viewConfig.items.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-12 border border-dashed rounded-lg bg-card/30">
+                        <div className="flex flex-col items-center justify-center p-12 border border-dashed rounded-lg bg-surface/30">
                             <p className="text-muted-foreground mb-4">
                                 当前视图还没有任何组件。
                             </p>
-                            <Button
-                                variant="outline"
+                            <button
+                                className="h-9 px-5 text-sm font-medium rounded border border-border bg-background hover:bg-foreground hover:text-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
                                 onClick={() => setIsAddDialogOpen(true)}
                             >
                                 添加第一个组件
-                            </Button>
+                            </button>
                         </div>
                     ) : (
                         <div

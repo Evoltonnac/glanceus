@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 ## Current Position
 
 Phase: 8 of 8 (UI Refactoring)
-Plan: 1 of 3 in current phase (08-01 completed)
+Plan: 2 of 3 in current phase (08-02 completed)
 Status: In Progress
-Last activity: 2026-03-03 - Executed 08-01 Design System Foundation
+Last activity: 2026-03-03 - Executed 08-02 TopNav Icon-Driven Refactor
 
 Progress: [██████████] 100%
 
@@ -47,7 +47,7 @@ Progress: [██████████] 100%
 | 5 | 3/3 | - | - |
 | 6 | 3/3 | - | - |
 | 7 | 2/2 | - | - |
-| 8 | 1/3 | 12min | - |
+| 8 | 2/3 | 12min | - |
 
 **Recent Trend:**
 - Last 5 plans: -
@@ -60,6 +60,9 @@ Progress: [██████████] 100%
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions / constraints. Current high-impact decisions:
+- [08-02] Single TooltipProvider at header level instead of per-tooltip wrappers to reduce DOM overhead
+- [08-02] Native <button> elements instead of shadcn Button component for precise hover/focus styling control
+- [08-02] NavLink end prop on Dashboard link prevents matching all child routes
 - [08-01] Violet 262.1 83.3% 57.8% used for both --ring and --brand in light and dark mode for consistent focus UX
 - [08-01] Soft elevation: three-layer box-shadow on interactive cards instead of transform:scale
 - [08-01] Status indicator changed from header gradient to semantic dot (h-1.5 w-1.5 rounded-full)
@@ -81,5 +84,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed 08-01-PLAN.md
+Stopped at: Session resumed, proceeding to execute 08-03-PLAN.md
 Resume file: None

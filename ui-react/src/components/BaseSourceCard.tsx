@@ -13,13 +13,13 @@ interface BaseSourceCardProps {
     onInteract?: (source: SourceSummary) => void;
 }
 
-// Semantic dot-status color indicator (replaces removed gradient classes)
-const statusDotColorMap: Record<string, string> = {
-    active: "bg-success",
-    refreshing: "bg-brand animate-pulse",
-    suspended: "bg-warning",
-    error: "bg-error",
-    disabled: "bg-muted-foreground",
+// Semantic status color indicator for server-rack style pill
+const statusPillColorMap: Record<string, string> = {
+    active: "bg-success shadow-[0_0_8px_var(--color-success)]",
+    refreshing: "bg-brand animate-pulse shadow-[0_0_8px_var(--color-brand)]",
+    suspended: "bg-warning shadow-[0_0_8px_var(--color-warning)]",
+    error: "bg-error shadow-[0_0_8px_var(--color-error)]",
+    disabled: "bg-muted-foreground opacity-50",
 };
 
 export function BaseSourceCard({
@@ -33,7 +33,7 @@ export function BaseSourceCard({
         status_field: undefined,
     };
 
-    // Determine status for indicator dot
+    // Determine status for indicator
     const rawStatus = sourceSummary?.status || "disabled";
     let dotStatus: "active" | "refreshing" | "error" | "suspended" | "disabled";
     if ((rawStatus as string) === "refreshing") {
@@ -48,8 +48,8 @@ export function BaseSourceCard({
         dotStatus = rawStatus as any;
     }
 
-    const dotColorClass =
-        statusDotColorMap[dotStatus] || statusDotColorMap.disabled;
+    const pillClass =
+        statusPillColorMap[dotStatus] || statusPillColorMap.disabled;
 
     // Decide if we have data to show
     const hasWidgetData =
@@ -57,18 +57,15 @@ export function BaseSourceCard({
     const hasNoData = !hasWidgetData;
 
     return (
-        <Card className="bg-surface border-border h-full flex flex-col overflow-hidden hover:border-foreground/20 hover:shadow-soft-elevation transition-all duration-150">
-            {/* Header — semantic dot encodes status; acts as drag handle */}
+        <Card className="bg-surface border-border h-full flex flex-col relative overflow-hidden hover:border-foreground/20 hover:shadow-soft-elevation transition-all duration-150">
+            {/* Header — acts as drag handle */}
             <div
-                title={`Status: ${dotStatus}`}
-                className="qb-card-header flex-shrink-0 flex items-center justify-between px-4 border-b border-border/40 bg-surface"
+                className="qb-card-header relative z-10 flex-shrink-0 flex items-center justify-between px-4 border-b border-border/40 bg-transparent"
                 style={{ height: "var(--qb-card-header-height)" }}
             >
-                <div className="flex items-center gap-2 min-w-0 flex-1 mt-1">
-                    {/* Semantic status dot */}
-                    <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${dotColorClass}`} />
+                <div className="flex items-center gap-2 min-w-0 flex-1">
                     {ui.icon && (
-                        <span className="text-sm leading-none shrink-0">
+                        <span className="text-sm leading-none shrink-0 text-muted-foreground">
                             {ui.icon}
                         </span>
                     )}
@@ -76,10 +73,15 @@ export function BaseSourceCard({
                         {ui.title}
                     </span>
                 </div>
+                {/* Absolute positioned server rack style indicator light in top-left */}
+                <div
+                    className={`absolute left-2 top-1/2 -translate-y-1/2 w-[4px] h-3 rounded-full flex-shrink-0 transition-all duration-500 z-20 ${pillClass}`}
+                    title={`Status: ${dotStatus}`}
+                />
             </div>
 
             {/* Content area — fills remaining card height */}
-            <div className="flex-1 flex flex-col overflow-hidden min-h-0 px-4 py-3">
+            <div className="relative z-10 flex-1 flex flex-col overflow-hidden min-h-0 px-4 py-3 bg-surface/50">
                 {hasWidgetData && (
                     <div className="flex flex-col gap-2 h-full min-h-0">
                         {component.widgets!.map((widget, idx) => (

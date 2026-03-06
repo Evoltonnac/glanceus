@@ -106,7 +106,7 @@ def create_app() -> FastAPI:
     """创建并配置 FastAPI 应用。"""
     app = FastAPI(
         title="Glancier API",
-        description="API for quota monitoring and data fetching",
+        description="API for metric monitoring and data aggregation",
         version="0.1.0",
         lifespan=lifespan,
     )

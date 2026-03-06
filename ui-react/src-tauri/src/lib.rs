@@ -54,7 +54,7 @@ pub fn run() {
             {
                 let sidecar_command = app
                     .shell()
-                    .sidecar("quota-board-server")
+                    .sidecar("glancier-server")
                     .expect("failed to create sidecar command");
 
                 let (mut _rx, _child) = sidecar_command

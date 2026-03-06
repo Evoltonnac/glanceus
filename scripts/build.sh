@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 TAURI_BINARIES_DIR="$PROJECT_ROOT/ui-react/src-tauri/binaries"
 
-echo "=== Quota Board 打包脚本 ==="
+echo "=== Glancier 打包脚本 ==="
 
 # 检测当前平台的 Tauri target triple
 ARCH=$(uname -m)
@@ -36,7 +36,7 @@ cd "$PROJECT_ROOT"
 
 pyinstaller \
     --onefile \
-    --name "quota-board-server" \
+    --name "glancier-server" \
     --add-data "config:config" \
     --hidden-import uvicorn.logging \
     --hidden-import uvicorn.loops.auto \
@@ -52,8 +52,8 @@ echo ""
 echo "=== Step 2: 复制到 Tauri binaries ==="
 mkdir -p "$TAURI_BINARIES_DIR"
 
-SIDECAR_NAME="quota-board-server-$TARGET_TRIPLE"
-cp "$PROJECT_ROOT/dist/quota-board-server" "$TAURI_BINARIES_DIR/$SIDECAR_NAME"
+SIDECAR_NAME="glancier-server-$TARGET_TRIPLE"
+cp "$PROJECT_ROOT/dist/glancier-server" "$TAURI_BINARIES_DIR/$SIDECAR_NAME"
 chmod +x "$TAURI_BINARIES_DIR/$SIDECAR_NAME"
 
 echo "✅ 已复制: binaries/$SIDECAR_NAME"
@@ -71,10 +71,10 @@ cp "$TAURI_CONF" "$TAURI_CONF.backup"
 
 # 使用 jq 添加 externalBin 配置
 if command -v jq &> /dev/null; then
-    jq '.bundle.externalBin = ["binaries/quota-board-server"]' "$TAURI_CONF.backup" > "$TAURI_CONF"
+    jq '.bundle.externalBin = ["binaries/glancier-server"]' "$TAURI_CONF.backup" > "$TAURI_CONF"
 else
     # 如果没有 jq,使用 sed (不太优雅但能工作)
-    sed -i.tmp 's/"icon":/&\n        "externalBin": ["binaries\/quota-board-server"],/' "$TAURI_CONF"
+    sed -i.tmp 's/"icon":/&\n        "externalBin": ["binaries\/glancier-server"],/' "$TAURI_CONF"
     rm -f "$TAURI_CONF.tmp"
 fi
 

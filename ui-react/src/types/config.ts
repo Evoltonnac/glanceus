@@ -11,7 +11,6 @@ export type ViewComponentType =
     | "bar_chart"
     | "table"
     | "json"
-    | "quota_card"
     | "progress_bar"
     | "stat_grid"
     | "badge"
@@ -163,10 +162,6 @@ export interface ViewComponent {
     // For component groups
     use_group?: string;
     group_vars?: Record<string, string>;
-    // For quota_card type
-    limit_field?: string;
-    usage_field?: string;
-    remaining_field?: string;
     // For progress_bar type
     value_field?: string;
     max_field?: string;

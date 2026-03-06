@@ -11,22 +11,22 @@
     --muted-foreground: 240 3.8% 46.1%;
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
-    --ring: 262.1 83.3% 45%; /* Darker Violet / Brand focus ring */
+    --ring: 190 100% 45%; /* Cyan / Glancier focus ring */
     --card: 0 0% 98%;
     --card-foreground: 0 0% 15%;
     --popover: 0 0% 98%;
     --popover-foreground: 0 0% 15%;
     --primary: 0 0% 9%;
     --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    --secondary: 190 20% 95.9%;
+    --secondary-foreground: 190 100% 20%;
+    --accent: 190 20% 95.9%;
+    --accent-foreground: 190 100% 20%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
     /* Semantic Colors */
-    --brand: 262.1 83.3% 45%; /* Darker Violet */
+    --brand: 190 100% 45%; /* Cyan / Glancier Brand */
     --warning: 24.6 95% 53.1%; /* Orange 500 */
     --success: 142.1 70.6% 45.3%; /* Emerald 500 */
     --error: 0 84.2% 60.2%; /* Red 500 */
@@ -50,22 +50,22 @@
     --muted-foreground: 240 5% 64.9%;
     --border: 240 3.7% 20%;
     --input: 240 3.7% 20%;
-    --ring: 262.1 83.3% 70%; /* Lighter Violet / Brand focus ring */
+    --ring: 190 100% 60%; /* Lighter Cyan / Brand focus ring */
     --card: 240 5% 12%;
     --card-foreground: 0 0% 90%;
     --popover: 240 5% 12%;
     --popover-foreground: 0 0% 90%;
     --primary: 0 0% 98%;
     --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+    --secondary: 190 20% 15.9%;
+    --secondary-foreground: 190 100% 98%;
+    --accent: 190 20% 15.9%;
+    --accent-foreground: 190 100% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
 
     /* Semantic Colors */
-    --brand: 262.1 83.3% 70%; /* Lighter Violet */
+    --brand: 190 100% 60%; /* Cyan / Glancier Brand */
     --warning: 24.6 95% 53.1%; /* Orange 500 */
     --success: 142.1 70.6% 45.3%; /* Emerald 500 */
     --error: 0 84.2% 60.2%; /* Red 500 */

@@ -8,7 +8,7 @@ import { TopNav } from "./components/TopNav";
 function App() {
     return (
         <BrowserRouter>
-            <div className="flex h-screen flex-col bg-background text-foreground">
+            <div className="flex h-screen flex-col bg-transparent text-foreground">
                 <TopNav />
                 <div className="flex-1 overflow-hidden relative">
                     <Routes>

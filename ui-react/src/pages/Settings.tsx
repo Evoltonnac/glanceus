@@ -115,7 +115,7 @@ export default function SettingsPage() {
 
     return (
         <TooltipProvider>
-            <div className="flex flex-col h-full bg-background text-foreground overflow-hidden">
+            <div className="flex flex-col h-full bg-transparent text-foreground overflow-hidden">
                 {/* Topbar */}
                 <AppHeader contentClassName="flex items-center gap-3 w-full">
                     <div className="flex items-center gap-3">
@@ -127,7 +127,9 @@ export default function SettingsPage() {
                         >
                             <ChevronLeft className="w-5 h-5" />
                         </Button>
-                        <h2 className="text-lg font-bold tracking-tight">设置</h2>
+                        <h2 className="text-lg font-bold tracking-tight">
+                            设置
+                        </h2>
                     </div>
                 </AppHeader>
 

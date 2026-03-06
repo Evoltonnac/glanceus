@@ -276,7 +276,7 @@ export default function IntegrationsPage() {
 
     return (
         <TooltipProvider>
-            <div className="flex h-full bg-background text-foreground">
+            <div className="flex h-full bg-transparent text-foreground">
                 {/* Sidebar */}
                 <aside
                     className={`border-r border-border bg-surface/30 flex flex-col transition-all duration-300 ${sidebarCollapsed ? "w-14" : "w-64"}`}
@@ -513,7 +513,7 @@ export default function IntegrationsPage() {
                                         <TooltipTrigger asChild>
                                             <Button
                                                 size="icon"
-                                                className="h-8 w-8 bg-brand text-primary-foreground hover:bg-foreground hover:text-background transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand/50"
+                                                className="h-8 w-8 bg-brand-gradient text-white hover:opacity-90 transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand/50 shadow-sm"
                                                 onClick={handleSave}
                                                 disabled={
                                                     saving ||

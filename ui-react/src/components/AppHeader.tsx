@@ -41,7 +41,7 @@ export function AppHeader({
     return (
         <header
             onMouseDown={handleMouseDown}
-            className={`${containerClasses} flex-shrink-0 border-b border-border px-6 bg-background z-50 flex items-center ${className}`}
+            className={`${containerClasses} flex-shrink-0 border-b border-border px-6 bg-background/80 backdrop-blur-md z-50 flex items-center ${className}`}
         >
             <div className={`${contentClassName}`}>{children}</div>
         </header>

@@ -451,7 +451,7 @@ export default function Dashboard() {
 
     return (
         <TooltipProvider>
-            <div className="h-full bg-background text-foreground flex overflow-hidden">
+            <div className="h-full bg-transparent text-foreground flex overflow-hidden">
                 <aside
                     className={`border-r border-border bg-surface/30 flex-col hidden md:flex transition-all duration-300 ${sidebarCollapsed ? "w-14" : "w-64"}`}
                 >
@@ -740,7 +740,7 @@ export default function Dashboard() {
                         <h2 className="text-lg font-semibold">监控视图</h2>
                         <div className="flex gap-2">
                             <button
-                                className="h-8 px-3 flex items-center gap-1.5 text-sm font-medium rounded-md bg-brand text-primary-foreground hover:bg-foreground hover:text-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+                                className="h-8 px-3 flex items-center gap-1.5 text-sm font-medium rounded-md bg-brand-gradient text-white hover:opacity-90 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 shadow-sm"
                                 onClick={() => setIsAddDialogOpen(true)}
                             >
                                 <Plus className="w-4 h-4" />

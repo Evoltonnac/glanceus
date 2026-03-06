@@ -76,8 +76,10 @@ Core data points (**Metrics**, Integration Data) are the heroes. They use large 
 ### 3. Compact but Breathable Layouts
 Spacing is tight (`p-3` or `gap-3`) to allow many metrics on a single screen. Elements are starkly separated by 1px hairlines (`border-border/40`) or subtle background color shifts (`bg-surface/50`).
 
-### 4. Flat and Border-Driven (with Soft Elevation)
+### 4. Flat and Border-Driven (with Soft Elevation & Fluid Gradients)
 Depth is primarily established using subtle 1px borders and slightly elevated background colors.
+- **Fluid Gradients**: Avoid solid, opaque backgrounds for large brand-colored elements (e.g., primary buttons, active states, emphasized headers). Instead, use **Fluid Gradients** that evoke motion and depth. These gradients should feel alive and high-end, transitioning smoothly across the brand spectrum without introducing visual noise.
+- **Ambient Backgrounds (The Vibe)**: The overall application background should not be a static solid color. Introduce a subtle, diffuse **Aurora** effect—extremely faint radial blurs of brand-related tones—to provide a sense of "ambient light" and depth. This "vibe" must remain secondary to the data, never compromising legibility or the "Surgical Precision" of the interface.
 - **Exception**: Interactive cards use a **Soft Elevation** (`shadow-soft-elevation`) on hover to provide clear feedback. This is a multi-layered, very subtle shadow that creates a lifting effect without feeling "heavy".
 
 ### 5. Strategic Accent Colors & Brand Tone

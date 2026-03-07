@@ -1,7 +1,7 @@
 import * as React from "react";
 import { cn } from "../../lib/utils";
 import { Card } from "./card";
-import { StatusColor, TrendData } from "../../types";
+import type { StatusColor, TrendData } from "../../types";
 
 interface MetricCardProps extends React.HTMLAttributes<HTMLDivElement> {
     title: string;

@@ -1,0 +1,34 @@
+from __future__ import annotations
+
+from core.config_loader import load_config
+
+
+def test_load_config_skips_invalid_integration_entries(tmp_path):
+    config_dir = tmp_path / "config"
+    integrations_dir = config_dir / "integrations"
+    integrations_dir.mkdir(parents=True)
+
+    (integrations_dir / "good.yaml").write_text(
+        """
+integrations:
+  - id: good_integration
+    auth:
+      type: none
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    (integrations_dir / "bad.yaml").write_text(
+        """
+integrations:
+  - id: bad_integration
+    auth:
+      type: invalid_auth
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    config = load_config(config_dir)
+
+    assert [integration.id for integration in config.integrations] == ["good_integration"]

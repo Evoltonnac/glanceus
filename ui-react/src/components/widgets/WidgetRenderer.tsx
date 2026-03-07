@@ -1,4 +1,4 @@
-import { WidgetConfig } from "../../types/config";
+import type { WidgetConfig } from "../../types/config";
 import { HeroMetric } from "./HeroMetric";
 import { KeyValueGrid } from "./KeyValueGrid";
 import { ProgressBar } from "./ProgressBar";

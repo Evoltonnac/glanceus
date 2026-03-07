@@ -1,4 +1,5 @@
-import { ReactNode, useCallback } from "react";
+import { useCallback } from "react";
+import type { ReactNode } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { isTauri } from "../lib/utils";
 

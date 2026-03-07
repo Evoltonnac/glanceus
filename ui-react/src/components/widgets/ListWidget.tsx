@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ListWidgetConfig } from "../../types/config";
+import type { ListWidgetConfig } from "../../types/config";
 import { getFieldFromPath, cn } from "../../lib/utils";
 import { WidgetRenderer } from "./WidgetRenderer";
 

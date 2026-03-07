@@ -50,6 +50,7 @@ import { ScraperStatusBanner } from "../components/ScraperStatusBanner";
 import { useStore } from "../store";
 import { useSidebar } from "../hooks/useSidebar";
 import { useScraper } from "../hooks/useScraper";
+import { mergeViewItemsWithGridNodes } from "./dashboardLayout";
 import { invoke } from "@tauri-apps/api/core";
 
 // GridStack layout constants
@@ -227,13 +228,10 @@ export default function Dashboard() {
             }))
             .filter((n) => n.id !== "");
 
-        const updatedItems = currentViewConfig.items.map((item) => {
-            const node = nodes.find((n) => n.id === item.id);
-            if (node) {
-                return { ...item, x: node.x, y: node.y, w: node.w, h: node.h };
-            }
-            return item;
-        });
+        const updatedItems = mergeViewItemsWithGridNodes(
+            currentViewConfig.items,
+            nodes,
+        );
 
         const updatedView = { ...currentViewConfig, items: updatedItems };
         setViewConfig(updatedView);

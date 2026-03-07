@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { HeroMetricWidget } from "../../types/config";
+import type { HeroMetricWidget } from "../../types/config";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { evaluateTemplate, cn } from "../../lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";

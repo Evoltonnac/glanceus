@@ -1,4 +1,4 @@
-import { ProgressBarWidget } from "../../types/config";
+import type { ProgressBarWidget } from "../../types/config";
 import { evaluateTemplate } from "../../lib/utils";
 
 interface Props {

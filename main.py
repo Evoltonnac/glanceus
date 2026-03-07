@@ -122,8 +122,12 @@ def create_app() -> FastAPI:
 
     # ── 初始化核心组件 ────────────────────────────────────────
     logger.info("正在加载配置...")
-    config = load_config()
-    logger.info(f"已加载 {len(config.integrations)} 个集成配置")
+    try:
+        config = load_config()
+        logger.info(f"已加载 {len(config.integrations)} 个集成配置")
+    except Exception as exc:
+        logger.error("配置加载失败，使用空配置启动: %s", exc, exc_info=True)
+        config = AppConfig()
 
     # 数据持久化
     data_controller = DataController()

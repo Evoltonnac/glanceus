@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { KeyValueGridWidget } from "../../types/config";
+import type { KeyValueGridWidget } from "../../types/config";
 import { evaluateTemplate, cn } from "../../lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 

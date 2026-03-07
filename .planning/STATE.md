@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: 跃迁 —— Glancier 正式版发布计划
-status: completed
-last_updated: "2026-03-06T06:45:00.000Z"
+status: in_progress
+last_updated: "2026-03-07T03:30:00Z"
 progress:
-  total_phases: 12
+  total_phases: 13
   completed_phases: 10
-  total_plans: 50
-  completed_plans: 45
+  total_plans: 53
+  completed_plans: 51
 ---
 
 # Project State
@@ -17,19 +17,26 @@ progress:
 See: .planning/PROJECT.md (Updated for v1.0)
 
 ## Current Position
-Phase: 10 of 12
-Status: Phase 10 (Codebase Semantic Update) completed. Ready to start Phase 11 (Test Coverage & TDD).
+Phase: 12 of 13
+Status: Phase 12 plan 01 complete (schema generation + Monaco YAML integration + diagnostics linkage); execution paused before plan 12-02.
 
 ## Performance Metrics (v1.0)
 - Completed Phases: 09, 10
-- Remaining Phases: 11, 12
+- Remaining Phases: 11, 12, 13
 - Velocity: On Track
 
 ## Session Continuity
 
-Last session: 2026-03-06
-Stopped at: Session resumed, proceeding to execute Phase 10
-Resume file: None
+Last session: 2026-03-07
+Stopped at: Completed Plan 12-01 implementation and verification, then stopped by instruction.
+Resume file: .planning/phases/12-error-exposure-visibility/12-01-SUMMARY.md
+
+## Accumulated Context
+
+### Pending Todos
+- [ ] [2026-03-06] dashboard-sidebar-hover-add-widget (Area: ui)
+- [ ] [2026-03-06] dashboard-multi-view-tabs (Area: ui)
+- [ ] [2026-03-06] flowhandler-refactor (Area: ui)
 
 ## Quick Tasks Completed
 

@@ -2,17 +2,17 @@
 配置加载器：将 YAML 配置文件解析为 Pydantic 模型。
 """
 
+import logging
 import os
 from enum import Enum
 from pathlib import Path
-from typing import Any
-
-import yaml
-import copy
-import glob
 from typing import Any, Dict, List, Optional
+
+import copy
 import yaml
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, ValidationError, model_validator
+
+logger = logging.getLogger(__name__)
 
 
 # ── 枚举 ──────────────────────────────────────────────
@@ -402,6 +402,31 @@ def load_config(path: Optional[str | Path] = None) -> AppConfig:
     raw = load_all_yamls(path)
 
     resolved = resolve_config(raw)
+
+    # Isolate malformed entries so one broken integration/source does not crash whole app.
+    def _validate_entries(entries: list[Any], model: type[BaseModel], entry_kind: str) -> list[dict[str, Any]]:
+        validated: list[dict[str, Any]] = []
+        for idx, entry in enumerate(entries):
+            entry_id = f"#{idx}"
+            if isinstance(entry, dict):
+                entry_id = str(entry.get("id", entry_id))
+            try:
+                model_obj = model.model_validate(entry)
+                validated.append(model_obj.model_dump(mode="python"))
+            except ValidationError as exc:
+                logger.error("Skipping invalid %s '%s': %s", entry_kind, entry_id, exc)
+        return validated
+
+    resolved["integrations"] = _validate_entries(
+        resolved.get("integrations", []),
+        IntegrationConfig,
+        "integration",
+    )
+    resolved["sources"] = _validate_entries(
+        resolved.get("sources", []),
+        SourceConfig,
+        "source",
+    )
     
     # Validation
     return AppConfig.model_validate(resolved)

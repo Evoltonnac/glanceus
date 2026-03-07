@@ -12,7 +12,10 @@
         "tauri:dev:all": "concurrently -n backend,tauri -c blue,yellow \"npm run dev:backend\" \"npm run tauri:dev\"",
         "tauri:build": "bash ../scripts/build.sh",
         "build": "tsc && vite build",
-        "preview": "vite preview"
+        "preview": "vite preview",
+        "test": "vitest",
+        "test:core": "vitest run src/api/client.test.ts src/store/index.test.ts src/components/widgets/WidgetRenderer.test.tsx src/components/ui/MetricCard.test.tsx src/components/ui/BentoWidget.test.tsx src/pages/Integrations.test.tsx src/pages/dashboardLayout.test.ts",
+        "typecheck": "tsc --noEmit -p tsconfig.app.json"
     },
     "dependencies": {
         "@monaco-editor/react": "^4.7.0",
@@ -41,6 +44,8 @@
         "zustand": "^5.0.11"
     },
     "devDependencies": {
+        "@testing-library/jest-dom": "^6.9.1",
+        "@testing-library/react": "^16.3.0",
         "@tauri-apps/cli": "^2.10.0",
         "@types/node": "^22.10.0",
         "@types/react": "^18.3.18",
@@ -50,9 +55,11 @@
         "@vitejs/plugin-react": "^4.3.4",
         "autoprefixer": "^10.4.20",
         "concurrently": "^9.2.1",
+        "jsdom": "^27.1.0",
         "postcss": "^8.4.49",
         "tailwindcss": "^3.4.17",
         "typescript": "^5.7.3",
-        "vite": "^6.0.11"
+        "vite": "^6.0.11",
+        "vitest": "^4.0.0"
     }
 }

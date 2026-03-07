@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import {
+import type {
     StoredView,
     SourceSummary,
     DataResponse,

@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  backend-core:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run backend core suite
+        run: bash scripts/test_backend_core.sh
+
+  frontend-core:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: ui-react/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: ui-react
+        run: npm ci
+
+      - name: Run frontend core suite
+        run: bash scripts/test_frontend_core.sh
+
+      - name: Run frontend typecheck
+        working-directory: ui-react
+        run: npm run typecheck

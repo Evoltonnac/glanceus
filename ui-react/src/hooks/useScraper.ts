@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useStore } from "../store";
 import { api } from "../api/client";
-import { SourceSummary } from "../types/config";
+import type { SourceSummary } from "../types/config";
 
 export function useScraper() {
     const sources = useStore((state) => state.sources);

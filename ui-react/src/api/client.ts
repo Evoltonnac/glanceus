@@ -1,4 +1,4 @@
-import {
+import type {
   SourceSummary,
   StoredView,
   AuthStatus,

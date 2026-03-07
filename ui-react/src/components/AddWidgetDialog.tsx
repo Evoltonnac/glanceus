@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { api } from "../api/client";
-import { ViewComponent, SourceSummary } from "../types/config";
+import type { ViewComponent, SourceSummary } from "../types/config";
 import {
     Dialog,
     DialogContent,

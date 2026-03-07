@@ -84,6 +84,31 @@ npm run dev:all  # 同时启动前端与后端 (默认端口: 3000 & 8400)
 - **Integration Data**：通过 Flow 获取的原始或加工后的信息。
 - **Bento Card**：承载特定来源数据的 UI 容器。
 
+## 测试与 TDD 门禁 (Phase 11)
+
+后端核心模块采用强制 TDD（RED -> GREEN -> REFACTOR）流程；前端核心行为使用 `Vitest + React Testing Library` 作为阻断门禁。
+
+常用命令：
+
+```bash
+# Backend core gate
+bash scripts/test_backend_core.sh
+
+# Frontend core gate
+bash scripts/test_frontend_core.sh
+
+# Frontend type gate
+bash scripts/test_frontend_core.sh --with-typecheck
+
+# Impacted-only gate (changed-file driven)
+bash scripts/test_impacted.sh
+
+# Minimal smoke path
+python -m pytest tests/smoke/test_phase11_smoke.py -q
+```
+
+完整规则与命令矩阵见 [docs/testing_tdd.md](docs/testing_tdd.md)。
+
 ## 架构指引
 
 - **UI 规范与设计红线**：[`docs/view_micro_widget_architecture.md`](docs/view_micro_widget_architecture.md)

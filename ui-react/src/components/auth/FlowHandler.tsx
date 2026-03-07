@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { SourceSummary } from "../../types/config";
+import type { SourceSummary } from "../../types/config";
 import {
     Dialog,
     DialogContent,

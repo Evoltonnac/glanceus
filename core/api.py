@@ -332,10 +332,7 @@ async def get_auth_status(source_id: str) -> dict[str, Any]:
     # 获取 integration 配置来确定 auth 类型
     integration = _config.get_integration(stored.integration_id) if stored.integration_id else None
     auth_type = "none"
-    has_flow = False
     if integration:
-        if integration.flow:
-            has_flow = True
         if integration.auth:
             auth_type = integration.auth.type.value
 
@@ -354,7 +351,7 @@ async def get_auth_status(source_id: str) -> dict[str, Any]:
         }
     
     # OAuth 特殊处理：检查是否有 token
-    if source.auth and source.auth.type.value == "oauth":
+    if auth_type == "oauth":
         handler = _auth_manager.get_oauth_handler(source_id)
         if handler and handler.has_token:
             return {
@@ -555,12 +552,13 @@ async def reload_config() -> dict:
     """
     global _config
 
-    # 获取旧的集成列表（基于文件名）
-    old_integrations = set(_integration_manager.list_integrations())
-
     # 重新加载配置
     from core.config_loader import load_config
-    new_config = load_config()
+    try:
+        new_config = load_config()
+    except Exception as exc:
+        logger.error("Configuration reload failed: %s", exc, exc_info=True)
+        raise HTTPException(400, f"Configuration reload failed: {exc}") from exc
 
     # 找出受影响的源（配置发生变化的集成所对应的源）
     changed_integrations = set()

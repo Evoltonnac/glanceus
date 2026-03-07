@@ -133,18 +133,20 @@ class Executor:
 
         except Exception as e:
             logger.error(f"[{source.id}] Fetch failed: {e}", exc_info=True)
+            normalized_error = self._normalize_interaction_error(source, e)
             # 将异常转换为交互请求
-            interaction = self._exception_to_interaction(source, e)
+            interaction = self._exception_to_interaction(source, normalized_error)
             if interaction:
+                status = self._interaction_status_for_error(normalized_error)
                 self._update_state(
                     source.id,
-                    SourceStatus.SUSPENDED,
-                    str(e),
+                    status,
+                    str(normalized_error),
                     interaction,
                 )
                 return
 
-            error_summary, error_details = self._format_fetch_error(e)
+            error_summary, error_details = self._format_fetch_error(normalized_error)
             self._update_state(
                 source.id,
                 SourceStatus.ERROR,
@@ -323,7 +325,15 @@ class Executor:
 
                      async with httpx.AsyncClient(**client_kwargs) as client:
                          response = await client.request(method, url, headers=headers)
-                         response.raise_for_status()
+                         try:
+                             response.raise_for_status()
+                         except httpx.HTTPStatusError as http_status_error:
+                             classified_error = self._classify_http_status_error(
+                                 source=source,
+                                 step=step,
+                                 error=http_status_error,
+                             )
+                             raise classified_error from http_status_error
 
                          output = {
                             "http_response": response.json(),
@@ -465,7 +475,14 @@ class Executor:
                     context.update(outputs)
 
             except Exception as step_error:
-                if isinstance(step_error, RequiredSecretMissing):
+                if isinstance(
+                    step_error,
+                    (
+                        RequiredSecretMissing,
+                        InvalidCredentialsError,
+                        WebScraperBlockedError,
+                    ),
+                ):
                     raise
                 logger.error(f"Step {step.id} failed: {step_error}")
                 flow_error = self._build_flow_step_error(
@@ -623,6 +640,150 @@ class Executor:
             parts.append("Raw traceback:\n" + trace_text)
         return summary, "\n\n".join(parts)
 
+    def _normalize_interaction_error(
+        self,
+        source: SourceConfig,
+        error: Exception,
+    ) -> Exception:
+        if isinstance(error, (RequiredSecretMissing, InvalidCredentialsError, WebScraperBlockedError)):
+            return error
+
+        if isinstance(error, httpx.HTTPStatusError):
+            return self._classify_http_status_error(source=source, step=None, error=error)
+
+        message = str(error).lower()
+        has_webview_step = bool(source.flow and any(step.use == StepType.WEBVIEW for step in source.flow))
+        block_keywords = ("captcha", "forbidden", "403", "login", "auth required", "timed out", "timeout")
+        if has_webview_step and any(keyword in message for keyword in block_keywords):
+            return WebScraperBlockedError(
+                source_id=source.id,
+                step_id=None,
+                message=str(error) or "Web scraper was blocked by auth wall",
+                data={"force_foreground": True, "manual_only": True},
+            )
+
+        return error
+
+    def _classify_http_status_error(
+        self,
+        source: SourceConfig,
+        step: StepConfig | None,
+        error: httpx.HTTPStatusError,
+    ) -> Exception:
+        response = error.response
+        status_code = response.status_code if response else None
+        has_webview_step = bool(source.flow and any(flow_step.use == StepType.WEBVIEW for flow_step in source.flow))
+        if status_code == 403 and has_webview_step:
+            return WebScraperBlockedError(
+                source_id=source.id,
+                step_id=step.id if step else None,
+                message=str(error),
+                status_code=status_code,
+                data={"force_foreground": True, "manual_only": True},
+            )
+
+        if status_code in {401, 403}:
+            return InvalidCredentialsError(
+                source_id=source.id,
+                step_id=step.id if step else None,
+                message=str(error),
+                status_code=status_code,
+            )
+
+        return error
+
+    def _interaction_status_for_error(self, error: Exception) -> SourceStatus:
+        if isinstance(error, InvalidCredentialsError):
+            return SourceStatus.ERROR
+        return SourceStatus.SUSPENDED
+
+    def _build_invalid_credentials_interaction(self, source: SourceConfig) -> InteractionRequest:
+        if source.flow:
+            for step in source.flow:
+                if step.use == StepType.OAUTH:
+                    return InteractionRequest(
+                        type=InteractionType.OAUTH_START,
+                        step_id=step.id,
+                        source_id=source.id,
+                        title="Authorization Invalid",
+                        message="Current OAuth authorization is invalid. Please reconnect.",
+                        fields=[],
+                        data={"oauth_args": step.args or {}, "doc_url": (step.args or {}).get("doc_url")},
+                    )
+                if step.use == StepType.API_KEY:
+                    api_key = step.secrets.get("api_key", "api_key") if step.secrets else "api_key"
+                    return InteractionRequest(
+                        type=InteractionType.INPUT_TEXT,
+                        step_id=step.id,
+                        source_id=source.id,
+                        title="Credentials Invalid",
+                        message="The API key appears invalid. Please update it and retry.",
+                        fields=[
+                            InteractionField(
+                                key=api_key,
+                                label=(step.args or {}).get("label", "API Key"),
+                                type="password",
+                                description=(step.args or {}).get("description", "Enter a valid API key"),
+                            )
+                        ],
+                    )
+                if step.use == StepType.CURL:
+                    curl_key = step.secrets.get("curl_command", "curl_command") if step.secrets else "curl_command"
+                    return InteractionRequest(
+                        type=InteractionType.INPUT_TEXT,
+                        step_id=step.id,
+                        source_id=source.id,
+                        title="Credentials Invalid",
+                        message="Session credentials expired or invalid. Please paste a fresh cURL command.",
+                        fields=[
+                            InteractionField(
+                                key=curl_key,
+                                label=(step.args or {}).get("label", "cURL Request"),
+                                type="text",
+                                description=(step.args or {}).get(
+                                    "description",
+                                    "Paste a new authenticated cURL command",
+                                ),
+                            )
+                        ],
+                        warning_message=(step.args or {}).get("warning_message"),
+                    )
+                if step.use == StepType.WEBVIEW:
+                    return InteractionRequest(
+                        type=InteractionType.WEBVIEW_SCRAPE,
+                        step_id=step.id,
+                        source_id=source.id,
+                        title="Web Scraper Blocked",
+                        message="Web scraper was blocked. Please resume in foreground mode.",
+                        fields=[],
+                        data={
+                            "url": (step.args or {}).get("url"),
+                            "script": (step.args or {}).get("script"),
+                            "intercept_api": (step.args or {}).get("intercept_api"),
+                            "secret_key": step.secrets.get("webview_data", "webview_data") if step.secrets else "webview_data",
+                            "force_foreground": True,
+                            "manual_only": True,
+                        },
+                    )
+
+        if source.auth and source.auth.type == AuthType.OAUTH:
+            return InteractionRequest(
+                type=InteractionType.OAUTH_START,
+                step_id="auth_check",
+                source_id=source.id,
+                title="Authorization Invalid",
+                message="Current OAuth authorization is invalid. Please reconnect.",
+                fields=[],
+            )
+
+        return InteractionRequest(
+            type=InteractionType.RETRY,
+            step_id="auth_check",
+            source_id=source.id,
+            title="Retry Required",
+            message="Credentials are invalid. Please update credentials and retry.",
+            fields=[],
+        )
 
     def _exception_to_interaction(self, source: SourceConfig, error: Exception) -> InteractionRequest | None:
         """根据异常生成特定的交互请求。"""
@@ -637,6 +798,41 @@ class Executor:
                 warning_message=error.warning_message,
                 fields=error.fields,
                 data=error.data
+            )
+
+        if isinstance(error, InvalidCredentialsError):
+            return self._build_invalid_credentials_interaction(source)
+
+        if isinstance(error, WebScraperBlockedError):
+            webview_step = None
+            if source.flow:
+                webview_step = next((step for step in source.flow if step.use == StepType.WEBVIEW), None)
+            interaction_data = {
+                "force_foreground": True,
+                "manual_only": True,
+            }
+            if webview_step:
+                interaction_data.update(
+                    {
+                        "url": (webview_step.args or {}).get("url"),
+                        "script": (webview_step.args or {}).get("script"),
+                        "intercept_api": (webview_step.args or {}).get("intercept_api"),
+                        "secret_key": webview_step.secrets.get("webview_data", "webview_data")
+                        if webview_step.secrets
+                        else "webview_data",
+                    }
+                )
+            if error.data:
+                interaction_data.update(error.data)
+
+            return InteractionRequest(
+                type=InteractionType.WEBVIEW_SCRAPE,
+                step_id=error.step_id or (webview_step.id if webview_step else "webview"),
+                source_id=source.id,
+                title="Manual Action Required",
+                message=error.message,
+                fields=[],
+                data=interaction_data,
             )
             
         # 通用网络错误 -> 重试
@@ -657,6 +853,42 @@ class RequiredSecretMissing(Exception):
         self.message = message
         self.data = data
         self.warning_message = warning_message
+        super().__init__(message)
+
+
+class InvalidCredentialsError(Exception):
+    """自定义异常：凭证已提供但无效。"""
+
+    def __init__(
+        self,
+        source_id: str,
+        step_id: str | None,
+        message: str,
+        status_code: int | None = None,
+    ):
+        self.source_id = source_id
+        self.step_id = step_id
+        self.message = message
+        self.status_code = status_code
+        super().__init__(message)
+
+
+class WebScraperBlockedError(Exception):
+    """自定义异常：WebScraper 命中登录墙/验证码等场景。"""
+
+    def __init__(
+        self,
+        source_id: str,
+        step_id: str | None,
+        message: str,
+        status_code: int | None = None,
+        data: dict | None = None,
+    ):
+        self.source_id = source_id
+        self.step_id = step_id
+        self.message = message
+        self.status_code = status_code
+        self.data = data or {}
         super().__init__(message)
 
 

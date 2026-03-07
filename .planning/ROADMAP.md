@@ -33,7 +33,7 @@ This roadmap manages the delivery path for Glancier. Completed milestones are ar
     - [ ] 11-04-PLAN.md — WidgetRenderer + micro-component behavior tests (TDD)
     - [ ] 11-05-PLAN.md — Integrations flow + dashboard `x/y/w/h` non-overlap tests (TDD)
     - [ ] 11-06-PLAN.md — Local quality gates, CI blocking workflow, and minimal smoke/UAT
-- [ ] **Phase 12: 错误暴露与展示增强 (Error Surfacing & Visibility)**
+- [x] **Phase 12: 错误暴露与展示增强 (Error Surfacing & Visibility)**
   - 核心目标：确保关键 Flow 的错误可以被完整暴露、正确归因，并在 UI 中可定位展示。
   - 认证 Flow 覆盖 OAuth 报错、WebScrap 报错、WebScraper `403`、非登录状态触发 cURL/CYL 报错。
   - 集成面板配置异常对齐 `.planning/quick/1-integration-editor/1-PLAN.md`：侧边栏状态、详情区、Monaco markers 三处联动。
@@ -41,7 +41,7 @@ This roadmap manages the delivery path for Glancier. Completed milestones are ar
   - **Plans:** 3 plans
     - [x] 12-01-PLAN.md — JSON Schema Generation & Monaco YAML Integration
     - [x] 12-02-PLAN.md — Flow Execution Fail-Fast & Error UI
-    - [ ] 12-03-PLAN.md — Interactive Step States & WebScraper Foregrounding
+    - [x] 12-03-PLAN.md — Interactive Step States & WebScraper Foregrounding
 - [ ] **Phase 13: Release v1.0 稳定版发版 (Build & Release)**
   - 核心目标：完成端到端打磨，交付可直接对外展示的安全、流畅的客户端。
   - 核心流程端到端 (E2E) 验证。

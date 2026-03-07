@@ -758,20 +758,6 @@ export default function Dashboard() {
                                                         </Tooltip>
                                                     </div>
                                                 </div>
-                                                {hasError && (
-                                                    <div className="mt-2">
-                                                        <p className="text-xs text-destructive line-clamp-2">
-                                                            {errorSummary}
-                                                        </p>
-                                                        <button
-                                                            className="w-full mt-2 h-7 text-xs font-medium rounded bg-destructive text-destructive-foreground hover:bg-foreground hover:text-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 flex items-center justify-center gap-1"
-                                                            onClick={() => openErrorDialog(source)}
-                                                        >
-                                                            <AlertTriangle className="h-3 w-3" />
-                                                            查看详情
-                                                        </button>
-                                                    </div>
-                                                )}
                                             </CardContent>
                                         </Card>
                                     );

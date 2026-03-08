@@ -3,6 +3,7 @@ FastAPI 路由：暴露 REST API 供展现层和外部调用。
 """
 
 import logging
+from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
@@ -247,6 +248,14 @@ async def oauth_authorize(source_id: str, redirect_uri: Optional[str] = None) ->
     """重定向到 OAuth 授权页面。"""
     handler = _auth_manager.get_oauth_handler(source_id)
     if handler is None:
+        stored = _get_stored_source(source_id)
+        if stored:
+            source = _resolve_stored_source(stored)
+            if source:
+                _auth_manager.register_source(source)
+                handler = _auth_manager.get_oauth_handler(source_id)
+
+    if handler is None:
         raise HTTPException(404, f"数据源 '{source_id}' 不是 OAuth 类型")
     url = handler.get_authorize_url(redirect_uri=redirect_uri)
     return {"authorize_url": url, "message": "请在浏览器中打开此 URL 进行授权"}
@@ -275,6 +284,10 @@ async def interact_source(source_id: str, data: dict[str, Any], background_tasks
     # Special Handling: OAuth Code Exchange (Client-Side Callback)
     if data.get("type") == "oauth_code_exchange":
         handler = _auth_manager.get_oauth_handler(source_id)
+        if not handler:
+            _auth_manager.register_source(source)
+            handler = _auth_manager.get_oauth_handler(source_id)
+        
         if not handler:
              raise HTTPException(400, "Source is not OAuth type")
         
@@ -332,17 +345,26 @@ async def get_auth_status(source_id: str) -> dict[str, Any]:
     if stored is None:
         raise HTTPException(404, f"数据源 '{source_id}' 不存在")
 
-    # 获取 integration 配置来确定 auth 类型
-    integration = _config.get_integration(stored.integration_id) if stored.integration_id else None
-    auth_type = "none"
-    if integration:
-        if integration.auth:
-            auth_type = integration.auth.type.value
+    source = _resolve_stored_source(stored)
 
-    # 也检查 stored.config 中的 auth 覆盖
-    if stored.config.get("auth"):
-        auth_type = stored.config.get("auth", {}).get("type", auth_type)
-    
+    # 懒加载：确保鉴权处理器已经注册
+    if source and _auth_manager.get_oauth_handler(source_id) is None:
+        _auth_manager.register_source(source)
+
+    # 获取 integration 配置来确定 auth 类型
+    auth_type = "none"
+    if source:
+        if source.auth and source.auth.type.value != "none":
+            auth_type = source.auth.type.value
+        elif source.flow:
+            for step in source.flow:
+                if step.use.value == "oauth":
+                    auth_type = "oauth"
+                    break
+                elif step.use.value == "api_key":
+                    auth_type = "api_key"
+                    break
+
     # 检查是否有注册错误
     error = _auth_manager.get_source_error(source_id)
     if error:
@@ -506,30 +528,46 @@ async def get_integration_templates(integration_id: str) -> list[dict]:
 
 @router.get("/integrations/files")
 async def list_integration_files() -> list[str]:
-    """列出所有集成配置（返回 YAML 中定义的 id）。"""
-    return _integration_manager.list_integrations()
+    """列出所有集成配置文件。"""
+    return _integration_manager.list_integration_files()
 
 
-@router.get("/integrations/files/{integration_id}")
-async def get_integration_file(integration_id: str) -> dict:
+@router.get("/integrations/files/meta")
+async def list_integration_file_metadata() -> list[dict]:
+    """列出所有集成配置文件元数据。"""
+    return _integration_manager.list_integration_file_metadata()
+
+
+@router.get("/integrations/files/{filename}")
+async def get_integration_file(filename: str) -> dict:
     """获取集成 YAML 文件内容。"""
-    content = _integration_manager.get_integration(integration_id)
+    content = _integration_manager.get_integration(filename)
     if content is None:
-        raise HTTPException(404, f"Integration {integration_id} not found")
-    return {"integration_id": integration_id, "content": content}
+        raise HTTPException(404, f"Integration file {filename} not found")
+    return {
+        "filename": filename,
+        "content": content,
+        "integration_ids": _integration_manager.get_integration_ids_in_file(filename),
+        "display_name": _integration_manager.get_integration_display_name(filename),
+    }
 
 
 @router.post("/integrations/files")
 async def create_integration_file(filename: str, request: FileContentRequest) -> dict:
     """创建新的集成 YAML 文件。"""
+    try:
+        normalized_filename = _integration_manager.normalize_filename(filename)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
     success = _integration_manager.create_integration(filename, request.content)
     if not success:
-        raise HTTPException(500, f"Failed to create integration {filename}")
-    return {"message": f"Integration {filename} created", "integration_id": filename}
+        raise HTTPException(500, f"Failed to create integration {normalized_filename}")
+    return {"message": f"Integration {normalized_filename} created", "filename": normalized_filename}
 
 
-@router.put("/integrations/files/{integration_id}")
-async def update_integration_file(integration_id: str, request: FileContentRequest) -> dict:
+@router.put("/integrations/files/{filename}")
+async def update_integration_file(filename: str, request: FileContentRequest) -> dict:
     """更新集成 YAML 文件内容。"""
     # 先进行 Pydantic 校验
     from core.config_loader import IntegrationConfig
@@ -538,32 +576,51 @@ async def update_integration_file(integration_id: str, request: FileContentReque
     try:
         # 解析 YAML 内容
         parsed = yaml.safe_load(request.content)
-        if not parsed:
+        if parsed is None:
             raise HTTPException(400, "Empty YAML content")
+        if not isinstance(parsed, dict):
+            raise HTTPException(400, "YAML top-level must be an object")
 
-        # 校验 integrations 列表
-        if "integrations" not in parsed:
-            raise HTTPException(400, "Missing 'integrations' key in YAML")
+        # 单文件单实例：不再接受 legacy integrations 数组结构
+        if "integrations" in parsed:
+            raise HTTPException(
+                400,
+                "Legacy 'integrations' array is no longer supported. Use a single integration object per file.",
+            )
 
-        integrations = parsed.get("integrations", [])
-        if not isinstance(integrations, list):
-            raise HTTPException(400, "'integrations' must be a list")
-
-        # 使用 Pydantic 校验每个 integration
+        # 运行时 id 由文件名决定
+        file_based_id = Path(filename).stem
+        integration_payload = dict(parsed)
         diagnostics = []
-        for idx, integration_data in enumerate(integrations):
-            try:
-                IntegrationConfig.model_validate(integration_data)
-            except ValidationError as exc:
-                # 将 Pydantic ValidationError 转换为前端可用的诊断信息
-                for error in exc.errors():
-                    field_path = ".".join(str(loc) for loc in error["loc"])
-                    diagnostics.append({
-                        "source": "backend",
-                        "message": error["msg"],
-                        "code": error["type"],
-                        "fieldPath": f"integrations[{idx}].{field_path}" if field_path else f"integrations[{idx}]"
-                    })
+
+        declared_id = integration_payload.pop("id", None)
+        if isinstance(declared_id, str) and declared_id and declared_id != file_based_id:
+            diagnostics.append(
+                {
+                    "source": "backend",
+                    "message": (
+                        f"Integration id '{declared_id}' conflicts with filename id '{file_based_id}'. "
+                        "Please remove id from YAML or rename the file."
+                    ),
+                    "code": "value_error.integration_id_conflict",
+                    "fieldPath": "id",
+                }
+            )
+
+        integration_payload["id"] = file_based_id
+
+        try:
+            IntegrationConfig.model_validate(integration_payload)
+        except ValidationError as exc:
+            # 将 Pydantic ValidationError 转换为前端可用的诊断信息
+            for error in exc.errors():
+                field_path = ".".join(str(loc) for loc in error["loc"])
+                diagnostics.append({
+                    "source": "backend",
+                    "message": error["msg"],
+                    "code": error["type"],
+                    "fieldPath": field_path or "",
+                })
 
         # 如果有校验错误，返回详细信息
         if diagnostics:
@@ -585,19 +642,19 @@ async def update_integration_file(integration_id: str, request: FileContentReque
         raise HTTPException(400, f"Validation failed: {exc}")
 
     # 校验通过，保存文件
-    success = _integration_manager.save_integration(integration_id, request.content)
+    success = _integration_manager.save_integration(filename, request.content)
     if not success:
-        raise HTTPException(500, f"Failed to save integration {integration_id}")
-    return {"message": f"Integration {integration_id} saved", "integration_id": integration_id}
+        raise HTTPException(404, f"Integration file {filename} not found")
+    return {"message": f"Integration {filename} saved", "filename": filename}
 
 
-@router.delete("/integrations/files/{integration_id}")
-async def delete_integration_file(integration_id: str) -> dict:
+@router.delete("/integrations/files/{filename}")
+async def delete_integration_file(filename: str) -> dict:
     """删除集成 YAML 文件。"""
-    success = _integration_manager.delete_integration(integration_id)
+    success = _integration_manager.delete_integration(filename)
     if not success:
-        raise HTTPException(500, f"Failed to delete integration {integration_id}")
-    return {"message": f"Integration {integration_id} deleted", "integration_id": integration_id}
+        raise HTTPException(404, f"Integration file {filename} not found")
+    return {"message": f"Integration {filename} deleted", "filename": filename}
 
 
 # ── Config Reload ─────────────────────────────────────────────────────
@@ -653,12 +710,18 @@ async def reload_config() -> dict:
 
 @router.get("/integrations/files/{filename}/sources")
 async def get_integration_sources(filename: str) -> list[dict]:
-    """获取使用指定集成的所有数据源。"""
-    # 从文件名提取 integration_id (去掉 .yaml 后缀)
-    integration_id = filename.replace(".yaml", "")
+    """获取使用指定文件中任一 integration 的所有数据源。"""
+    content = _integration_manager.get_integration(filename)
+    if content is None:
+        raise HTTPException(404, f"Integration file {filename} not found")
+
+    integration_ids = set(_integration_manager.get_integration_ids_in_file(filename))
+    if not integration_ids:
+        return []
+
     # 从 JSON 存储中查找
     all_sources = _resource_manager.load_sources()
-    related = [s for s in all_sources if s.integration_id == integration_id]
+    related = [s for s in all_sources if s.integration_id in integration_ids]
     return [s.model_dump() for s in related]
 
 

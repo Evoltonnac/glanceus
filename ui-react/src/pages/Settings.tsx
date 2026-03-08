@@ -36,8 +36,22 @@ const DEFAULT_SETTINGS: SystemSettings = {
     autostart: false,
     proxy: "",
     encryption_enabled: false,
+    scraper_timeout_seconds: 10,
     master_key: null,
 };
+
+const SCRAPER_TIMEOUT_MIN_SECONDS = 1;
+const SCRAPER_TIMEOUT_MAX_SECONDS = 300;
+
+function normalizeScraperTimeoutSeconds(value: number | undefined): number {
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+        return 10;
+    }
+    return Math.min(
+        SCRAPER_TIMEOUT_MAX_SECONDS,
+        Math.max(SCRAPER_TIMEOUT_MIN_SECONDS, Math.floor(value)),
+    );
+}
 
 export default function SettingsPage() {
     const navigate = useNavigate();
@@ -60,7 +74,13 @@ export default function SettingsPage() {
             invoke<boolean>("get_autostart").catch(() => false),
         ])
             .then(([s, autostartEnabled]) => {
-                setSettings({ ...s, autostart: autostartEnabled });
+                setSettings({
+                    ...s,
+                    autostart: autostartEnabled,
+                    scraper_timeout_seconds: normalizeScraperTimeoutSeconds(
+                        s.scraper_timeout_seconds,
+                    ),
+                });
             })
             .catch(console.error)
             .finally(() => setLoading(false));
@@ -301,6 +321,52 @@ export default function SettingsPage() {
                                                         }))
                                                     }
                                                     className="max-w-md"
+                                                />
+                                            </div>
+                                        </section>
+
+                                        <Separator />
+
+                                        {/* ── 抓取设置 ── */}
+                                        <section className="space-y-4">
+                                            <div className="flex items-center gap-2 text-base font-semibold">
+                                                <MonitorPlay className="w-5 h-5 text-primary" />
+                                                抓取设置
+                                            </div>
+                                            <div className="space-y-3 rounded-lg border border-border px-5 py-4 bg-background hover:shadow-soft-elevation transition-shadow duration-150">
+                                                <div>
+                                                    <Label
+                                                        htmlFor="scraper-timeout"
+                                                        className="text-sm font-medium"
+                                                    >
+                                                        抓取任务超时（秒）
+                                                    </Label>
+                                                    <p className="text-xs text-muted-foreground mt-1 mb-3">
+                                                        默认 10 秒。超时后任务会自动移出队列并继续下一个任务。
+                                                    </p>
+                                                </div>
+                                                <Input
+                                                    id="scraper-timeout"
+                                                    type="number"
+                                                    min={SCRAPER_TIMEOUT_MIN_SECONDS}
+                                                    max={SCRAPER_TIMEOUT_MAX_SECONDS}
+                                                    step={1}
+                                                    value={
+                                                        settings.scraper_timeout_seconds
+                                                    }
+                                                    onChange={(e) => {
+                                                        const raw = Number(
+                                                            e.target.value,
+                                                        );
+                                                        setSettings((s) => ({
+                                                            ...s,
+                                                            scraper_timeout_seconds:
+                                                                normalizeScraperTimeoutSeconds(
+                                                                    raw,
+                                                                ),
+                                                        }));
+                                                    }}
+                                                    className="max-w-[140px]"
                                                 />
                                             </div>
                                         </section>

@@ -3,7 +3,7 @@ import json
 import logging
 from pathlib import Path
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +12,9 @@ class SystemSettings(BaseModel):
     autostart: bool = False
     proxy: str = ""  # e.g. "http://127.0.0.1:7890"
     encryption_enabled: bool = False
+    # Timeout for a single webview scraper task in seconds.
+    # Timed-out tasks are skipped so queue can continue.
+    scraper_timeout_seconds: int = Field(default=10, ge=1, le=300)
     # base64 encoded AES-256 master key; stored locally, never synced
     master_key: Optional[str] = None
     theme: str = "system" # can be 'light', 'dark', or 'system'

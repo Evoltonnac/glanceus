@@ -20,6 +20,19 @@ export interface ReloadConfigDiagnostic {
   fieldPath?: string;
 }
 
+export interface IntegrationFileResponse {
+  filename: string;
+  content: string;
+  integration_ids?: string[];
+  display_name?: string | null;
+}
+
+export interface IntegrationFileMetadata {
+  filename: string;
+  id: string;
+  name?: string | null;
+}
+
 class ApiClient {
   async getSources(): Promise<SourceSummary[]> {
     const res = await fetch(`${BASE_URL}/sources`);
@@ -145,9 +158,15 @@ class ApiClient {
     return res.json();
   }
 
+  async listIntegrationFileMetadata(): Promise<IntegrationFileMetadata[]> {
+    const res = await fetch(`${BASE_URL}/integrations/files/meta`);
+    if (!res.ok) throw new Error("Failed to fetch integration metadata");
+    return res.json();
+  }
+
   async getIntegrationFile(
     filename: string,
-  ): Promise<{ filename: string; content: string }> {
+  ): Promise<IntegrationFileResponse> {
     const res = await fetch(`${BASE_URL}/integrations/files/${filename}`);
     if (!res.ok) throw new Error(`Failed to fetch integration ${filename}`);
     return res.json();
@@ -156,7 +175,7 @@ class ApiClient {
   async createIntegrationFile(
     filename: string,
     content: string = "",
-  ): Promise<void> {
+  ): Promise<{ filename: string }> {
     const res = await fetch(
       `${BASE_URL}/integrations/files?filename=${encodeURIComponent(filename)}`,
       {
@@ -166,6 +185,7 @@ class ApiClient {
       },
     );
     if (!res.ok) throw new Error(`Failed to create integration ${filename}`);
+    return res.json();
   }
 
   async saveIntegrationFile(filename: string, content: string): Promise<void> {
@@ -348,6 +368,7 @@ export interface SystemSettings {
   autostart: boolean;
   proxy: string;
   encryption_enabled: boolean;
+  scraper_timeout_seconds: number;
   master_key?: string | null;
   theme?: string;
 }

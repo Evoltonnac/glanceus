@@ -87,7 +87,7 @@ async def lifespan(app: FastAPI):
                 # 将 StoredSource 解析为 SourceConfig
                 resolved = resolve_stored_source(stored, config)
                 if resolved:
-                    await executor.fetch_source(resolved)
+                    asyncio.create_task(executor.fetch_source(resolved))
                 else:
                     logger.warning(f"[{stored.id}] 无法解析 StoredSource，跳过刷新")
             except Exception as e:

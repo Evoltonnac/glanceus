@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: 跃迁 —— Glancier 正式版发布计划
 status: in_progress
-last_updated: "2026-03-08T10:00:00Z"
+last_updated: "2026-03-08T10:30:00Z"
 progress:
   total_phases: 13
   completed_phases: 11
@@ -28,13 +28,14 @@ Status: Phase 12 plan 03 complete (interactive state split + webscraper foregrou
 ## Session Continuity
 
 Last session: 2026-03-08
-Stopped at: Completed Quick Task 7: Web fallback UI and prompts for webview scraping (non-Tauri environments) and documented in architecture guide.
+Stopped at: Added global search todo to Topnav.
 Resume file: .planning/STATE.md
-Last activity: 2026-03-08 - Added "Desktop App Only" fallback UI to FlowHandler and ScraperStatusBanner; updated docs/webview_scraper_architecture.md.
+Last activity: 2026-03-08 - Added global search todo to pending list.
 
 ## Accumulated Context
 
 ### Pending Todos
+- [ ] [2026-03-08] topnav-global-search (Area: ui)
 - [ ] [2026-03-06] dashboard-sidebar-hover-add-widget (Area: ui)
 - [ ] [2026-03-06] dashboard-multi-view-tabs (Area: ui)
 - [ ] [2026-03-06] flowhandler-refactor (Area: ui)

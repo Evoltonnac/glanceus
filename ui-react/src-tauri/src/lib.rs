@@ -34,11 +34,18 @@ pub fn run() {
             scraper::show_scraper_window,
             scraper::cancel_scraper_task,
             scraper::scraper_log,
+            scraper::get_scraper_error_logs,
             set_autostart,
             get_autostart
         ])
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None))
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                window.hide().unwrap();
+            }
+        })
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -87,4 +94,3 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-

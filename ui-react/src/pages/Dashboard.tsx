@@ -8,17 +8,6 @@ import type {
     ViewComponent,
 } from "../types/config";
 import {
-    RefreshCw,
-    Database,
-    Trash2,
-    Wrench,
-    AlertTriangle,
-    ChevronLeft,
-    ChevronRight,
-    Plus,
-    Clock,
-} from "lucide-react";
-import {
     Card,
     CardContent,
     CardHeader,
@@ -38,6 +27,12 @@ import {
     DialogFooter,
 } from "../components/ui/dialog";
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
+import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
@@ -52,6 +47,18 @@ import { useSidebar } from "../hooks/useSidebar";
 import { useScraper } from "../hooks/useScraper";
 import { mergeViewItemsWithGridNodes } from "./dashboardLayout";
 import { invoke } from "@tauri-apps/api/core";
+import {
+    RefreshCw,
+    Database,
+    Trash2,
+    Wrench,
+    AlertTriangle,
+    ChevronLeft,
+    ChevronRight,
+    Plus,
+    Clock,
+    MoreVertical,
+} from "lucide-react";
 
 // GridStack layout constants
 const GRID_ROW_HEIGHT = 60;
@@ -153,6 +160,7 @@ export default function Dashboard() {
     const {
         activeScraper,
         webviewQueue,
+        scraperLogs,
         handleSkipScraper,
         handleClearScraperQueue,
         handlePushToQueue,
@@ -337,6 +345,25 @@ export default function Dashboard() {
     useEffect(() => {
         loadData();
     }, [loadData]);
+
+    // Poll for status updates if any source is in a transient state
+    useEffect(() => {
+        const hasTransient = sources.some((s) => {
+            const sourceData = dataMap[s.id];
+            const isRefreshing = s.status === "refreshing";
+            const isSuspended = s.status === "suspended";
+            const hasNoData = !s.has_data && !sourceData?.data;
+            return isRefreshing || isSuspended || hasNoData;
+        });
+
+        if (!hasTransient) return;
+
+        const interval = setInterval(() => {
+            void loadData();
+        }, 3000);
+
+        return () => clearInterval(interval);
+    }, [sources, dataMap, loadData]);
 
     useEffect(() => {
         const onRefresh = async () => {
@@ -652,9 +679,16 @@ export default function Dashboard() {
                                             <CardContent className="p-3">
                                                 <div className="flex items-center justify-between gap-1">
                                                     <div className="flex items-center gap-2 overflow-hidden min-w-0 flex-1">
-                                                        <span className="font-medium text-sm truncate">
-                                                            {source.name}
-                                                        </span>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <span className="font-medium text-sm truncate">
+                                                                    {source.name}
+                                                                </span>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent side="top">
+                                                                {source.name}
+                                                            </TooltipContent>
+                                                        </Tooltip>
                                                     </div>
                                                     <div className="flex items-center gap-1 shrink-0">
                                                         {actionableInteraction ? (
@@ -747,44 +781,36 @@ export default function Dashboard() {
                                                                 }
                                                             </Badge>
                                                         )}
-                                                        <Tooltip>
-                                                            <TooltipTrigger
-                                                                asChild
-                                                            >
-                                                                <button
-                                                                    className="h-6 w-6 inline-flex items-center justify-center rounded text-muted-foreground hover:bg-foreground hover:text-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-6 w-6 text-muted-foreground hover:bg-foreground hover:text-background transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand/50"
+                                                                >
+                                                                    <MoreVertical className="h-3 w-3" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                                <DropdownMenuItem
                                                                     onClick={() =>
-                                                                        handleRefreshSource(
-                                                                            source.id,
-                                                                        )
+                                                                        handleRefreshSource(source.id)
                                                                     }
                                                                 >
-                                                                    <RefreshCw className="h-3 w-3" />
-                                                                </button>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent side="top">
-                                                                <p>刷新</p>
-                                                            </TooltipContent>
-                                                        </Tooltip>
-                                                        <Tooltip>
-                                                            <TooltipTrigger
-                                                                asChild
-                                                            >
-                                                                <button
-                                                                    className="h-6 w-6 inline-flex items-center justify-center rounded text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+                                                                    <RefreshCw className="mr-2 h-4 w-4" />
+                                                                    <span>刷新</span>
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem
+                                                                    className="text-destructive"
                                                                     onClick={() =>
-                                                                        setDeletingSourceId(
-                                                                            source.id,
-                                                                        )
+                                                                        setDeletingSourceId(source.id)
                                                                     }
                                                                 >
-                                                                    <Trash2 className="h-3 w-3" />
-                                                                </button>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent side="top">
-                                                                <p>删除</p>
-                                                            </TooltipContent>
-                                                        </Tooltip>
+                                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                                    <span>删除</span>
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
                                                     </div>
                                                 </div>
                                             </CardContent>
@@ -922,6 +948,7 @@ export default function Dashboard() {
                         null
                     }
                     queueLength={webviewQueue.length}
+                    scraperLogs={scraperLogs}
                     onShowWindow={handleShowScraperWindow}
                     onSkip={handleSkipScraper}
                     onClearQueue={handleClearScraperQueue}
@@ -950,7 +977,7 @@ export default function Dashboard() {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-3">
-                        <div className="rounded border border-error/20 bg-error/5 p-3 text-sm text-error whitespace-pre-wrap break-words">
+                        <div className="rounded border border-error/20 bg-error/5 p-3 text-sm text-error whitespace-pre-wrap break-all w-full">
                             {errorSummary}
                         </div>
                         {canShowDetails && (
@@ -967,7 +994,7 @@ export default function Dashboard() {
                             </button>
                         )}
                         {showErrorDetails && canShowDetails && (
-                            <pre className="max-h-72 overflow-auto rounded border border-border bg-background p-3 text-xs leading-relaxed text-muted-foreground whitespace-pre-wrap break-words">
+                            <pre className="max-h-72 overflow-auto rounded border border-border bg-background p-3 text-xs leading-relaxed text-muted-foreground whitespace-pre-wrap break-all w-full">
                                 {errorDetails}
                             </pre>
                         )}

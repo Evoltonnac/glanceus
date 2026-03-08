@@ -10,8 +10,9 @@ import {
 } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { AlertCircle, ExternalLink, Wrench } from "lucide-react";
+import { AlertCircle, ExternalLink, Wrench, Monitor, Download } from "lucide-react";
 import { api } from "../../api/client";
+import { isTauri } from "../../lib/utils";
 
 interface FlowHandlerProps {
     source: SourceSummary | null;
@@ -31,6 +32,7 @@ export function FlowHandler({
     onInteractSuccess,
     onPushToQueue,
 }: FlowHandlerProps) {
+    const inTauri = isTauri();
     const [formData, setFormData] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -235,32 +237,68 @@ export function FlowHandler({
             case "webview_scrape":
                 return (
                     <div className="py-6 flex flex-col items-center justify-center space-y-4">
-                        <div className="w-12 h-12 rounded-full bg-warning/20 flex items-center justify-center">
-                            <Wrench className="w-6 h-6 text-warning" />
-                        </div>
-                        <div className="text-sm text-muted-foreground text-center">
-                            <p className="font-medium text-foreground mb-1">
-                                需要手动继续 Web 抓取
-                            </p>
-                            <p>点击下方按钮将 WebView 以前台模式启动。</p>
-                            <p className="mt-1">
-                                你可以在窗口中登录或通过验证码，完成后将自动继续执行。
-                            </p>
-                        </div>
-                        <Button
-                            onClick={() => {
-                                if (!source || !onPushToQueue) return;
-                                const added = onPushToQueue(source, {
-                                    foreground: true,
-                                });
-                                if (added) {
-                                    onClose();
-                                }
-                            }}
-                            className="w-full"
-                        >
-                            前台手动启动
-                        </Button>
+                        {inTauri ? (
+                            <>
+                                <div className="w-12 h-12 rounded-full bg-brand/20 flex items-center justify-center">
+                                    <Wrench className="w-6 h-6 text-brand" />
+                                </div>
+                                <div className="text-sm text-muted-foreground text-center">
+                                    <p className="font-semibold text-foreground mb-1">
+                                        需要手动介入
+                                    </p>
+                                    <p>点击下方按钮将浏览器窗口启动在前台。</p>
+                                    <p className="mt-1">
+                                        你可以在窗口中登录或通过验证码，完成后数据将自动采集并继续。
+                                    </p>
+                                </div>
+                                <Button
+                                    onClick={() => {
+                                        if (!source || !onPushToQueue) return;
+                                        const added = onPushToQueue(source, {
+                                            foreground: true,
+                                        });
+                                        if (added) {
+                                            onClose();
+                                        }
+                                    }}
+                                    className="w-full"
+                                >
+                                    在前台打开浏览器
+                                </Button>
+                            </>
+                        ) : (
+                            <>
+                                <div className="w-12 h-12 rounded-full bg-muted/20 flex items-center justify-center">
+                                    <Monitor className="w-6 h-6 text-muted-foreground" />
+                                </div>
+                                <div className="text-sm text-muted-foreground text-center space-y-2">
+                                    <p className="font-semibold text-foreground">
+                                        此功能仅在桌面客户端可用
+                                    </p>
+                                    <p>
+                                        由于浏览器安全限制，网页抓取任务（如自动登录、后台采集）无法在
+                                        Web 端直接运行。
+                                    </p>
+                                    <p className="text-xs bg-muted/50 p-2 rounded-md border border-border/50">
+                                        请下载并使用 Glancier
+                                        桌面客户端，它内置了安全的自动化引擎，能完美支持此类操作。
+                                    </p>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    className="w-full gap-2 border-brand/20 hover:bg-brand/5 hover:border-brand/40 text-brand"
+                                    onClick={() =>
+                                        window.open(
+                                            "https://github.com/xingminghua/quota-board/releases",
+                                            "_blank",
+                                        )
+                                    }
+                                >
+                                    <Download className="h-4 w-4" />
+                                    下载桌面客户端
+                                </Button>
+                            </>
+                        )}
                     </div>
                 );
 

@@ -30,6 +30,10 @@ Handled in `core/executor.py` and `core/auth/`. The flow engine acts as a state 
 
 React's role is strictly as an event relayer. It sits idle, listening to `window.__TAURI__.event.listen("scraper_result", ...)` and `scraper_auth_required`. It bridges the gap between the Rust desktop environment and the Python REST backend.
 
+Scraper UI/hook logic is **Tauri-only** by design:
+- In plain browser runtime, scraper queue actions must be no-op and never invoke Tauri commands.
+- In Tauri runtime, each scraper task uses a configurable timeout (default `10s` from Settings). Timed-out tasks are removed from queue and scheduler proceeds to next task.
+
 ### 3.3 Singleton WebView & Resource Blocking (Rust Core)
 
 Implemented in `ui-react/src-tauri/src/scraper.rs`.
@@ -41,14 +45,23 @@ Implemented in `ui-react/src-tauri/src/scraper.rs`.
 
 The most critical edge case in background scraping is Authentication (e.g., Session Expired, Cloudflare Check).
 
-**Auth Fallback (401/403 Handling):**
-If the overridden `fetch` or `XHR` encounters a `401 Unauthorized` or `403 Forbidden` response from the target `intercept_api`, silent extraction has failed. 
-1. The script immediately halts extraction and invokes `handle_scraper_auth`.
-2. Rust emits an event to React and crucially, **turns the hidden WebView visible (`win.show()`) and focuses it**.
-3. The user is presented with the actual platform login screen natively. They can log in, solve a CAPTCHA, or pass security checks manually.
-4. Once logged in, the page re-renders/redirects, the interceptor re-triggers automatically on the successful API call, and the flow succeeds seamlessly (subsequently hiding the window).
+### 4.2 Non-Tauri Environment (Web Fallback)
+
+Since the WebView scraper relies on Tauri's native window capabilities and IPC commands, it cannot function in a standard browser environment.
+
+1.  **Detection:** The frontend uses `isTauri()` (detecting `window.__TAURI_INTERNALS__`) to determine the current runtime.
+2.  **Interaction Blocking:** When a flow reaches a `webview_scrape` interaction state in a browser:
+    -   The `FlowHandler` dialog displays a fallback UI explaining that the feature is desktop-only.
+    -   It provides a direct link to the GitHub Releases page for users to download the desktop client.
+    -   The "Manual Start" button is hidden/replaced by the download CTA.
+3.  **Status Banner:** The `ScraperStatusBanner` in the dashboard detects the environment:
+    -   **Tauri:** Shows full controls, task queue length, and real-time logs.
+    -   **Web:** Shows a subtle "Web 端无法进行网页抓取" (Web scraping unavailable) message and a "Get Client" button.
+
+This ensures users are never stuck without knowing why a data source isn't refreshing, while maintaining a clear upgrade path to the full desktop experience.
 
 ## 5. Integration Developer Guide
+
 
 To utilize the WebView scraper, define a `webview` step in your `flow` array.
 

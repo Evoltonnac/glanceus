@@ -71,17 +71,30 @@ async def list_sources() -> list[dict]:
 
     result = []
     for source in stored_sources:
-        # 获取运行时状态
+        # 获取持久化状态（来自 data.json）
         latest_data = _data_controller.get_latest(source.id)
-        state = _executor.get_source_state(source.id)
+
+        # 优先使用持久化状态，其次回退到内存运行时状态
+        # 注意：内存状态在服务重启后会丢失，因此优先使用持久化数据
+        persisted_status = latest_data.get("status") if latest_data else None
+        persisted_message = latest_data.get("message") if latest_data else None
+        persisted_interaction = latest_data.get("interaction") if latest_data else None
+
+        # 获取运行时状态（内存中）
+        runtime_state = _executor.get_source_state(source.id)
 
         # 确定 has_data
         has_data = latest_data is not None and latest_data.get("data") is not None
 
         # 确定 error（优先使用持久化错误，其次回落到运行时 ERROR 状态消息首行）
         error = latest_data.get("error") if latest_data else None
-        if not error and state and state.status == SourceStatus.ERROR and state.message:
-            error = state.message.splitlines()[0].strip() or "Execution failed"
+        if not error and runtime_state and runtime_state.status == SourceStatus.ERROR and runtime_state.message:
+            error = runtime_state.message.splitlines()[0].strip() or "Execution failed"
+
+        # 优先使用持久化状态，如果没有则使用运行时状态
+        status = persisted_status if persisted_status else (runtime_state.status.value if runtime_state else "disabled")
+        message = persisted_message if persisted_message else (runtime_state.message if runtime_state else None)
+        interaction = persisted_interaction if persisted_interaction else (runtime_state.interaction.model_dump() if runtime_state and runtime_state.interaction else None)
 
         # 构建 SourceSummary
         summary = {
@@ -95,10 +108,10 @@ async def list_sources() -> list[dict]:
             "has_data": has_data,
             "updated_at": latest_data.get("updated_at") if latest_data else None,
             "error": error,
-            "error_details": state.message if state and state.status == SourceStatus.ERROR else None,
-            "status": state.status.value if state else "disabled",
-            "message": state.message if state else None,
-            "interaction": state.interaction.model_dump() if state and state.interaction else None,
+            "error_details": message if status == "error" else None,
+            "status": status,
+            "message": message,
+            "interaction": interaction,
         }
 
         # Try to determine auth_type from flow

@@ -172,7 +172,11 @@ export function AddWidgetDialog({
                                                     : "border-border hover:border-border/80 hover:shadow-soft-elevation hover:-translate-y-0.5"
                                             } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
                                             onClick={() =>
-                                                setSelectedTemplateIdx(idx)
+                                                setSelectedTemplateIdx(
+                                                    selectedTemplateIdx === idx
+                                                        ? -1
+                                                        : idx,
+                                                )
                                             }
                                             tabIndex={0}
                                             onKeyDown={(e) => {
@@ -181,7 +185,12 @@ export function AddWidgetDialog({
                                                     e.key === " "
                                                 ) {
                                                     e.preventDefault();
-                                                    setSelectedTemplateIdx(idx);
+                                                    setSelectedTemplateIdx(
+                                                        selectedTemplateIdx ===
+                                                            idx
+                                                            ? -1
+                                                            : idx,
+                                                    );
                                                 }
                                             }}
                                         >

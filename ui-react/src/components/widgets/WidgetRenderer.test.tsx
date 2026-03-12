@@ -1,104 +1,233 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 
 import { render } from "../../test/render";
 import { WidgetRenderer } from "./WidgetRenderer";
 
-vi.mock("./HeroMetric", () => ({
-    HeroMetric: () => <div data-testid="hero-metric-widget" />,
-}));
-
-vi.mock("./KeyValueGrid", () => ({
-    KeyValueGrid: () => <div data-testid="key-value-grid-widget" />,
-}));
-
-vi.mock("./ProgressBar", () => ({
-    ProgressBar: () => <div data-testid="progress-bar-widget" />,
-}));
-
-vi.mock("./ListWidget", () => ({
-    ListWidget: () => <div data-testid="list-widget" />,
-}));
-
 describe("WidgetRenderer", () => {
-    it("dispatches widget types to their dedicated components", () => {
-        const data = { value: 1 };
-
-        render(
-            <WidgetRenderer
-                widget={{ type: "hero_metric", amount: "{value}" } as any}
-                data={data}
-            />,
-        );
-        expect(screen.getByTestId("hero-metric-widget")).toBeInTheDocument();
-
-        render(
-            <WidgetRenderer
-                widget={{ type: "key_value_grid", items: { A: "{value}" } } as any}
-                data={data}
-            />,
-        );
-        expect(screen.getByTestId("key-value-grid-widget")).toBeInTheDocument();
-
-        render(
-            <WidgetRenderer
-                widget={{ type: "progress_bar", usage: "{value}", limit: "100" } as any}
-                data={data}
-            />,
-        );
-        expect(screen.getByTestId("progress-bar-widget")).toBeInTheDocument();
+    it("renders Progress values from list item templates", () => {
+        const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
         render(
             <WidgetRenderer
                 widget={
                     {
-                        type: "list",
-                        data_source: "items",
-                        render: { type: "hero_metric", amount: "{item.value}" },
+                        type: "List",
+                        data_source: "keys_list",
+                        item_alias: "key_item",
+                        layout: "grid",
+                        columns: 2,
+                        pagination: true,
+                        page_size: 4,
+                        render: [
+                            {
+                                type: "Progress",
+                                label: "{key_item.name}",
+                                value: "{key_item.percent}",
+                                thresholds: {
+                                    warning: 75,
+                                    attention: 90,
+                                },
+                            },
+                        ],
                     } as any
                 }
-                data={{ items: [{ value: 1 }] }}
+                data={{
+                    keys_list: [{ name: "Key A", percent: 67 }],
+                }}
             />,
         );
-        expect(screen.getByTestId("list-widget")).toBeInTheDocument();
+
+        expect(screen.getByText("Key A")).toBeInTheDocument();
+        expect(screen.getByText("67%")).toBeInTheDocument();
+        expect(
+            errorSpy.mock.calls.some((call) =>
+                String(call[0]).includes("Widget validation failed:"),
+            ),
+        ).toBe(false);
+
+        errorSpy.mockRestore();
     });
 
-    it("renders unknown type fallback message", () => {
+    it("shows validation fallback when Progress value is not numeric", () => {
+        const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
         render(
             <WidgetRenderer
-                widget={{ type: "unknown_widget" } as any}
-                data={{}}
+                widget={
+                    {
+                        type: "List",
+                        data_source: "keys_list",
+                        item_alias: "key_item",
+                        render: [
+                            {
+                                type: "Progress",
+                                value: "{key_item.percent}",
+                            },
+                        ],
+                    } as any
+                }
+                data={{
+                    keys_list: [{ percent: "not-a-number" }],
+                }}
             />,
         );
 
         expect(
-            screen.getByText("Unknown widget type: unknown_widget"),
+            screen.getByText("Invalid widget configuration: Progress"),
         ).toBeInTheDocument();
+        expect(
+            errorSpy.mock.calls.some((call) =>
+                String(call[0]).includes("Widget validation failed:"),
+            ),
+        ).toBe(true);
+
+        errorSpy.mockRestore();
     });
 
-    it("applies row-span defaults and custom override to wrapper style", () => {
-        const { rerender } = render(
+    it("shows pagination controls and switches pages", () => {
+        render(
             <WidgetRenderer
-                widget={{ type: "hero_metric", amount: "{value}" } as any}
-                data={{ value: 1 }}
+                widget={
+                    {
+                        type: "List",
+                        data_source: "keys_list",
+                        item_alias: "key_item",
+                        pagination: true,
+                        page_size: 2,
+                        render: [
+                            {
+                                type: "TextBlock",
+                                text: "{key_item.name}",
+                            },
+                        ],
+                    } as any
+                }
+                data={{
+                    keys_list: [
+                        { name: "Key 1" },
+                        { name: "Key 2" },
+                        { name: "Key 3" },
+                    ],
+                }}
             />,
         );
 
-        const defaultWrapper = screen
-            .getByTestId("hero-metric-widget")
-            .parentElement;
-        expect(defaultWrapper?.getAttribute("style")).toContain("flex: 2");
+        expect(screen.getByText("Page 1 / 2")).toBeInTheDocument();
+        expect(screen.getByText("Key 1")).toBeInTheDocument();
+        expect(screen.getByText("Key 2")).toBeInTheDocument();
+        expect(screen.queryByText("Key 3")).toBeNull();
 
-        rerender(
+        fireEvent.click(screen.getByRole("button", { name: "Next" }));
+
+        expect(screen.getByText("Page 2 / 2")).toBeInTheDocument();
+        expect(screen.getByText("Key 3")).toBeInTheDocument();
+        expect(screen.queryByText("Key 1")).toBeNull();
+        expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+
+        fireEvent.click(screen.getByRole("button", { name: "Prev" }));
+        expect(screen.getByText("Page 1 / 2")).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Prev" })).toBeDisabled();
+    });
+
+    it("formats decimal display via expression", () => {
+        render(
             <WidgetRenderer
-                widget={{ type: "hero_metric", amount: "{value}", row_span: 5 } as any}
-                data={{ value: 1 }}
+                widget={
+                    {
+                        type: "TextBlock",
+                        text: "{fixed(value, 2)}",
+                    } as any
+                }
+                data={{ value: 12.3456 }}
             />,
         );
 
-        const customWrapper = screen
-            .getByTestId("hero-metric-widget")
-            .parentElement;
-        expect(customWrapper?.getAttribute("style")).toContain("flex: 5");
+        expect(screen.getByText("12.35")).toBeInTheDocument();
+    });
+
+    it("renders primitive result for full expression text", () => {
+        render(
+            <WidgetRenderer
+                widget={
+                    {
+                        type: "TextBlock",
+                        text: "{value}",
+                    } as any
+                }
+                data={{ value: 42 }}
+            />,
+        );
+
+        expect(screen.getByText("42")).toBeInTheDocument();
+    });
+
+    it("supports ternary expressions in templates", () => {
+        render(
+            <WidgetRenderer
+                widget={
+                    {
+                        type: "TextBlock",
+                        text: "{usage > 80 ? 'High' : 'Normal'}",
+                    } as any
+                }
+                data={{ usage: 91 }}
+            />,
+        );
+
+        expect(screen.getByText("High")).toBeInTheDocument();
+    });
+
+    it("filters list items with expression engine", () => {
+        render(
+            <WidgetRenderer
+                widget={
+                    {
+                        type: "List",
+                        data_source: "keys_list",
+                        item_alias: "key_item",
+                        filter: "key_item.active && key_item.percent >= 80",
+                        render: [
+                            {
+                                type: "TextBlock",
+                                text: "{key_item.name}",
+                            },
+                        ],
+                    } as any
+                }
+                data={{
+                    keys_list: [
+                        { name: "Key 1", active: true, percent: 90 },
+                        { name: "Key 2", active: false, percent: 95 },
+                        { name: "Key 3", active: true, percent: 70 },
+                    ],
+                }}
+            />,
+        );
+
+        expect(screen.getByText("Key 1")).toBeInTheDocument();
+        expect(screen.queryByText("Key 2")).toBeNull();
+        expect(screen.queryByText("Key 3")).toBeNull();
+    });
+
+    it("applies TextBlock multi-line clamp styles", () => {
+        render(
+            <WidgetRenderer
+                widget={
+                    {
+                        type: "TextBlock",
+                        text: "A very long line that should be clamped to two lines in declarative UI rendering.",
+                        maxLines: 2,
+                    } as any
+                }
+                data={{}}
+            />,
+        );
+
+        const text = screen.getByText(
+            "A very long line that should be clamped to two lines in declarative UI rendering.",
+        );
+        expect(text).toHaveStyle({ WebkitLineClamp: "2" });
+        expect(text).toHaveStyle({ display: "-webkit-box" });
     });
 });

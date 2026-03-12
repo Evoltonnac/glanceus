@@ -8,7 +8,7 @@ import { loader } from "@monaco-editor/react";
 import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
 import YamlWorker from "../../workers/yaml.worker?worker";
 
-// Import schema directly to let Vite bundle it
+// Import the composed full schema (Python flow + React SDUI) for Monaco validation.
 import bundledSchema from "../../../../config/schemas/integration.schema.json";
 
 // Tell @monaco-editor/react to use locally installed monaco-editor instead of CDN

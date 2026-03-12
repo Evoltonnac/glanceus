@@ -4,10 +4,142 @@ import type {
   AuthStatus,
   ViewComponent,
 } from "../types/config";
+import { isTauri } from "../lib/utils";
 
 // --- API Client ---
 
-const BASE_URL = "/api";
+const DEFAULT_TAURI_API_PORT = 18640;
+const DEFAULT_TAURI_BACKEND_BASE_URL = `http://127.0.0.1:${DEFAULT_TAURI_API_PORT}/api`;
+const WEB_BASE_URL = "/api";
+
+type RuntimePortInfo = {
+  api_target_port?: number;
+};
+
+let tauriResolvedBaseUrl: Promise<string> | null = null;
+let tauriCachedBaseUrl: string | null = null;
+let backendReady = false;
+let backendReadyPromise: Promise<void> | null = null;
+
+type WaitForBackendOptions = {
+  force?: boolean;
+  timeoutMs?: number;
+  intervalMs?: number;
+  probeTimeoutMs?: number;
+};
+
+async function resolveApiBaseUrl(): Promise<string> {
+  if (!isTauri()) {
+    return WEB_BASE_URL;
+  }
+
+  if (tauriCachedBaseUrl) {
+    return tauriCachedBaseUrl;
+  }
+
+  if (!tauriResolvedBaseUrl) {
+    tauriResolvedBaseUrl = import("@tauri-apps/api/core")
+      .then(({ invoke }) =>
+        invoke<RuntimePortInfo>("get_runtime_port_info")
+          .then((info) => {
+            const port = Number(info?.api_target_port);
+            if (Number.isFinite(port) && port > 0) {
+              const resolved = `http://127.0.0.1:${port}/api`;
+              tauriCachedBaseUrl = resolved;
+              return resolved;
+            }
+            tauriCachedBaseUrl = DEFAULT_TAURI_BACKEND_BASE_URL;
+            return tauriCachedBaseUrl;
+          })
+          .catch(() => {
+            tauriResolvedBaseUrl = null;
+            return DEFAULT_TAURI_BACKEND_BASE_URL;
+          }),
+      )
+      .catch(() => {
+        tauriResolvedBaseUrl = null;
+        return DEFAULT_TAURI_BACKEND_BASE_URL;
+      });
+  }
+
+  return tauriResolvedBaseUrl;
+}
+
+export function getApiBaseUrl(): string {
+  return isTauri() ? DEFAULT_TAURI_BACKEND_BASE_URL : WEB_BASE_URL;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function probeBackend(baseUrl: string, timeoutMs: number): Promise<boolean> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${baseUrl}/system/health`, {
+      method: "GET",
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function ensureBackendReady(options: WaitForBackendOptions = {}): Promise<void> {
+  const {
+    force = false,
+    timeoutMs = 20_000,
+    intervalMs = 250,
+    probeTimeoutMs = 1_500,
+  } = options;
+
+  if (force) {
+    backendReady = false;
+    backendReadyPromise = null;
+  }
+
+  if (backendReady) {
+    return;
+  }
+
+  if (backendReadyPromise) {
+    return backendReadyPromise;
+  }
+
+  backendReadyPromise = (async () => {
+    const deadline = Date.now() + timeoutMs;
+    let currentInterval = intervalMs;
+
+    while (Date.now() < deadline) {
+      const baseUrl = await resolveApiBaseUrl();
+      const ready = await probeBackend(baseUrl, probeTimeoutMs);
+      if (ready) {
+        backendReady = true;
+        return;
+      }
+
+      await sleep(currentInterval);
+      currentInterval = Math.min(Math.floor(currentInterval * 1.35), 1_000);
+    }
+
+    throw new Error("Backend startup timed out");
+  })();
+
+  try {
+    await backendReadyPromise;
+  } finally {
+    if (!backendReady) {
+      backendReadyPromise = null;
+    }
+  }
+}
 
 export interface ReloadConfigDiagnostic {
   source?: "backend" | "editor";
@@ -25,6 +157,7 @@ export interface IntegrationFileResponse {
   content: string;
   integration_ids?: string[];
   display_name?: string | null;
+  resolved_path?: string | null;
 }
 
 export interface IntegrationFileMetadata {
@@ -33,15 +166,65 @@ export interface IntegrationFileMetadata {
   name?: string | null;
 }
 
+export interface IntegrationPresetResponse {
+  id: string;
+  label: string;
+  description: string;
+  filename_hint: string;
+  content_template: string;
+}
+
+export interface SourceDeleteCleanup {
+  data_cleared: boolean;
+  secrets_cleared: boolean;
+  affected_view_ids: string[];
+  affected_view_count: number;
+  warnings: string[];
+}
+
+export interface SourceDeleteResponse {
+  message: string;
+  source_id: string;
+  cleanup?: SourceDeleteCleanup;
+}
+
 class ApiClient {
+  async waitForBackendReady(timeoutMs = 20_000): Promise<void> {
+    await ensureBackendReady({ timeoutMs });
+  }
+
+  private async request(path: string, init?: RequestInit): Promise<Response> {
+    await ensureBackendReady();
+    const baseUrl = await resolveApiBaseUrl();
+    return fetch(`${baseUrl}${path}`, init);
+  }
+
+  private async parseErrorMessage(
+    res: Response,
+    fallback: string,
+  ): Promise<string> {
+    try {
+      const payload = await res.json();
+      if (payload && typeof payload === "object") {
+        const detail = "detail" in payload ? payload.detail : null;
+        const message = "message" in payload ? payload.message : null;
+        if (typeof detail === "string" && detail.trim()) return detail;
+        if (typeof message === "string" && message.trim()) return message;
+      }
+    } catch {
+      // ignore non-JSON responses and keep fallback
+    }
+    return fallback;
+  }
+
   async getSources(): Promise<SourceSummary[]> {
-    const res = await fetch(`${BASE_URL}/sources`);
+    const res = await this.request(`/sources`);
     if (!res.ok) throw new Error("Failed to fetch sources");
     return res.json();
   }
 
   async getSourceData(sourceId: string): Promise<any> {
-    const res = await fetch(`${BASE_URL}/data/${sourceId}`);
+    const res = await this.request(`/data/${sourceId}`);
     if (!res.ok) {
       if (res.status === 404) return null;
       throw new Error(`Failed to fetch data for ${sourceId}`);
@@ -50,35 +233,45 @@ class ApiClient {
   }
 
   async getHistory(sourceId: string, limit = 100): Promise<any[]> {
-    const res = await fetch(
-      `${BASE_URL}/data/${sourceId}/history?limit=${limit}`,
+    const res = await this.request(`/data/${sourceId}/history?limit=${limit}`,
     );
     if (!res.ok) return [];
     return res.json();
   }
 
   async refreshSource(sourceId: string): Promise<void> {
-    const res = await fetch(`${BASE_URL}/refresh/${sourceId}`, {
+    const encodedSourceId = encodeURIComponent(sourceId);
+    const res = await this.request(`/refresh/${encodedSourceId}`, {
       method: "POST",
     });
-    if (!res.ok) throw new Error(`Failed to refresh source ${sourceId}`);
+    if (!res.ok) {
+      const fallback = `Failed to refresh source ${sourceId} (HTTP ${res.status})`;
+      throw new Error(await this.parseErrorMessage(res, fallback));
+    }
   }
 
   async refreshAll(): Promise<void> {
-    const res = await fetch(`${BASE_URL}/refresh`, { method: "POST" });
-    if (!res.ok) throw new Error("Failed to refresh sources");
+    const res = await this.request(`/refresh`, { method: "POST" });
+    if (!res.ok) {
+      throw new Error(
+        await this.parseErrorMessage(
+          res,
+          `Failed to refresh sources (HTTP ${res.status})`,
+        ),
+      );
+    }
   }
 
   // --- Views ---
 
   async getViews(): Promise<StoredView[]> {
-    const res = await fetch(`${BASE_URL}/views`);
+    const res = await this.request(`/views`);
     if (!res.ok) throw new Error("Failed to fetch views");
     return res.json();
   }
 
   async createView(view: StoredView): Promise<StoredView> {
-    const res = await fetch(`${BASE_URL}/views`, {
+    const res = await this.request(`/views`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(view),
@@ -88,7 +281,7 @@ class ApiClient {
   }
 
   async updateView(viewId: string, view: StoredView): Promise<StoredView> {
-    const res = await fetch(`${BASE_URL}/views/${viewId}`, {
+    const res = await this.request(`/views/${viewId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(view),
@@ -98,7 +291,7 @@ class ApiClient {
   }
 
   async deleteView(viewId: string): Promise<void> {
-    const res = await fetch(`${BASE_URL}/views/${viewId}`, {
+    const res = await this.request(`/views/${viewId}`, {
       method: "DELETE",
     });
     if (!res.ok) throw new Error(`Failed to delete view ${viewId}`);
@@ -107,7 +300,7 @@ class ApiClient {
   // --- Interaction ---
 
   async interact(sourceId: string, data: Record<string, any>): Promise<void> {
-    const res = await fetch(`${BASE_URL}/sources/${sourceId}/interact`, {
+    const res = await this.request(`/sources/${sourceId}/interact`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -121,10 +314,23 @@ class ApiClient {
   async getAuthorizeUrl(
     sourceId: string,
     redirectUri: string,
-  ): Promise<{ authorize_url: string }> {
+  ): Promise<
+    | { flow: "code"; authorize_url: string; message?: string }
+    | {
+        flow: "device";
+        device: {
+          user_code: string;
+          verification_uri: string;
+          verification_uri_complete?: string;
+          expires_in: number;
+          interval: number;
+        };
+        message?: string;
+      }
+    | { flow: "client_credentials"; status: "authorized"; message?: string }
+  > {
     const params = new URLSearchParams({ redirect_uri: redirectUri });
-    const res = await fetch(
-      `${BASE_URL}/oauth/authorize/${sourceId}?${params}`,
+    const res = await this.request(`/oauth/authorize/${sourceId}?${params}`,
     );
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -133,8 +339,43 @@ class ApiClient {
     return res.json();
   }
 
+  async getDeviceFlowStatus(sourceId: string): Promise<{
+    status: "idle" | "pending" | "authorized" | "expired" | "denied" | "error";
+    retry_after?: number;
+    error?: string;
+    error_description?: string;
+    device?: {
+      user_code: string;
+      verification_uri: string;
+      verification_uri_complete?: string;
+      expires_in: number;
+      interval: number;
+    };
+  }> {
+    const res = await this.request(`/oauth/device/status/${sourceId}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to get device flow status for ${sourceId}`);
+    }
+    return res.json();
+  }
+
+  async pollDeviceToken(sourceId: string): Promise<{
+    status: "pending" | "authorized" | "expired" | "denied" | "error";
+    retry_after?: number;
+    error?: string;
+    error_description?: string;
+  }> {
+    const res = await this.request(`/oauth/device/poll/${sourceId}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || `Failed polling device flow for ${sourceId}`);
+    }
+    return res.json();
+  }
+
   async getAuthStatus(sourceId: string): Promise<AuthStatus> {
-    const res = await fetch(`${BASE_URL}/sources/${sourceId}/auth-status`);
+    const res = await this.request(`/sources/${sourceId}/auth-status`);
     if (!res.ok) throw new Error(`Failed to check auth status for ${sourceId}`);
     return res.json();
   }
@@ -144,8 +385,7 @@ class ApiClient {
   async getIntegrationTemplates(
     integrationId: string,
   ): Promise<ViewComponent[]> {
-    const res = await fetch(
-      `${BASE_URL}/integrations/${integrationId}/templates`,
+    const res = await this.request(`/integrations/${integrationId}/templates`,
     );
     if (!res.ok)
       throw new Error(`Failed to fetch templates for ${integrationId}`);
@@ -153,21 +393,32 @@ class ApiClient {
   }
 
   async listIntegrationFiles(): Promise<string[]> {
-    const res = await fetch(`${BASE_URL}/integrations/files`);
+    const res = await this.request(`/integrations/files`);
     if (!res.ok) throw new Error("Failed to fetch integrations");
     return res.json();
   }
 
   async listIntegrationFileMetadata(): Promise<IntegrationFileMetadata[]> {
-    const res = await fetch(`${BASE_URL}/integrations/files/meta`);
+    const res = await this.request(`/integrations/files/meta`);
     if (!res.ok) throw new Error("Failed to fetch integration metadata");
+    return res.json();
+  }
+
+  async listIntegrationPresets(): Promise<IntegrationPresetResponse[]> {
+    const res = await this.request(`/integrations/presets`);
+    if (!res.ok) throw new Error("Failed to fetch integration presets");
     return res.json();
   }
 
   async getIntegrationFile(
     filename: string,
   ): Promise<IntegrationFileResponse> {
-    const res = await fetch(`${BASE_URL}/integrations/files/${filename}`);
+    const encodedFilename = encodeURIComponent(filename);
+    const cacheBust = Date.now();
+    const res = await this.request(
+      `/integrations/files/${encodedFilename}?_ts=${cacheBust}`,
+      { cache: "no-store" },
+    );
     if (!res.ok) throw new Error(`Failed to fetch integration ${filename}`);
     return res.json();
   }
@@ -176,8 +427,7 @@ class ApiClient {
     filename: string,
     content: string = "",
   ): Promise<{ filename: string }> {
-    const res = await fetch(
-      `${BASE_URL}/integrations/files?filename=${encodeURIComponent(filename)}`,
+    const res = await this.request(`/integrations/files?filename=${encodeURIComponent(filename)}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -189,7 +439,7 @@ class ApiClient {
   }
 
   async saveIntegrationFile(filename: string, content: string): Promise<void> {
-    const res = await fetch(`${BASE_URL}/integrations/files/${filename}`, {
+    const res = await this.request(`/integrations/files/${filename}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content }),
@@ -224,15 +474,14 @@ class ApiClient {
   }
 
   async deleteIntegrationFile(filename: string): Promise<void> {
-    const res = await fetch(`${BASE_URL}/integrations/files/${filename}`, {
+    const res = await this.request(`/integrations/files/${filename}`, {
       method: "DELETE",
     });
     if (!res.ok) throw new Error(`Failed to delete integration ${filename}`);
   }
 
   async getIntegrationSources(filename: string): Promise<any[]> {
-    const res = await fetch(
-      `${BASE_URL}/integrations/files/${filename}/sources`,
+    const res = await this.request(`/integrations/files/${filename}/sources`,
     );
     if (!res.ok) throw new Error(`Failed to fetch sources for ${filename}`);
     return res.json();
@@ -241,7 +490,7 @@ class ApiClient {
   // --- Source Management ---
 
   async listSourceFiles(): Promise<string[]> {
-    const res = await fetch(`${BASE_URL}/sources/files`);
+    const res = await this.request(`/sources/files`);
     if (!res.ok) throw new Error("Failed to fetch sources");
     return res.json();
   }
@@ -249,7 +498,7 @@ class ApiClient {
   async getSourceFile(
     filename: string,
   ): Promise<{ filename: string; content: string }> {
-    const res = await fetch(`${BASE_URL}/sources/files/${filename}`);
+    const res = await this.request(`/sources/files/${filename}`);
     if (!res.ok) throw new Error(`Failed to fetch source ${filename}`);
     return res.json();
   }
@@ -270,7 +519,7 @@ class ApiClient {
       vars: config.vars || {},
     };
 
-    const res = await fetch(`${BASE_URL}/sources`, {
+    const res = await this.request(`/sources`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(source),
@@ -282,15 +531,16 @@ class ApiClient {
     return res.json();
   }
 
-  async deleteSourceFile(sourceId: string): Promise<void> {
-    const res = await fetch(`${BASE_URL}/sources/${sourceId}`, {
+  async deleteSourceFile(sourceId: string): Promise<SourceDeleteResponse> {
+    const res = await this.request(`/sources/${sourceId}`, {
       method: "DELETE",
     });
     if (!res.ok) throw new Error(`Failed to delete source ${sourceId}`);
+    return res.json();
   }
 
   async getStoredSources(): Promise<any[]> {
-    const res = await fetch(`${BASE_URL}/sources`);
+    const res = await this.request(`/sources`);
     if (!res.ok) throw new Error("Failed to fetch sources");
     return res.json();
   }
@@ -301,7 +551,7 @@ class ApiClient {
     message: string;
     affected_sources: string[];
   }> {
-    const res = await fetch(`${BASE_URL}/system/reload`, {
+    const res = await this.request(`/system/reload`, {
       method: "POST",
     });
     if (!res.ok) {
@@ -332,13 +582,13 @@ class ApiClient {
   // --- System Settings ---
 
   async getSettings(): Promise<SystemSettings> {
-    const res = await fetch(`${BASE_URL}/settings`);
+    const res = await this.request(`/settings`);
     if (!res.ok) throw new Error("Failed to fetch settings");
     return res.json();
   }
 
   async updateSettings(settings: SystemSettings): Promise<SystemSettings> {
-    const res = await fetch(`${BASE_URL}/settings`, {
+    const res = await this.request(`/settings`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(settings),
@@ -348,13 +598,13 @@ class ApiClient {
   }
 
   async exportMasterKey(): Promise<{ master_key: string; hint: string }> {
-    const res = await fetch(`${BASE_URL}/settings/master-key/export`);
+    const res = await this.request(`/settings/master-key/export`);
     if (!res.ok) throw new Error("Failed to export master key");
     return res.json();
   }
 
   async importMasterKey(masterKey: string): Promise<{ message: string }> {
-    const res = await fetch(`${BASE_URL}/settings/master-key/import`, {
+    const res = await this.request(`/settings/master-key/import`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ master_key: masterKey }),
@@ -368,6 +618,7 @@ export interface SystemSettings {
   autostart: boolean;
   proxy: string;
   encryption_enabled: boolean;
+  debug_logging_enabled: boolean;
   scraper_timeout_seconds: number;
   master_key?: string | null;
   theme?: string;

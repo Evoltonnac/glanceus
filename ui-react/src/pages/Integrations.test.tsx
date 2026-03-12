@@ -5,6 +5,7 @@ const { apiMock } = vi.hoisted(() => ({
     apiMock: {
         listIntegrationFiles: vi.fn(),
         listIntegrationFileMetadata: vi.fn(),
+        listIntegrationPresets: vi.fn(),
         getIntegrationFile: vi.fn(),
         getIntegrationSources: vi.fn(),
         saveIntegrationFile: vi.fn(),
@@ -18,6 +19,22 @@ const { apiMock } = vi.hoisted(() => ({
 
 vi.mock("../api/client", () => ({
     api: apiMock,
+}));
+
+// Mock both monaco related packages and the setup worker to avoid loading monaco in vitest
+vi.mock("monaco-editor", () => ({
+    editor: {
+        setModelMarkers: vi.fn(),
+    },
+}));
+
+vi.mock("monaco-yaml", () => ({
+    configureMonacoYaml: vi.fn(),
+}));
+
+vi.mock("../components/editor/YamlEditorWorkerSetup", () => ({
+    setupYamlWorker: vi.fn().mockResolvedValue(undefined),
+    markersToDiagnostics: vi.fn().mockReturnValue([]),
 }));
 
 vi.mock("@monaco-editor/react", () => ({
@@ -48,6 +65,7 @@ describe("Integrations page", () => {
 
         apiMock.listIntegrationFiles.mockReset();
         apiMock.listIntegrationFileMetadata.mockReset();
+        apiMock.listIntegrationPresets.mockReset();
         apiMock.getIntegrationFile.mockReset();
         apiMock.getIntegrationSources.mockReset();
         apiMock.saveIntegrationFile.mockReset();
@@ -61,6 +79,7 @@ describe("Integrations page", () => {
         apiMock.listIntegrationFileMetadata.mockResolvedValue([
             { filename: "demo.yaml", id: "demo", name: "演示集成" },
         ]);
+        apiMock.listIntegrationPresets.mockResolvedValue([]);
         apiMock.getIntegrationFile.mockResolvedValue({
             filename: "demo.yaml",
             content: "name: demo",
@@ -97,26 +116,51 @@ describe("Integrations page", () => {
                 "name: changed",
             );
         });
-
-        expect(await screen.findByText(/Saved!/)).toBeInTheDocument();
     });
 
-    it("shows save error message when save request fails", async () => {
-        apiMock.saveIntegrationFile.mockRejectedValue(new Error("save failed"));
+    it("shows single-step delete warning and deletes source", async () => {
+        apiMock.getIntegrationSources
+            .mockResolvedValueOnce([
+                {
+                    id: "source-1",
+                    name: "Source One",
+                    integration_id: "demo",
+                    config: {},
+                    vars: {},
+                },
+            ])
+            .mockResolvedValueOnce([]);
+        apiMock.deleteSourceFile.mockResolvedValue({
+            message: "Source source-1 deleted",
+            source_id: "source-1",
+            cleanup: {
+                data_cleared: true,
+                secrets_cleared: true,
+                affected_view_ids: ["view-1"],
+                affected_view_count: 1,
+                warnings: [],
+            },
+        });
+
         render(<IntegrationsPage />);
 
         const fileEntry = await screen.findByText("demo.yaml");
         fireEvent.click(fileEntry);
 
+        expect(await screen.findByText("Source One")).toBeInTheDocument();
+
+        fireEvent.click(
+            screen.getByRole("button", { name: "Delete source source-1" }),
+        );
+
+        expect(await screen.findByText("确认删除数据源")).toBeInTheDocument();
+        expect(
+            await screen.findByText(/将同时清理该 source_id 下的数据、密钥/),
+        ).toBeInTheDocument();
+        fireEvent.click(screen.getByRole("button", { name: "确认删除" }));
+
         await waitFor(() => {
-            expect(apiMock.getIntegrationFile).toHaveBeenCalledWith("demo.yaml");
+            expect(apiMock.deleteSourceFile).toHaveBeenCalledWith("source-1");
         });
-
-        const editor = screen.getByTestId("integration-editor");
-        fireEvent.change(editor, { target: { value: "name: broken" } });
-
-        fireEvent.keyDown(window, { key: "s", ctrlKey: true });
-
-        expect(await screen.findByText("save failed")).toBeInTheDocument();
     });
 });

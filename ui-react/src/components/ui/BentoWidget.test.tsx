@@ -26,7 +26,7 @@ describe("BentoWidget", () => {
 
         rerender(
             <BentoWidget
-                title="Quota"
+                title="Usage"
                 subtitle="Daily"
                 icon={<span data-testid="bento-icon">I</span>}
                 headerAction={<button type="button">Action</button>}
@@ -35,7 +35,7 @@ describe("BentoWidget", () => {
             </BentoWidget>,
         );
 
-        expect(screen.getByRole("heading", { name: "Quota" })).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Usage" })).toBeInTheDocument();
         expect(screen.getByText("Daily")).toBeInTheDocument();
         expect(screen.getByTestId("bento-icon")).toBeInTheDocument();
         expect(screen.getByRole("button", { name: "Action" })).toBeInTheDocument();

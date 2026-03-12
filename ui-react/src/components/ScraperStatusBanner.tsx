@@ -8,8 +8,7 @@ import {
     FileText,
     Monitor,
 } from "lucide-react";
-import { cn } from "../lib/utils";
-import { isTauri } from "../lib/utils";
+import { cn, isTauri, openExternalLink } from "../lib/utils";
 import type { ScraperLifecycleLog } from "../hooks/useScraper";
 
 export interface ScraperStatusBannerProps {
@@ -274,9 +273,8 @@ export function ScraperStatusBanner({
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        window.open(
-                                            "https://github.com/xingminghua/quota-board/releases",
-                                            "_blank",
+                                        openExternalLink(
+                                            "https://github.com/xingminghua/glancier/releases",
                                         );
                                     }}
                                     className="flex items-center gap-1 h-7 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-brand/10 text-brand hover:bg-brand hover:text-background transition-all"

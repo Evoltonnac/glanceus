@@ -6,11 +6,22 @@ import type {
 } from "../types/config";
 import { api } from "../api/client";
 
+interface ToastData {
+    message: string;
+    type: "success" | "error" | "info";
+    id: number;
+}
+
 interface AppState {
     // UI State
     sidebarCollapsed: boolean;
     setSidebarCollapsed: (collapsed: boolean) => void;
     toggleSidebar: () => void;
+
+    // Toast State
+    toast: ToastData | null;
+    showToast: (message: string, type?: "success" | "error" | "info") => void;
+    hideToast: () => void;
 
     // Data State
     viewConfig: StoredView | null;
@@ -54,6 +65,21 @@ export const useStore = create<AppState>((set, get) => ({
     setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
     toggleSidebar: () =>
         set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+
+    // Toast State
+    toast: null,
+    showToast: (message, type = "success") => {
+        const id = Date.now();
+        set({ toast: { message, type, id } });
+        // Auto hide after 3 seconds
+        setTimeout(() => {
+            const currentToast = get().toast;
+            if (currentToast?.id === id) {
+                set({ toast: null });
+            }
+        }, 3000);
+    },
+    hideToast: () => set({ toast: null }),
 
     // Data State
     viewConfig: null,

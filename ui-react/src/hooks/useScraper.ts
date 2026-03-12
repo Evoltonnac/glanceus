@@ -80,6 +80,7 @@ export function useScraper() {
     const skippedScrapers = useStore((state) => state.skippedScrapers);
     const addSkippedScraper = useStore((state) => state.addSkippedScraper);
     const setSkippedScrapers = useStore((state) => state.setSkippedScrapers);
+    const showToast = useStore((state) => state.showToast);
     const [queueNonce, setQueueNonce] = useState(0);
     const [scraperLogs, setScraperLogs] = useState<ScraperLifecycleLog[]>([]);
 
@@ -87,7 +88,11 @@ export function useScraper() {
     const activeTaskIdRef = useRef<string | null>(null);
     const manualQueuedRef = useRef<Set<string>>(new Set());
     const foregroundOverridesRef = useRef<Set<string>>(new Set());
+    const detachedForegroundTasksRef = useRef<Set<string>>(new Set());
     const timeoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // Track when scraper was intentionally started by user action
+    // This prevents the cleanup effect from incorrectly canceling scrapers that were just started
+    const intentionallyStartedRef = useRef<Set<string>>(new Set());
     const [scraperTimeoutMs, setScraperTimeoutMs] = useState(
         DEFAULT_SCRAPER_TIMEOUT_SECONDS * 1000,
     );
@@ -123,6 +128,7 @@ export function useScraper() {
         setQueueNonce((prev) => prev + 1);
     }, []);
 
+    // Dynamic Polling for refreshing sources
     useEffect(() => {
         if (!scraperEnabled) {
             setScraperTimeoutMs(DEFAULT_SCRAPER_TIMEOUT_SECONDS * 1000);
@@ -187,9 +193,7 @@ export function useScraper() {
         const { url, script, intercept_api, secret_key } =
             source.interaction?.data || {};
 
-        console.log(
-            `Starting scraper for ${source.name} (${source.id}), foreground=${forceForeground}`,
-        );
+        detachedForegroundTasksRef.current.delete(source.id);
         setActiveScraper(source.id);
         activeTaskIdRef.current = null;
         manualQueuedRef.current.delete(source.id);
@@ -206,39 +210,14 @@ export function useScraper() {
             void syncErrorLogsFromMemory(source.id);
             manualQueuedRef.current.delete(source.id);
             foregroundOverridesRef.current.delete(source.id);
+            intentionallyStartedRef.current.delete(source.id);
+            detachedForegroundTasksRef.current.delete(source.id);
             activeTaskIdRef.current = null;
             addSkippedScraper(source.id);
             setActiveScraper(null);
             bumpQueueNonce();
         });
     }, [addSkippedScraper, bumpQueueNonce, scraperEnabled, setActiveScraper, syncErrorLogsFromMemory]);
-
-    const queueManualTaskIfNeeded = useCallback((sourceId: string) => {
-        const source = useStore.getState().sources.find((s) => s.id === sourceId);
-        if (source?.interaction?.data?.manual_only) {
-            manualQueuedRef.current.add(sourceId);
-        }
-    }, []);
-
-    const promoteToForeground = useCallback((source: SourceSummary) => {
-        void (async () => {
-            const currentActive = useStore.getState().activeScraper;
-            if (currentActive && currentActive !== source.id) {
-                try {
-                    await invoke("cancel_scraper_task");
-                } catch (error) {
-                    console.error("Failed to cancel active scraper task:", error);
-                }
-                activeTaskIdRef.current = null;
-                queueManualTaskIfNeeded(currentActive);
-                foregroundOverridesRef.current.delete(currentActive);
-            }
-
-            foregroundOverridesRef.current.add(source.id);
-            startScraperTask(source, true);
-            bumpQueueNonce();
-        })();
-    }, [startScraperTask, queueManualTaskIfNeeded, bumpQueueNonce]);
 
     // Actions
     const handleSkipScraper = useCallback(async () => {
@@ -254,6 +233,8 @@ export function useScraper() {
 
         manualQueuedRef.current.delete(activeScraper);
         foregroundOverridesRef.current.delete(activeScraper);
+        intentionallyStartedRef.current.delete(activeScraper);
+        detachedForegroundTasksRef.current.delete(activeScraper);
         activeTaskIdRef.current = null;
         addSkippedScraper(activeScraper);
         setActiveScraper(null);
@@ -278,6 +259,8 @@ export function useScraper() {
         activeTaskIdRef.current = null;
         manualQueuedRef.current.clear();
         foregroundOverridesRef.current.clear();
+        intentionallyStartedRef.current.clear();
+        detachedForegroundTasksRef.current.clear();
         // Keep recent error logs for troubleshooting; drop noisy non-error logs.
         setScraperLogs((prev) =>
             prev.filter((log) => log.level === "error").slice(-SCRAPER_LOG_LIMIT)
@@ -290,16 +273,60 @@ export function useScraper() {
         options?: { foreground?: boolean },
     ): boolean => {
         if (!scraperEnabled) {
-            alert("Web 抓取仅在 Tauri 客户端环境生效。");
+            showToast("Web 抓取仅在 Tauri 客户端环境生效。", "error");
             return false;
         }
         const forceForeground =
             Boolean(options?.foreground) ||
             Boolean(source.interaction?.data?.force_foreground);
+        const currentActive = useStore.getState().activeScraper;
+        const alreadyInQueue = webviewQueue.some((s) => s.id === source.id);
+
+        const detachForegroundFromQueue = (sourceId: string) => {
+            manualQueuedRef.current.delete(sourceId);
+            foregroundOverridesRef.current.delete(sourceId);
+            intentionallyStartedRef.current.delete(sourceId);
+            activeTaskIdRef.current = null;
+            detachedForegroundTasksRef.current.add(sourceId);
+            addSkippedScraper(sourceId);
+            setActiveScraper(null);
+            bumpQueueNonce();
+        };
 
         if (forceForeground) {
-            foregroundOverridesRef.current.add(source.id);
+            if (currentActive === source.id) {
+                void (async () => {
+                    try {
+                        await invoke("show_scraper_window");
+                    } catch (error) {
+                        console.error("Failed to show scraper window:", error);
+                    }
+                    detachForegroundFromQueue(source.id);
+                })();
+                return true;
+            }
+            if (currentActive && currentActive !== source.id) {
+                const activeSourceName =
+                    sources.find((s) => s.id === currentActive)?.name || currentActive;
+                showToast(
+                    `后台任务 "${activeSourceName}" 正在运行，当前前台任务不会加入队列，请稍后再试。`,
+                    "info",
+                );
+                return false;
+            }
+
+            const next = new Set(skippedScrapers);
+            next.delete(source.id);
+            setSkippedScrapers(next);
+            manualQueuedRef.current.delete(source.id);
+            foregroundOverridesRef.current.delete(source.id);
+            intentionallyStartedRef.current.add(source.id);
+            startScraperTask(source, true);
+            // Foreground mode is detached from background queue.
+            detachForegroundFromQueue(source.id);
+            return true;
         }
+
         if (source.interaction?.data?.manual_only) {
             manualQueuedRef.current.add(source.id);
         }
@@ -308,47 +335,20 @@ export function useScraper() {
         next.delete(source.id);
         setSkippedScrapers(next);
 
-        if (activeScraper === source.id) {
-            if (forceForeground) {
-                void (async () => {
-                    try {
-                        await invoke("show_scraper_window");
-                    } catch (error) {
-                        console.error("Failed to show scraper window:", error);
-                    }
-                    // User takes over in foreground: remove from queue and continue next task.
-                    manualQueuedRef.current.delete(source.id);
-                    foregroundOverridesRef.current.delete(source.id);
-                    activeTaskIdRef.current = null;
-                    addSkippedScraper(source.id);
-                    setActiveScraper(null);
-                    bumpQueueNonce();
-                })();
-                return true;
-            }
-            alert(`"${source.name}" 的抓取任务已在运行中。`);
+        if (currentActive === source.id) {
+            showToast(`"${source.name}" 的抓取任务已在运行中。`, "info");
             return false;
-        }
-        const alreadyInQueue = webviewQueue.some((s) => s.id === source.id);
-        if (forceForeground) {
-            if (alreadyInQueue) {
-                promoteToForeground(source);
-                return true;
-            }
-            console.log(`手动将 ${source.name} (${source.id}) 加入抓取队列并切换到前台`);
-            promoteToForeground(source);
-            return true;
         }
 
         if (alreadyInQueue) {
-            alert(`"${source.name}" 已在抓取队列中，请勿重复添加。`);
+            showToast(`"${source.name}" 已在抓取队列中，请勿重复添加。`, "info");
             return false;
         }
 
         console.log(`手动将 ${source.name} (${source.id}) 加入抓取队列`);
         bumpQueueNonce();
         return true;
-    }, [activeScraper, webviewQueue, skippedScrapers, scraperEnabled, setSkippedScrapers, bumpQueueNonce, promoteToForeground, addSkippedScraper, setActiveScraper]);
+    }, [activeScraper, webviewQueue, skippedScrapers, scraperEnabled, setSkippedScrapers, bumpQueueNonce, showToast, sources, startScraperTask, addSkippedScraper, setActiveScraper]);
 
     const handleShowScraperWindow = useCallback(async () => {
         if (!scraperEnabled) return;
@@ -363,10 +363,12 @@ export function useScraper() {
             console.error("Failed to show scraper window:", error);
             return;
         }
-        // User takes over in foreground: remove from queue and continue next task.
+        // Foreground mode is detached from background queue.
         manualQueuedRef.current.delete(currentActive);
         foregroundOverridesRef.current.delete(currentActive);
+        intentionallyStartedRef.current.delete(currentActive);
         activeTaskIdRef.current = null;
+        detachedForegroundTasksRef.current.add(currentActive);
         addSkippedScraper(currentActive);
         setActiveScraper(null);
         bumpQueueNonce();
@@ -398,6 +400,8 @@ export function useScraper() {
                         setDataMap((prev) => ({ ...prev, [id]: data }));
                     });
                     await Promise.all(dataPromises);
+                    // Refresh completed - trigger queue check for background scrapers
+                    bumpQueueNonce();
                 } else {
                     setSources(updatedSources);
                 }
@@ -407,17 +411,29 @@ export function useScraper() {
         }, 2000);
 
         return () => clearInterval(interval);
-    }, [sources, setSources, setDataMap]);
+    }, [sources, setSources, setDataMap, bumpQueueNonce]);
 
     // 2. Cleanup zombie active scraper
+    // Only clean up if the source was deleted (no longer exists in sources list)
+    // Don't cancel based on status check - status changes are async and may not
+    // reflect the actual scraper state when task is just started
     useEffect(() => {
         if (!scraperEnabled) {
             return;
         }
         if (activeScraper) {
+            // Skip cleanup if scraper was intentionally started by a user action.
+            // This prevents false positives where the source exists but cleanup effect runs
+            // before the sources array is fully updated or due to render timing
+            if (intentionallyStartedRef.current.has(activeScraper)) {
+                intentionallyStartedRef.current.delete(activeScraper);
+                return;
+            }
+
             const activeSource = sources.find((s) => s.id === activeScraper);
-            if (!activeSource || activeSource.status !== "suspended") {
-                console.log("Cleaning up zombie active scraper:", activeScraper);
+            // Only cancel if source no longer exists (was deleted)
+            if (!activeSource) {
+                console.log("Cleaning up zombie active scraper: source no longer exists", activeScraper);
                 activeTaskIdRef.current = null;
                 setActiveScraper(null);
                 invoke("cancel_scraper_task").catch(console.error);
@@ -429,6 +445,7 @@ export function useScraper() {
     useEffect(() => {
         if (!scraperEnabled) return;
         if (activeScraper) return;
+        if (detachedForegroundTasksRef.current.size > 0) return;
 
         const nextSource = webviewQueue.length > 0 ? webviewQueue[0] : null;
 
@@ -475,6 +492,7 @@ export function useScraper() {
 
                 manualQueuedRef.current.delete(currentActive);
                 foregroundOverridesRef.current.delete(currentActive);
+                intentionallyStartedRef.current.delete(currentActive);
                 activeTaskIdRef.current = null;
                 useStore.getState().addSkippedScraper(currentActive);
                 useStore.getState().setActiveScraper(null);
@@ -530,8 +548,10 @@ export function useScraper() {
                 secretKey: string;
             }>("scraper_result", async (event) => {
                 const { sourceId, taskId, data, error, secretKey } = event.payload;
-
-                if (activeScraperRef.current !== sourceId) {
+                const isDetachedForegroundTask =
+                    detachedForegroundTasksRef.current.has(sourceId);
+                const isActiveTask = activeScraperRef.current === sourceId;
+                if (!isDetachedForegroundTask && !isActiveTask) {
                     console.warn(
                         `[Scraper] Discarding stale result for ${sourceId} (active=${activeScraperRef.current ?? "none"})`,
                     );
@@ -552,16 +572,20 @@ export function useScraper() {
                     activeTaskIdRef.current = taskId;
                 }
 
-                // Add to skipped list and clear active
-                useStore.getState().addSkippedScraper(sourceId);
+                // Clear active scraper state (but don't add to skipped on success -
+                // the source completed successfully and should be re-queued if needed)
                 useStore.getState().setActiveScraper(null);
                 activeTaskIdRef.current = null;
                 manualQueuedRef.current.delete(sourceId);
                 foregroundOverridesRef.current.delete(sourceId);
+                intentionallyStartedRef.current.delete(sourceId);
+                detachedForegroundTasksRef.current.delete(sourceId);
                 bumpQueueNonce();
 
                 if (error) {
+                    // Only add to skipped on error, not on success
                     console.error(`Scraper error for ${sourceId}:`, error);
+                    useStore.getState().addSkippedScraper(sourceId);
                     void syncErrorLogsFromMemory(sourceId);
                     return;
                 }
@@ -587,6 +611,8 @@ export function useScraper() {
                     activeTaskIdRef.current = null;
                     foregroundOverridesRef.current.add(sourceId);
                     manualQueuedRef.current.delete(sourceId);
+                    intentionallyStartedRef.current.delete(sourceId);
+                    detachedForegroundTasksRef.current.delete(sourceId);
                     bumpQueueNonce();
 
                     const currentSources = useStore.getState().sources;

@@ -88,6 +88,29 @@
   }
 }
 
+/* Global native scrollbar policy: hidden by default, except Monaco editor. */
+:where(body, body *) {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+:where(body, body *)::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.monaco-editor,
+.monaco-editor * {
+  -ms-overflow-style: auto;
+  scrollbar-width: auto;
+}
+
+.monaco-editor::-webkit-scrollbar,
+.monaco-editor *::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
 /* ── Card header drag handle ───────────────────────────────────────── */
 .qb-card-header {
   cursor: grab;

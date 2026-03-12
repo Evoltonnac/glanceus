@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { SourceSummary } from "../../types/config";
 import {
     Dialog,
@@ -12,7 +12,8 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { AlertCircle, ExternalLink, Wrench, Monitor, Download } from "lucide-react";
 import { api } from "../../api/client";
-import { isTauri } from "../../lib/utils";
+import { isTauri, openExternalLink } from "../../lib/utils";
+import { DeviceFlowModal, type DeviceFlowData } from "./DeviceFlowModal";
 
 interface FlowHandlerProps {
     source: SourceSummary | null;
@@ -25,6 +26,9 @@ interface FlowHandlerProps {
     ) => boolean; // returns false if already in queue
 }
 
+const OAUTH_PENDING_SOURCE_ID_KEY = "oauth_pending_source_id";
+const AUTH_STATUS_POLL_INTERVAL_MS = 2000;
+
 export function FlowHandler({
     source,
     isOpen,
@@ -33,21 +37,197 @@ export function FlowHandler({
     onPushToQueue,
 }: FlowHandlerProps) {
     const inTauri = isTauri();
+    const sourceId = source?.id ?? null;
     const [formData, setFormData] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [deviceFlowData, setDeviceFlowData] = useState<DeviceFlowData | null>(
+        null,
+    );
+    const [deviceStatus, setDeviceStatus] = useState<
+        "idle" | "pending" | "authorized" | "expired" | "error"
+    >("idle");
+    const [verifying, setVerifying] = useState(false);
+    const authStatusPollInFlightRef = useRef(false);
 
-    if (!source || !source.interaction) {
-        return null;
-    }
+    // Refs to track initial source ID and step ID for state change detection
+    const initialSourceIdRef = useRef<string | null>(null);
+    const initialStepIdRef = useRef<string | null>(null);
 
-    const { interaction } = source;
-    const isErrorState = source.status === "error";
-    const isSuspendedState = source.status === "suspended";
+    const interaction = source?.interaction ?? null;
+    const isErrorState = source?.status === "error";
+    const isSuspendedState = source?.status === "suspended";
 
     const handleInputChange = (key: string, value: string) => {
         setFormData((prev) => ({ ...prev, [key]: value }));
     };
+
+    const resetFlowState = useCallback(() => {
+        setError(null);
+        setLoading(false);
+        setDeviceFlowData(null);
+        setDeviceStatus("idle");
+        setVerifying(false);
+    }, []);
+
+    const handleClose = useCallback(() => {
+        resetFlowState();
+        onClose();
+    }, [onClose, resetFlowState]);
+
+    useEffect(() => {
+        setFormData({});
+        resetFlowState();
+    }, [sourceId, resetFlowState]);
+
+    // Track initial source ID and step ID when source changes
+    useEffect(() => {
+        if (sourceId) {
+            initialSourceIdRef.current = sourceId;
+            initialStepIdRef.current = interaction?.step_id ?? null;
+        }
+    }, [sourceId, interaction?.step_id]);
+
+    // Poll for source state changes and close modal if step_id changed or no interaction
+    useEffect(() => {
+        if (!isOpen || !initialSourceIdRef.current) return;
+
+        const checkSourceState = async () => {
+            try {
+                const sources = await api.getSources();
+                const currentSource = sources.find((s) => s.id === initialSourceIdRef.current);
+                if (!currentSource) {
+                    // Source no longer exists, close modal
+                    handleClose();
+                    return;
+                }
+
+                const currentInteraction = currentSource.interaction;
+                const currentStepId = currentInteraction?.step_id ?? null;
+
+                // Close modal if: no interaction, or step_id changed
+                if (!currentInteraction || currentStepId !== initialStepIdRef.current) {
+                    console.log(
+                        "[FlowHandler] Source state changed, closing modal:",
+                        currentSource.id,
+                    );
+                    handleClose();
+                }
+            } catch (err) {
+                console.debug("[FlowHandler] Failed to check source state:", err);
+            }
+        };
+
+        const intervalId = setInterval(checkSourceState, 2000);
+        return () => clearInterval(intervalId);
+    }, [isOpen, handleClose]);
+
+    // Poll auth status while waiting for OAuth code flow callback.
+    useEffect(() => {
+        if (!isOpen || !sourceId || interaction?.type !== "oauth_start" || !loading) {
+            return;
+        }
+
+        let active = true;
+
+        const pollAuthStatus = async () => {
+            if (!active || authStatusPollInFlightRef.current) return;
+            authStatusPollInFlightRef.current = true;
+            try {
+                const authStatus = await api.getAuthStatus(sourceId);
+                if (!active) return;
+
+                if (authStatus.status === "ok") {
+                    console.log(
+                        "[FlowHandler] OAuth verified via auth-status polling:",
+                        sourceId,
+                    );
+                    onInteractSuccess?.();
+                    handleClose();
+                    return;
+                }
+
+                if (authStatus.status === "error" && authStatus.message) {
+                    setError(authStatus.message);
+                }
+            } catch (err) {
+                console.debug("[FlowHandler] Auth status polling failed:", err);
+            } finally {
+                authStatusPollInFlightRef.current = false;
+            }
+        };
+
+        void pollAuthStatus();
+        const intervalId = window.setInterval(() => {
+            void pollAuthStatus();
+        }, AUTH_STATUS_POLL_INTERVAL_MS);
+
+        return () => {
+            active = false;
+            window.clearInterval(intervalId);
+            authStatusPollInFlightRef.current = false;
+        };
+    }, [
+        handleClose,
+        interaction?.type,
+        isOpen,
+        loading,
+        onInteractSuccess,
+        sourceId,
+    ]);
+
+    // Check for existing device flow status when modal opens.
+    // NOTE: Removed automatic polling - user must manually click "Verify" button.
+    useEffect(() => {
+        if (!isOpen || !sourceId) return;
+        const flowHint =
+            interaction?.data?.oauth_flow ||
+            interaction?.data?.oauth_args?.oauth_flow ||
+            interaction?.data?.oauth_args?.flow_type ||
+            interaction?.data?.oauth_args?.grant_type;
+        const normalizedFlowHint =
+            typeof flowHint === "string" ? flowHint.trim().toLowerCase() : "";
+        const shouldCheckDeviceFlowStatus =
+            interaction?.type === "oauth_device_flow" ||
+            (interaction?.type === "oauth_start" &&
+                (normalizedFlowHint === "device" ||
+                    normalizedFlowHint === "device_code"));
+        if (!shouldCheckDeviceFlowStatus) return;
+
+        const checkExistingFlow = async () => {
+            try {
+                console.log("[FlowHandler] Checking existing device flow for:", sourceId);
+                const status = await api.getDeviceFlowStatus(sourceId);
+                console.log("[FlowHandler] Existing flow status:", status);
+                if (status.status === "pending") {
+                    if (status.device) {
+                        // Restore existing device flow
+                        setDeviceFlowData(status.device);
+                    }
+                    setDeviceStatus("pending");
+                    // Don't set cooldown - user manually clicks Verify
+                } else if (status.status === "authorized") {
+                    setDeviceStatus("authorized");
+                    onInteractSuccess?.();
+                    handleClose();
+                } else if (status.status === "expired") {
+                    setDeviceStatus("expired");
+                    setError("Device code expired. Please restart authorization.");
+                } else if (status.status === "denied") {
+                    setDeviceStatus("error");
+                    setError("Authorization was denied.");
+                } else if (status.status === "error") {
+                    setDeviceStatus("error");
+                    setError(status.error_description || "Device flow error");
+                }
+            } catch (err) {
+                // Ignore errors - no existing flow
+                console.debug("No existing device flow:", err);
+            }
+        };
+
+        void checkExistingFlow();
+    }, [handleClose, interaction?.type, isOpen, onInteractSuccess, sourceId]);
 
     const handleSubmit = async () => {
         if (!source) return;
@@ -56,7 +236,7 @@ export function FlowHandler({
         try {
             await api.interact(source.id, formData);
             onInteractSuccess?.();
-            onClose();
+            handleClose();
         } catch (err: any) {
             setError(err.message || "Interaction failed");
         } finally {
@@ -64,8 +244,52 @@ export function FlowHandler({
         }
     };
 
-    const handleOAuthStart = async () => {
-        if (!source) return;
+    const pollDeviceToken = useCallback(async () => {
+        if (!sourceId) return;
+        if (verifying) return;
+        setVerifying(true);
+        try {
+            console.log("[FlowHandler] Polling device token for:", sourceId);
+            const pollResult = await api.pollDeviceToken(sourceId);
+            console.log("[FlowHandler] Poll result:", pollResult);
+            if (pollResult.status === "authorized") {
+                console.log("[FlowHandler] Authorization successful! Closing modal...");
+                setDeviceStatus("authorized");
+                onInteractSuccess?.();
+                handleClose();
+                return;
+            }
+            if (pollResult.status === "pending") {
+                setDeviceStatus("pending");
+                // User can click Verify again manually - no auto cooldown
+                return;
+            }
+            if (pollResult.status === "expired") {
+                setDeviceStatus("expired");
+                setError("Device code expired. Please restart authorization.");
+                return;
+            }
+            if (pollResult.status === "denied") {
+                setDeviceStatus("error");
+                setError("Authorization was denied.");
+                return;
+            }
+            setDeviceStatus("error");
+            setError(
+                pollResult.error_description ||
+                    pollResult.error ||
+                    "Device flow polling failed",
+            );
+        } catch (err: any) {
+            setDeviceStatus("error");
+            setError(err.message || "Failed to poll device token");
+        } finally {
+            setVerifying(false);
+        }
+    }, [handleClose, onInteractSuccess, sourceId, verifying]);
+
+    const handleOAuthStart = useCallback(async () => {
+        if (!source || !sourceId) return;
         setLoading(true);
         setError(null);
 
@@ -77,7 +301,7 @@ export function FlowHandler({
                 event.data.sourceId === source.id
             ) {
                 onInteractSuccess?.();
-                onClose();
+                handleClose();
                 channel.close();
             }
         };
@@ -95,25 +319,56 @@ export function FlowHandler({
             const redirectUri = window.location.origin + "/oauth/callback";
             const res = await api.getAuthorizeUrl(source.id, redirectUri);
 
-            // 3. Open Popup
-            const width = 600;
-            const height = 700;
-            const left = window.screen.width / 2 - width / 2;
-            const top = window.screen.height / 2 - height / 2;
+            if (res.flow === "device") {
+                setLoading(false);
+                setDeviceFlowData(res.device);
+                setDeviceStatus("pending");
+                // Don't set cooldown - user manually clicks Verify
+                channel.close();
+                return;
+            }
 
-            window.open(
-                res.authorize_url,
-                "oauth_window",
-                `width=${width},height=${height},top=${top},left=${left},resizable,scrollbars,status`,
-            );
+            if (res.flow === "client_credentials") {
+                setLoading(false);
+                onInteractSuccess?.();
+                handleClose();
+                channel.close();
+                return;
+            }
+
+            try {
+                window.localStorage.setItem(OAUTH_PENDING_SOURCE_ID_KEY, source.id);
+            } catch (_e) {
+                // Ignore localStorage errors and rely on provider state.
+            }
+
+            // 3. Open Popup or System Browser
+            if (inTauri) {
+                await openExternalLink(res.authorize_url);
+            } else {
+                const width = 600;
+                const height = 700;
+                const left = window.screen.width / 2 - width / 2;
+                const top = window.screen.height / 2 - height / 2;
+
+                window.open(
+                    res.authorize_url,
+                    "oauth_window",
+                    `width=${width},height=${height},top=${top},left=${left},resizable,scrollbars,status`,
+                );
+            }
         } catch (err: any) {
             setError(err.message || "Failed to start OAuth flow");
             setLoading(false);
             channel.close();
         }
-    };
+    }, [formData, handleClose, inTauri, onInteractSuccess, source, sourceId]);
 
     const renderContent = () => {
+        if (!source || !interaction) {
+            return null;
+        }
+
         // Get doc_url from interaction data if available
         const docUrl = interaction.data?.doc_url;
 
@@ -227,6 +482,17 @@ export function FlowHandler({
                     </div>
                 );
 
+            case "oauth_device_flow":
+                return (
+                    <DeviceFlowModal
+                        flowData={deviceFlowData}
+                        loading={loading || verifying}
+                        status={deviceStatus}
+                        onStart={handleOAuthStart}
+                        onVerifyNow={pollDeviceToken}
+                    />
+                );
+
             case "confirm":
                 return (
                     <div className="py-4 text-sm text-center">
@@ -258,7 +524,7 @@ export function FlowHandler({
                                             foreground: true,
                                         });
                                         if (added) {
-                                            onClose();
+                                            handleClose();
                                         }
                                     }}
                                     className="w-full"
@@ -288,9 +554,8 @@ export function FlowHandler({
                                     variant="outline"
                                     className="w-full gap-2 border-brand/20 hover:bg-brand/5 hover:border-brand/40 text-brand"
                                     onClick={() =>
-                                        window.open(
-                                            "https://github.com/xingminghua/quota-board/releases",
-                                            "_blank",
+                                        openExternalLink(
+                                            "https://github.com/xingminghua/glancier/releases",
                                         )
                                     }
                                 >
@@ -311,8 +576,19 @@ export function FlowHandler({
         }
     };
 
+    if (!source || !interaction) {
+        return null;
+    }
+
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
+        <Dialog
+            open={isOpen}
+            onOpenChange={(open) => {
+                if (!open) {
+                    handleClose();
+                }
+            }}
+        >
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                     <DialogTitle>
@@ -321,6 +597,8 @@ export function FlowHandler({
                     </DialogTitle>
                     <DialogDescription>
                         {interaction.type === "oauth_start"
+                            ? "Authentication"
+                            : interaction.type === "oauth_device_flow"
                             ? "Authentication"
                             : isErrorState
                               ? "凭证无效，请更新后重试。"
@@ -355,14 +633,16 @@ export function FlowHandler({
 
                 <DialogFooter>
                     {interaction.type !== "oauth_start" &&
+                        interaction.type !== "oauth_device_flow" &&
                         interaction.type !== "webview_scrape" && (
                             <Button onClick={handleSubmit} disabled={loading}>
                                 {loading ? "Submitting..." : "Submit"}
                             </Button>
                         )}
                     {(interaction.type === "oauth_start" ||
+                        interaction.type === "oauth_device_flow" ||
                         interaction.type === "webview_scrape") && (
-                        <Button variant="outline" onClick={onClose}>
+                        <Button variant="outline" onClick={handleClose}>
                             关闭
                         </Button>
                     )}

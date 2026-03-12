@@ -1,4 +1,11 @@
-import { useEffect, useRef, useCallback, useState } from "react";
+import {
+    Component,
+    type ReactNode,
+    useEffect,
+    useRef,
+    useCallback,
+    useState,
+} from "react";
 import { GridStack } from "gridstack";
 import "gridstack/dist/gridstack.min.css";
 import { api } from "../api/client";
@@ -6,17 +13,16 @@ import type {
     SourceSummary,
     DataResponse,
     ViewComponent,
+    StoredView,
 } from "../types/config";
 import {
     Card,
     CardContent,
-    CardHeader,
-    CardTitle,
-    CardDescription,
 } from "../components/ui/card";
 import { Badge, badgeVariants } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { cn } from "../lib/utils";
+import { useSources, useViews, invalidateSources, invalidateViews, optimisticRemoveSource, optimisticUpdateSourceStatus, mutate } from "../hooks/useSWR";
 
 import {
     Dialog,
@@ -42,6 +48,7 @@ import { FlowHandler } from "../components/auth/FlowHandler";
 import { BaseSourceCard } from "../components/BaseSourceCard";
 import { AddWidgetDialog } from "../components/AddWidgetDialog";
 import { ScraperStatusBanner } from "../components/ScraperStatusBanner";
+import { EmptyState } from "../components/EmptyState";
 import { useStore } from "../store";
 import { useSidebar } from "../hooks/useSidebar";
 import { useScraper } from "../hooks/useScraper";
@@ -63,6 +70,96 @@ import {
 // GridStack layout constants
 const GRID_ROW_HEIGHT = 60;
 const GRID_MARGIN = 12;
+const warnedCompatibilityKeys = new Set<string>();
+
+function warnDashboardCompatibilityOnce(key: string, message: string): void {
+    if (warnedCompatibilityKeys.has(key)) {
+        return;
+    }
+    warnedCompatibilityKeys.add(key);
+    console.warn(message);
+}
+
+function toSafeViewProps(itemId: string, rawProps: unknown): Record<string, any> {
+    if (rawProps && typeof rawProps === "object" && !Array.isArray(rawProps)) {
+        return rawProps as Record<string, any>;
+    }
+    if (rawProps !== undefined && rawProps !== null) {
+        warnDashboardCompatibilityOnce(
+            `invalid-props:${itemId}`,
+            `[Dashboard] Widget ${itemId} has invalid props shape (${typeof rawProps}); fallback to empty props.`,
+        );
+    }
+    return {};
+}
+
+function normalizeTemplateType(itemId: string, rawType: unknown): ViewComponent["type"] {
+    if (typeof rawType !== "string" || rawType.trim() === "") {
+        warnDashboardCompatibilityOnce(
+            `missing-type:${itemId}`,
+            `[Dashboard] Widget ${itemId} is missing component type; fallback to source_card.`,
+        );
+        return "source_card";
+    }
+
+    if (rawType !== "source_card") {
+        warnDashboardCompatibilityOnce(
+            `unknown-type:${itemId}:${rawType}`,
+            `[Dashboard] Widget ${itemId} uses unknown component type '${rawType}', fallback to source_card.`,
+        );
+        return "source_card";
+    }
+
+    return "source_card";
+}
+
+interface WidgetFallbackBoundaryProps {
+    itemId: string;
+    resetKey: string;
+    children: ReactNode;
+}
+
+interface WidgetFallbackBoundaryState {
+    hasError: boolean;
+}
+
+class WidgetFallbackBoundary extends Component<
+    WidgetFallbackBoundaryProps,
+    WidgetFallbackBoundaryState
+> {
+    state: WidgetFallbackBoundaryState = { hasError: false };
+
+    static getDerivedStateFromError(): WidgetFallbackBoundaryState {
+        return { hasError: true };
+    }
+
+    componentDidCatch(error: Error): void {
+        warnDashboardCompatibilityOnce(
+            `render-failure:${this.props.itemId}:${error.name}:${error.message}`,
+            `[Dashboard] Widget ${this.props.itemId} render failed; degraded to fallback state. ${error.name}: ${error.message}`,
+        );
+    }
+
+    componentDidUpdate(prevProps: WidgetFallbackBoundaryProps): void {
+        if (
+            this.state.hasError &&
+            prevProps.resetKey !== this.props.resetKey
+        ) {
+            this.setState({ hasError: false });
+        }
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
+                    组件暂不可用（已静默降级）
+                </div>
+            );
+        }
+        return this.props.children;
+    }
+}
 
 // Delete button — absolute positioned at top-right corner of card
 function DeleteBtn({ onDelete }: { onDelete?: () => void }) {
@@ -135,18 +232,23 @@ function getSourceErrorDetails(
     source: SourceSummary,
     sourceData?: DataResponse | null,
 ): string {
-    return source.error_details || source.message || sourceData?.error || source.error || "";
+    return (
+        source.error_details ||
+        source.message ||
+        sourceData?.error ||
+        source.error ||
+        ""
+    );
 }
 
 export default function Dashboard() {
     const {
-        viewConfig,
+        viewConfig: storeViewConfig,
         setViewConfig,
-        sources,
+        sources: storeSources,
         setSources,
-        dataMap,
-        loading,
-        loadData,
+        dataMap: storeDataMap,
+        setDataMap: setStoreDataMap,
         interactSource,
         setInteractSource,
         isAddDialogOpen,
@@ -155,6 +257,24 @@ export default function Dashboard() {
         setDeletingSourceId,
         setSkippedScrapers,
     } = useStore();
+
+    // Use SWR for data fetching - handles dedup, caching, and StrictMode automatically
+    const { sources: swrSources, dataMap: swrDataMap, isLoading: swrLoading } = useSources();
+    const { views: swrViews } = useViews();
+
+    // Use SWR data, fallback to store data during initial load
+    const sources: SourceSummary[] = swrSources.length > 0 ? swrSources : storeSources;
+    const dataMap = Object.keys(swrDataMap).length > 0 ? swrDataMap : storeDataMap;
+    const viewConfig: StoredView | null = swrViews.length > 0 ? swrViews[0] : storeViewConfig;
+    const isDataLoading = swrLoading && storeSources.length === 0;
+
+    useEffect(() => {
+        if (swrLoading) {
+            return;
+        }
+        setSources(swrSources);
+        setStoreDataMap(swrDataMap);
+    }, [setSources, setStoreDataMap, swrDataMap, swrLoading, swrSources]);
 
     const { sidebarCollapsed, toggleSidebar } = useSidebar();
     const {
@@ -196,10 +316,10 @@ export default function Dashboard() {
             id: newItemId,
             x: 0,
             y: 999,
-            w: 4,
-            h: 2,
+            w: 3,
+            h: 4,
             source_id: sourceId,
-            template_id: template.label || template.type || "",
+            template_id: template.id,
             props: { ...template },
         };
 
@@ -215,7 +335,9 @@ export default function Dashboard() {
             } else {
                 await api.updateView(updatedView.id, updatedView);
             }
-            setTimeout(loadData, 500);
+            // Refresh data via SWR
+            invalidateSources();
+            invalidateViews();
         } catch (error) {
             console.error("Failed to add widget:", error);
             setViewConfig(viewConfig);
@@ -273,8 +395,8 @@ export default function Dashboard() {
                 id: el.getAttribute("gs-id") || "",
                 x: parseInt(el.getAttribute("gs-x") || "0"),
                 y: parseInt(el.getAttribute("gs-y") || "0"),
-                w: parseInt(el.getAttribute("gs-w") || "4"),
-                h: parseInt(el.getAttribute("gs-h") || "2"),
+                w: parseInt(el.getAttribute("gs-w") || "3"),
+                h: parseInt(el.getAttribute("gs-h") || "4"),
             }))
             .filter((n) => n.id !== "");
 
@@ -342,28 +464,54 @@ export default function Dashboard() {
         };
     }, []);
 
-    useEffect(() => {
-        loadData();
-    }, [loadData]);
+    // Note: Data fetching is now handled by SWR hooks (useSources, useViews)
+    // No need for manual loadData() call
 
     // Poll for status updates if any source is in a transient state
     useEffect(() => {
         const hasTransient = sources.some((s) => {
-            const sourceData = dataMap[s.id];
             const isRefreshing = s.status === "refreshing";
-            const isSuspended = s.status === "suspended";
-            const hasNoData = !s.has_data && !sourceData?.data;
-            return isRefreshing || isSuspended || hasNoData;
+            const hasError = hasSourceError(s, dataMap[s.id]);
+            const isWaiting =
+                !s.has_data && s.status !== "suspended" && !hasError;
+            return isRefreshing || isWaiting;
         });
 
         if (!hasTransient) return;
 
-        const interval = setInterval(() => {
-            void loadData();
+        const interval = setInterval(async () => {
+            try {
+                const updatedSources = await api.getSources();
+
+                // Get all source data for the new cache
+                const dataPromises = updatedSources.map((s) =>
+                    api
+                        .getSourceData(s.id)
+                        .then((data) => ({ id: s.id, data }))
+                );
+                const results = await Promise.all(dataPromises);
+
+                const newDataMap: Record<string, DataResponse> = {};
+                results.forEach(({ id, data }) => {
+                    newDataMap[id] = data;
+                });
+
+                // Update SWR cache
+                mutate(
+                    "sources-with-data",
+                    {
+                        sources: updatedSources,
+                        dataMap: newDataMap,
+                    },
+                    false
+                );
+            } catch (error) {
+                console.error("Dashboard polling failed:", error);
+            }
         }, 3000);
 
         return () => clearInterval(interval);
-    }, [sources, dataMap, loadData]);
+    }, [sources, dataMap]);
 
     useEffect(() => {
         const onRefresh = async () => {
@@ -403,11 +551,8 @@ export default function Dashboard() {
             useStore.getState().setActiveScraper(null);
         }
 
-        setSources(
-            sources.map((s) =>
-                s.id === sourceId ? { ...s, status: "refreshing" } : s,
-            ),
-        );
+        // Optimistically update status to refreshing for immediate UI feedback
+        optimisticUpdateSourceStatus(sourceId, "refreshing");
 
         const nextSkipped = new Set(useStore.getState().skippedScrapers);
         nextSkipped.delete(sourceId);
@@ -417,16 +562,24 @@ export default function Dashboard() {
             await api.refreshSource(sourceId);
         } catch (error) {
             console.error(`刷新数据源 ${sourceId} 失败:`, error);
+            // Rollback by re-fetching
+            invalidateSources();
         }
     };
 
     const handleDeleteSource = async (sourceId: string) => {
         try {
-            await api.deleteSourceFile(sourceId);
+            // Optimistically remove from UI immediately
+            optimisticRemoveSource(sourceId);
             setDeletingSourceId(null);
-            setTimeout(loadData, 500);
+            // Then delete from backend
+            await api.deleteSourceFile(sourceId);
+            // Refresh views in background
+            invalidateViews();
         } catch (error) {
             console.error(`删除数据源 ${sourceId} 失败:`, error);
+            // Rollback by re-fetching data
+            invalidateSources();
         }
     };
 
@@ -435,21 +588,15 @@ export default function Dashboard() {
         setShowErrorDetails(false);
     }, []);
 
-    if (loading) {
+    if (isDataLoading) {
         return (
             <TooltipProvider>
                 <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
-                    <Card className="w-[350px]">
-                        <CardHeader className="text-center">
-                            <CardTitle>加载中...</CardTitle>
-                            <CardDescription>
-                                正在获取配置和数据
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex justify-center">
-                            <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
-                        </CardContent>
-                    </Card>
+                    <EmptyState 
+                        icon={<RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />}
+                        title="加载中..."
+                        description="正在获取配置和数据"
+                    />
                 </div>
             </TooltipProvider>
         );
@@ -680,9 +827,13 @@ export default function Dashboard() {
                                                 <div className="flex items-center justify-between gap-1">
                                                     <div className="flex items-center gap-2 overflow-hidden min-w-0 flex-1">
                                                         <Tooltip>
-                                                            <TooltipTrigger asChild>
+                                                            <TooltipTrigger
+                                                                asChild
+                                                            >
                                                                 <span className="font-medium text-sm truncate">
-                                                                    {source.name}
+                                                                    {
+                                                                        source.name
+                                                                    }
                                                                 </span>
                                                             </TooltipTrigger>
                                                             <TooltipContent side="top">
@@ -735,12 +886,12 @@ export default function Dashboard() {
                                                                             : source
                                                                                     .interaction
                                                                                     ?.type ===
-                                                                              "webview_scrape"
+                                                                                "webview_scrape"
                                                                               ? "前台手动启动"
                                                                               : "解决问题"}
                                                                     </p>
                                                                 </TooltipContent>
-                                                                </Tooltip>
+                                                            </Tooltip>
                                                         ) : hasError ? (
                                                             <button
                                                                 type="button"
@@ -782,11 +933,13 @@ export default function Dashboard() {
                                                             </Badge>
                                                         )}
                                                         <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
+                                                            <DropdownMenuTrigger
+                                                                asChild
+                                                            >
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="icon"
-                                                                    className="h-6 w-6 text-muted-foreground hover:bg-foreground hover:text-background transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand/50"
+                                                                    className="h-6 w-6 shrink-0 text-muted-foreground hover:bg-foreground hover:text-background transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand/50"
                                                                 >
                                                                     <MoreVertical className="h-3 w-3" />
                                                                 </Button>
@@ -794,20 +947,28 @@ export default function Dashboard() {
                                                             <DropdownMenuContent align="end">
                                                                 <DropdownMenuItem
                                                                     onClick={() =>
-                                                                        handleRefreshSource(source.id)
+                                                                        handleRefreshSource(
+                                                                            source.id,
+                                                                        )
                                                                     }
                                                                 >
                                                                     <RefreshCw className="mr-2 h-4 w-4" />
-                                                                    <span>刷新</span>
+                                                                    <span>
+                                                                        刷新
+                                                                    </span>
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuItem
                                                                     className="text-destructive"
                                                                     onClick={() =>
-                                                                        setDeletingSourceId(source.id)
+                                                                        setDeletingSourceId(
+                                                                            source.id,
+                                                                        )
                                                                     }
                                                                 >
                                                                     <Trash2 className="mr-2 h-4 w-4" />
-                                                                    <span>删除</span>
+                                                                    <span>
+                                                                        删除
+                                                                    </span>
                                                                 </DropdownMenuItem>
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
@@ -829,7 +990,7 @@ export default function Dashboard() {
                                     <DialogHeader>
                                         <DialogTitle>确认删除</DialogTitle>
                                         <DialogDescription>
-                                            确定要删除此数据源吗？相关配置和本地数据也将被清除，此操作不可撤销。
+                                            确定要删除此数据源吗？该 source_id 的本地数据、密钥和绑定视图组件将被一并清理，此操作不可撤销。
                                         </DialogDescription>
                                     </DialogHeader>
                                     <DialogFooter>
@@ -874,17 +1035,14 @@ export default function Dashboard() {
                     </div>
 
                     {!viewConfig || viewConfig.items.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-12 border border-dashed rounded-lg bg-surface/30">
-                            <p className="text-muted-foreground mb-4">
-                                当前视图还没有任何组件。
-                            </p>
-                            <button
-                                className="h-9 px-5 text-sm font-medium rounded border border-border bg-background hover:bg-foreground hover:text-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
-                                onClick={() => setIsAddDialogOpen(true)}
-                            >
-                                添加第一个组件
-                            </button>
-                        </div>
+                        <EmptyState
+                            icon={<Database className="h-8 w-8 text-muted-foreground" />}
+                            title="当前视图还没有任何组件"
+                            description="添加组件以监控您的数据源。"
+                            actionLabel="添加第一个组件"
+                            onAction={() => setIsAddDialogOpen(true)}
+                            className="border border-dashed rounded-lg bg-surface/30 mx-4 mb-4"
+                        />
                     ) : (
                         <div
                             ref={gridRef}
@@ -896,17 +1054,36 @@ export default function Dashboard() {
                                     : null;
                                 const sourceSummary = item.source_id
                                     ? sources.find(
-                                          (s) => s.id === item.source_id,
-                                      )
+                                      (s) => s.id === item.source_id,
+                                  )
                                     : undefined;
+                                const safeProps = toSafeViewProps(
+                                    item.id,
+                                    item.props,
+                                );
+                                const normalizedType = normalizeTemplateType(
+                                    item.id,
+                                    safeProps.type ?? item.template_id,
+                                );
+                                const normalizedLabel =
+                                    typeof safeProps.label === "string"
+                                        ? safeProps.label
+                                        : (safeProps.ui?.title || item.template_id);
+                                const resetKey = [
+                                    item.id,
+                                    item.source_id || "",
+                                    normalizedType,
+                                    normalizedLabel,
+                                    Array.isArray(safeProps.widgets)
+                                        ? safeProps.widgets.length
+                                        : 0,
+                                ].join(":");
 
                                 const comp: ViewComponent = {
-                                    type: (item.props?.type ||
-                                        item.template_id ||
-                                        "source_card") as any,
-                                    label:
-                                        item.props?.label || item.template_id,
-                                    ...item.props,
+                                    ...safeProps,
+                                    id: item.template_id,
+                                    type: normalizedType,
+                                    label: normalizedLabel,
                                 };
 
                                 return (
@@ -926,13 +1103,18 @@ export default function Dashboard() {
                                                 }
                                             />
                                             <div className="w-full h-full flex flex-col [&>*]:flex-1 [&>*]:min-h-0">
-                                                {renderComponent(
-                                                    comp,
-                                                    sourceData,
-                                                    sourceSummary,
-                                                    setInteractSource,
-                                                    openErrorDialog,
-                                                )}
+                                                <WidgetFallbackBoundary
+                                                    itemId={item.id}
+                                                    resetKey={resetKey}
+                                                >
+                                                    {renderComponent(
+                                                        comp,
+                                                        sourceData,
+                                                        sourceSummary,
+                                                        setInteractSource,
+                                                        openErrorDialog,
+                                                    )}
+                                                </WidgetFallbackBoundary>
                                             </div>
                                         </div>
                                     </div>
@@ -1035,7 +1217,7 @@ export default function Dashboard() {
                 isOpen={!!interactSource}
                 onClose={() => setInteractSource(null)}
                 onInteractSuccess={() => {
-                    setTimeout(loadData, 1000);
+                    invalidateSources();
                 }}
                 onPushToQueue={handlePushToQueue}
             />

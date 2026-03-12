@@ -1,16 +1,18 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, type ComponentType } from "react";
 import Editor from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 import type * as Monaco from "monaco-editor";
 import { api } from "../api/client";
-import type { ReloadConfigDiagnostic } from "../api/client";
+import type { IntegrationPresetResponse, ReloadConfigDiagnostic, IntegrationFileMetadata } from "../api/client";
 import { useStore } from "../store";
+import {
+    useIntegrationFiles,
+    useIntegrationPresets,
+    useIntegrationMetadata,
+} from "../hooks/useSWR";
 import {
     Card,
     CardContent,
-    CardHeader,
-    CardTitle,
-    CardDescription,
 } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -48,6 +50,10 @@ import {
     RotateCcw,
     ChevronLeft,
     ChevronRight,
+    Globe,
+    Key,
+    Lock,
+    Terminal,
 } from "lucide-react";
 import { Badge } from "../components/ui/badge";
 import { useTheme } from "../components/theme-provider";
@@ -56,6 +62,9 @@ import {
     setupYamlWorker,
     type IntegrationDiagnostic,
 } from "../components/editor/YamlEditorWorkerSetup";
+import { RouteInterceptor } from "../components/RouteInterceptor";
+import { EmptyState } from "../components/EmptyState";
+import { InlineError } from "../components/InlineError";
 
 type ReloadConfigError = Error & {
     diagnostics?: ReloadConfigDiagnostic[];
@@ -66,15 +75,57 @@ function normalizeIntegrationFilename(input: string): string {
     return input.trim();
 }
 
+function stripYamlExtension(input: string): string {
+    const trimmed = input.trim();
+    return trimmed.toLowerCase().endsWith(".yaml")
+        ? trimmed.slice(0, -5)
+        : trimmed;
+}
+
 function toYamlSingleQuoted(value: string): string {
     return `'${value.replace(/'/g, "''")}'`;
 }
 
+type IntegrationPreset = {
+    id: string;
+    label: string;
+    description: string;
+    filenameHint: string;
+    contentTemplate: string;
+    icon: ComponentType<{ className?: string }>;
+};
+
+const PRESET_ICON_BY_ID: Record<string, ComponentType<{ className?: string }>> = {
+    api_key: Key,
+    oauth2: Lock,
+    curl: Terminal,
+    webscraper: Globe,
+};
+
+function normalizePresetResponse(preset: IntegrationPresetResponse): IntegrationPreset {
+    return {
+        id: preset.id,
+        label: preset.label,
+        description: preset.description,
+        filenameHint: preset.filename_hint,
+        contentTemplate: preset.content_template,
+        icon: PRESET_ICON_BY_ID[preset.id] ?? FileJson,
+    };
+}
+
+function renderPresetContent(template: string, displayName: string): string {
+    const safeSingleQuoted = toYamlSingleQuoted(displayName);
+    return template
+        .replaceAll("{{display_name_single_quoted}}", safeSingleQuoted)
+        .replaceAll("{{display_name}}", displayName);
+}
+
 function DiagnosticItem({ diagnostic }: { diagnostic: IntegrationDiagnostic }) {
     const [expanded, setExpanded] = useState(false);
-    const locationPrefix = diagnostic.line && diagnostic.column
-        ? `l:${diagnostic.line},c:${diagnostic.column} `
-        : "";
+    const locationPrefix =
+        diagnostic.line && diagnostic.column
+            ? `l:${diagnostic.line},c:${diagnostic.column} `
+            : "";
     return (
         <div className="rounded-md border border-error/20 bg-background/80 px-3 py-2 text-xs mb-2">
             <div
@@ -82,22 +133,30 @@ function DiagnosticItem({ diagnostic }: { diagnostic: IntegrationDiagnostic }) {
                 onClick={() => setExpanded(!expanded)}
             >
                 <div className="flex items-center gap-2 truncate pr-2">
-                   <AlertCircle className="h-3.5 w-3.5 text-error flex-shrink-0" />
-                   <span className="truncate">
-                       {locationPrefix && <span className="text-muted-foreground">{locationPrefix}</span>}
-                       {diagnostic.message}
-                   </span>
+                    <AlertCircle className="h-3.5 w-3.5 text-error flex-shrink-0" />
+                    <span className="truncate">
+                        {locationPrefix && (
+                            <span className="text-muted-foreground">
+                                {locationPrefix}
+                            </span>
+                        )}
+                        {diagnostic.message}
+                    </span>
                 </div>
-                <ChevronRight className={`h-4 w-4 flex-shrink-0 transition-transform duration-200 ${expanded ? "rotate-90" : ""}`} />
+                <ChevronRight
+                    className={`h-4 w-4 flex-shrink-0 transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
+                />
             </div>
             {expanded && (
                 <div className="mt-2 text-muted-foreground pl-5 border-l-2 border-error/20 ml-1.5 space-y-1">
                     <p>
-                    {diagnostic.line && diagnostic.column
-                        ? `Location: line ${diagnostic.line}, column ${diagnostic.column}`
-                        : "No precise position from backend"}
+                        {diagnostic.line && diagnostic.column
+                            ? `Location: line ${diagnostic.line}, column ${diagnostic.column}`
+                            : "No precise position from backend"}
                     </p>
-                    {diagnostic.fieldPath && <p>Field: {diagnostic.fieldPath}</p>}
+                    {diagnostic.fieldPath && (
+                        <p>Field: {diagnostic.fieldPath}</p>
+                    )}
                     {diagnostic.code && <p>Code: {diagnostic.code}</p>}
                     <p>Source: {diagnostic.source}</p>
                 </div>
@@ -136,8 +195,11 @@ export default function IntegrationsPage() {
     const [integrations, setIntegrations] = useState<string[]>([]);
     const [content, setContent] = useState<string>("");
     const [originalContent, setOriginalContent] = useState<string>("");
+    const [selectedFilePath, setSelectedFilePath] = useState<string | null>(
+        null,
+    );
     const [saving, setSaving] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [editorError, setEditorError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
     const [backendDiagnosticsByFile, setBackendDiagnosticsByFile] = useState<
         Record<string, IntegrationDiagnostic[]>
@@ -156,8 +218,18 @@ export default function IntegrationsPage() {
     const [showNewIntegrationDialog, setShowNewIntegrationDialog] =
         useState(false);
     const [showNewSourceDialog, setShowNewSourceDialog] = useState(false);
+    const [newIntegrationError, setNewIntegrationError] = useState<
+        string | null
+    >(null);
+    const [newSourceError, setNewSourceError] = useState<string | null>(null);
     const [newFilename, setNewFilename] = useState("");
     const [newIntegrationName, setNewIntegrationName] = useState("");
+    const [selectedPresetId, setSelectedPresetId] = useState<string | null>(
+        null,
+    );
+    const [integrationPresets, setIntegrationPresets] = useState<
+        IntegrationPreset[]
+    >([]);
     const [newSourceName, setNewSourceName] = useState("");
     const [integrationDisplayNameByFile, setIntegrationDisplayNameByFile] =
         useState<Record<string, string>>({});
@@ -165,11 +237,17 @@ export default function IntegrationsPage() {
     const [deletingIntegration, setDeletingIntegration] = useState<
         string | null
     >(null);
+    const [deleteIntegrationError, setDeleteIntegrationError] = useState<
+        string | null
+    >(null);
     const [deletingSourceId, setDeletingSourceId] = useState<string | null>(
         null,
     );
+    const [deleteSourceError, setDeleteSourceError] = useState<string | null>(
+        null,
+    );
     const [diagnosticsExpanded, setDiagnosticsExpanded] = useState(false);
-    
+
     const activeFileRef = useRef<string | null>(selectedFile);
     const validateDebounceRef = useRef<number | null>(null);
 
@@ -186,8 +264,9 @@ export default function IntegrationsPage() {
         [backendDiagnosticsByFile, editorDiagnosticsByFile],
     );
 
-    const selectedDiagnostics =
-        selectedFile ? getFileDiagnostics(selectedFile) : [];
+    const selectedDiagnostics = selectedFile
+        ? getFileDiagnostics(selectedFile)
+        : [];
 
     useEffect(() => {
         if (selectedDiagnostics.length > 0) {
@@ -315,13 +394,14 @@ export default function IntegrationsPage() {
         }
     }, []);
 
-    const loadIntegrationContent = async (filename: string) => {
+    const loadIntegrationContent = useCallback(async (filename: string) => {
         try {
             const data = await api.getIntegrationFile(filename);
             setSelectedFile(data.filename);
             setContent(data.content);
             setOriginalContent(data.content);
             setSelectedIntegrationIds(data.integration_ids ?? []);
+            setSelectedFilePath(data.resolved_path ?? null);
             setIntegrationDisplayNameByFile((prev) => {
                 const next = { ...prev };
                 const name = data.display_name?.trim();
@@ -332,23 +412,120 @@ export default function IntegrationsPage() {
                 }
                 return next;
             });
-            setError(null);
+            setEditorError(null);
 
             // Load related sources
-            const relatedSources = await api.getIntegrationSources(data.filename);
+            const relatedSources = await api.getIntegrationSources(
+                data.filename,
+            );
             setSources(relatedSources);
+            return data;
         } catch (err) {
-            setError(`Failed to load ${filename}`);
+            setEditorError(`Failed to load ${filename}`);
             console.error(err);
+            return null;
         }
-    };
+    }, []);
+
+    const handleReloadFile = useCallback(async () => {
+        if (!selectedFile) {
+            return;
+        }
+
+        const previousContent = content;
+        setEditorError(null);
+        setSuccess(null);
+
+        const data = await loadIntegrationContent(selectedFile);
+        if (!data) {
+            return;
+        }
+
+        try {
+            const reloadResult = await api.reloadConfig();
+            clearBackendDiagnosticsForFile(data.filename);
+            if (data.content === previousContent) {
+                if (reloadResult.affected_sources.length > 0) {
+                    setSuccess(
+                        `Reloaded config. Affected sources: ${reloadResult.affected_sources.join(", ")}`,
+                    );
+                } else {
+                    setSuccess(
+                        "Reloaded. No external file changes detected; runtime config refreshed.",
+                    );
+                }
+            } else if (reloadResult.affected_sources.length > 0) {
+                setSuccess(
+                    `Reloaded latest file and config. Affected sources: ${reloadResult.affected_sources.join(", ")}`,
+                );
+            } else {
+                setSuccess("Reloaded latest file and runtime config.");
+            }
+        } catch (reloadErr) {
+            const typedReloadErr = reloadErr as ReloadConfigError;
+            const reloadMessage =
+                typedReloadErr.detail ||
+                typedReloadErr.message ||
+                "Configuration reload failed";
+            const groupedDiagnostics = mapBackendDiagnostics(
+                data.filename,
+                typedReloadErr.diagnostics,
+                reloadMessage,
+            );
+            setBackendDiagnosticsByFile((prev) => {
+                const next = { ...prev };
+                Object.entries(groupedDiagnostics).forEach(
+                    ([filename, diagnostics]) => {
+                        next[filename] = diagnostics;
+                    },
+                );
+                return next;
+            });
+            if (data.content === previousContent) {
+                setSuccess("Reloaded file, but config reload failed.");
+            } else {
+                setSuccess("Reloaded latest file, but config reload failed.");
+            }
+            setEditorError(reloadMessage);
+        }
+
+        setTimeout(() => setSuccess(null), 3000);
+    }, [
+        clearBackendDiagnosticsForFile,
+        content,
+        loadIntegrationContent,
+        mapBackendDiagnostics,
+        selectedFile,
+    ]);
+
+    // Use SWR for data fetching - handles dedup and StrictMode automatically
+    const { files, isLoading: filesLoading } = useIntegrationFiles();
+    const { presets, isLoading: presetsLoading } = useIntegrationPresets();
+    const { metadata } = useIntegrationMetadata();
+
+    // Sync SWR data to state
+    useEffect(() => {
+        if (!filesLoading && files) {
+            setIntegrations(files);
+            // Process metadata for display names
+            if (metadata) {
+                const nextNames: Record<string, string> = {};
+                metadata.forEach((item: IntegrationFileMetadata) => {
+                    const name = item.name?.trim();
+                    if (name) {
+                        nextNames[item.filename] = name;
+                    }
+                });
+                setIntegrationDisplayNameByFile(nextNames);
+            }
+        }
+    }, [files, filesLoading, metadata]);
 
     useEffect(() => {
-        const init = async () => {
-            await loadIntegrations();
-        };
-        init();
-    }, [loadIntegrations]);
+        if (!presetsLoading && presets) {
+            setIntegrationPresets(presets.map(normalizePresetResponse));
+        }
+    }, [presets, presetsLoading]);
 
     // Automatically load content if a file is selected (e.g., when returning to the page)
     const hasInitialLoaded = useRef(false);
@@ -378,7 +555,7 @@ export default function IntegrationsPage() {
         if (!selectedFile) return;
 
         setSaving(true);
-        setError(null);
+        setEditorError(null);
         setSuccess(null);
 
         try {
@@ -417,57 +594,87 @@ export default function IntegrationsPage() {
                     return next;
                 });
                 setSuccess("Saved file, but config reload failed.");
-                setError(reloadMessage);
+                setEditorError(reloadMessage);
             }
 
             setTimeout(() => setSuccess(null), 4000);
         } catch (saveErr) {
             const message =
                 saveErr instanceof Error ? saveErr.message : "Failed to save";
-            setError(message);
+            setEditorError(message);
         } finally {
             setSaving(false);
         }
     };
 
     const handleCreateIntegration = async () => {
-        const rawFilename = newFilename.trim();
+        const rawFilename = stripYamlExtension(newFilename);
         if (!rawFilename) return;
+        setNewIntegrationError(null);
 
-        // Ensure the filename has .yaml extension
-        const filename = rawFilename.toLowerCase().endsWith(".yaml")
-            ? rawFilename
-            : `${rawFilename}.yaml`;
-        const displayName = newIntegrationName.trim();
-        const initialContent = displayName
-            ? `name: ${toYamlSingleQuoted(displayName)}\n`
-            : "";
+        const filename = `${rawFilename}.yaml`;
+        const displayName = newIntegrationName.trim() || rawFilename;
+        const selectedPreset = selectedPresetId
+            ? (integrationPresets.find(
+                  (preset) => preset.id === selectedPresetId,
+              ) ?? null)
+            : null;
+        const initialContent = selectedPreset
+            ? renderPresetContent(selectedPreset.contentTemplate, displayName)
+            : `name: ${toYamlSingleQuoted(displayName)}\n`;
 
         try {
             const created = await api.createIntegrationFile(
                 filename,
                 initialContent,
             );
+            await api.reloadConfig();
             await loadIntegrations();
             setShowNewIntegrationDialog(false);
             setNewFilename("");
             setNewIntegrationName("");
+            setSelectedPresetId(null);
+            setNewIntegrationError(null);
             // Load the newly created file
             await loadIntegrationContent(created.filename);
         } catch (err: any) {
-            setError(err.message || "Failed to create integration");
+            setNewIntegrationError(
+                err.message || "Failed to create integration",
+            );
         }
     };
 
     const handleNewIntegrationDialogChange = (open: boolean) => {
         setShowNewIntegrationDialog(open);
+        setNewIntegrationError(null);
         if (!open) {
             setNewFilename("");
             setNewIntegrationName("");
+            setSelectedPresetId(null);
+        }
+    };
+
+    const handleNewSourceDialogChange = (open: boolean) => {
+        setShowNewSourceDialog(open);
+        setNewSourceError(null);
+        if (!open) {
+            setNewSourceName("");
+        }
+    };
+
+    const handlePresetSelect = (preset: IntegrationPreset) => {
+        if (selectedPresetId === preset.id) {
+            setSelectedPresetId(null);
+        } else {
+            setSelectedPresetId(preset.id);
+            if (!newFilename.trim()) {
+                setNewFilename(preset.filenameHint);
+            }
         }
     };
 
     const handleDeleteIntegration = async (filename: string) => {
+        setDeleteIntegrationError(null);
         try {
             await api.deleteIntegrationFile(filename);
             await loadIntegrations();
@@ -493,15 +700,19 @@ export default function IntegrationsPage() {
                 setContent("");
                 setSources([]);
                 setSelectedIntegrationIds([]);
+                setSelectedFilePath(null);
             }
             setDeletingIntegration(null);
         } catch (err: any) {
-            setError(err.message || "Failed to delete integration");
+            setDeleteIntegrationError(
+                err.message || "Failed to delete integration",
+            );
         }
     };
 
     const handleCreateSource = async () => {
         if (!newSourceName) return;
+        setNewSourceError(null);
 
         try {
             const integrationId = (selectedIntegrationIds[0] ?? "").trim();
@@ -518,17 +729,19 @@ export default function IntegrationsPage() {
             }
             setShowNewSourceDialog(false);
             setNewSourceName("");
+            setNewSourceError(null);
 
             // Reload config
             await api.reloadConfig();
         } catch (err: any) {
-            setError(err.message || "Failed to create source");
+            setNewSourceError(err.message || "Failed to create source");
         }
     };
 
     const handleDeleteSource = async (sourceId: string) => {
+        setDeleteSourceError(null);
         try {
-            await api.deleteSourceFile(sourceId);
+            const deleted = await api.deleteSourceFile(sourceId);
             if (selectedFile) {
                 const relatedSources =
                     await api.getIntegrationSources(selectedFile);
@@ -538,8 +751,13 @@ export default function IntegrationsPage() {
             // Reload config
             await api.reloadConfig();
             setDeletingSourceId(null);
+            const affectedViewCount = deleted.cleanup?.affected_view_count ?? 0;
+            setSuccess(
+                `Source deleted. Cleared data/secrets and removed ${affectedViewCount} linked view item(s).`,
+            );
+            setTimeout(() => setSuccess(null), 3000);
         } catch (err: any) {
-            setError(err.message || "Failed to delete source");
+            setDeleteSourceError(err.message || "Failed to delete source");
         }
     };
 
@@ -548,7 +766,11 @@ export default function IntegrationsPage() {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.ctrlKey || e.metaKey) && e.key === "s") {
                 e.preventDefault();
-                if (selectedFile && content !== originalContent && selectedDiagnostics.length === 0) {
+                if (
+                    selectedFile &&
+                    content !== originalContent &&
+                    selectedDiagnostics.length === 0
+                ) {
                     handleSave();
                 }
             }
@@ -558,8 +780,17 @@ export default function IntegrationsPage() {
     }, [selectedFile, content, originalContent, selectedDiagnostics]);
 
     const handleMonacoMount = useCallback(
-        async (_editor: editor.IStandaloneCodeEditor, monaco: typeof Monaco) => {
+        async (
+            _editor: editor.IStandaloneCodeEditor,
+            monaco: typeof Monaco,
+        ) => {
             const model = _editor.getModel();
+            if (model) {
+                model.updateOptions({
+                    tabSize: 2,
+                    insertSpaces: true,
+                });
+            }
 
             await setupYamlWorker(monaco, {
                 fileMatch: ["*"], // Match all files since this editor only edits YAML
@@ -568,15 +799,26 @@ export default function IntegrationsPage() {
             // Trigger validation after schema is loaded
             if (model) {
                 // Force re-validation by clearing and letting the language service re-validate
-                monaco.editor.setModelMarkers(model, 'yaml', []);
+                monaco.editor.setModelMarkers(model, "yaml", []);
             }
         },
         [],
     );
 
+    const isDuplicateFilename = (() => {
+        const rawFilename = stripYamlExtension(newFilename);
+        if (!rawFilename) return false;
+        const targetFilename = `${rawFilename.toLowerCase()}.yaml`;
+        return integrations.some(
+            (existing) => existing.toLowerCase() === targetFilename
+        );
+    })();
+    const defaultIntegrationName = stripYamlExtension(newFilename);
+
     return (
         <TooltipProvider>
-            <div className="flex h-full bg-transparent text-foreground">
+            <RouteInterceptor when={content !== originalContent && !!selectedFile} />
+            <div className="flex h-full min-w-0 bg-transparent text-foreground">
                 {/* Sidebar */}
                 <aside
                     className={`border-r border-border bg-surface/30 flex flex-col transition-all duration-300 ${sidebarCollapsed ? "w-14" : "w-64"}`}
@@ -600,27 +842,35 @@ export default function IntegrationsPage() {
                                         <Button
                                             variant="ghost"
                                             size="icon"
+                                            aria-label="New Integration"
                                             className="h-6 w-6 text-muted-foreground hover:bg-foreground hover:text-background transition-colors duration-150"
                                         >
                                             <Plus className="h-4 w-4" />
                                         </Button>
                                     </DialogTrigger>
-                                    <DialogContent>
+                                    <DialogContent className="max-w-2xl">
                                         <DialogHeader>
                                             <DialogTitle>
                                                 New Integration
                                             </DialogTitle>
-                                            <DialogDescription>
-                                                Create a new integration YAML
-                                                file.
-                                            </DialogDescription>
                                         </DialogHeader>
-                                        <div className="py-4 space-y-4">
-                                            <div className="space-y-1.5">
-                                                <Label htmlFor="new-integration-id">
-                                                    Integration ID (filename)
-                                                </Label>
-                                                <div className="flex items-center rounded-md border border-input focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 ring-offset-background">
+                                        <div className="py-4 space-y-5">
+                                            {/* ID (Filename) Input */}
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <Label
+                                                        htmlFor="new-integration-id"
+                                                        className="text-sm font-medium"
+                                                    >
+                                                        ID (file name)
+                                                    </Label>
+                                                    {isDuplicateFilename && (
+                                                        <span className="text-xs text-error font-medium">
+                                                            File already exists
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className={`flex items-center rounded-md border transition-colors duration-150 ${isDuplicateFilename ? "border-error bg-error/5" : "border-input focus-within:border-brand focus-within:ring-1 focus-within:ring-brand/20"}`}>
                                                     <Input
                                                         id="new-integration-id"
                                                         placeholder="github_oauth"
@@ -629,49 +879,90 @@ export default function IntegrationsPage() {
                                                             const val =
                                                                 e.target.value;
                                                             setNewFilename(
-                                                                val
-                                                                    .toLowerCase()
-                                                                    .endsWith(
-                                                                        ".yaml",
-                                                                    )
-                                                                    ? val.slice(
-                                                                          0,
-                                                                          -5,
-                                                                      )
-                                                                    : val,
+                                                                stripYamlExtension(
+                                                                    val,
+                                                                ),
                                                             );
                                                         }}
-                                                        className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                                                        className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
                                                     />
-                                                    <span className="flex h-10 items-center justify-center rounded-r-md border-l border-input bg-muted px-3 text-sm font-medium text-muted-foreground select-none">
+                                                    <span className="flex h-10 items-center justify-center border-l border-border bg-muted/50 px-3 text-sm font-mono text-muted-foreground select-none">
                                                         .yaml
                                                     </span>
                                                 </div>
-                                                <p className="text-xs text-muted-foreground">
-                                                    File name stem is used as
-                                                    integration id.
-                                                </p>
                                             </div>
-                                            <div className="space-y-1.5">
-                                                <Label htmlFor="new-integration-name">
-                                                    Display Name (optional)
+
+                                            {/* Name Input */}
+                                            <div className="space-y-2">
+                                                <Label
+                                                    htmlFor="new-integration-name"
+                                                    className="text-sm font-medium"
+                                                >
+                                                    Name
                                                 </Label>
                                                 <Input
                                                     id="new-integration-name"
-                                                    placeholder="GitHub 登录"
+                                                    placeholder={
+                                                        defaultIntegrationName ||
+                                                        "integration_name"
+                                                    }
                                                     value={newIntegrationName}
                                                     onChange={(e) =>
                                                         setNewIntegrationName(
                                                             e.target.value,
                                                         )
                                                     }
+                                                    className="border-input focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand/20"
                                                 />
-                                                <p className="text-xs text-muted-foreground">
-                                                    When provided, name is
-                                                    written into the new YAML
-                                                    and shown in sidebar.
-                                                </p>
                                             </div>
+
+                                            {/* Presets Section */}
+                                            <div className="space-y-3">
+                                                <Label className="text-sm font-medium">
+                                                    Presets
+                                                </Label>
+                                                <div className="relative">
+                                                    <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+                                                        {integrationPresets.map(
+                                                            (preset) => {
+                                                                const selected =
+                                                                    selectedPresetId ===
+                                                                    preset.id;
+                                                                const IconComponent = preset.icon;
+                                                                return (
+                                                                    <Tooltip key={preset.id}>
+                                                                        <TooltipTrigger asChild>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() =>
+                                                                                    handlePresetSelect(
+                                                                                        preset,
+                                                                                    )
+                                                                                }
+                                                                                className={`flex-shrink-0 w-32 snap-start rounded-lg border transition-all duration-150 ${selected ? "border-brand bg-brand/10 shadow-soft-elevation" : "border-border bg-surface hover:border-brand/50 hover:bg-surface/80"}`}
+                                                                            >
+                                                                                <div className="flex flex-col items-center justify-center p-4 gap-2">
+                                                                                    <div className="w-12 h-12 flex items-center justify-center">
+                                                                                        <IconComponent className={`w-10 h-10 ${selected ? "text-brand" : "text-muted-foreground"}`} />
+                                                                                    </div>
+                                                                                    <p className="text-sm font-medium text-center">
+                                                                                        {preset.label}
+                                                                                    </p>
+                                                                                </div>
+                                                                            </button>
+                                                                        </TooltipTrigger>
+                                                                        <TooltipContent side="top" className="max-w-xs">
+                                                                            {preset.description}
+                                                                        </TooltipContent>
+                                                                    </Tooltip>
+                                                                );
+                                                            },
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <InlineError message={newIntegrationError} />
                                         </div>
                                         <DialogFooter>
                                             <Button
@@ -688,6 +979,8 @@ export default function IntegrationsPage() {
                                                 onClick={
                                                     handleCreateIntegration
                                                 }
+                                                disabled={!newFilename.trim() || isDuplicateFilename}
+                                                className="bg-brand-gradient text-white hover:opacity-90 transition-opacity duration-150"
                                             >
                                                 Create
                                             </Button>
@@ -726,9 +1019,12 @@ export default function IntegrationsPage() {
                                     <Button
                                         variant="ghost"
                                         size="icon"
+                                        aria-label="New Integration"
                                         className="h-8 w-8 text-muted-foreground hover:bg-foreground hover:text-background transition-colors duration-150"
                                         onClick={() =>
-                                            setShowNewIntegrationDialog(true)
+                                            handleNewIntegrationDialogChange(
+                                                true,
+                                            )
                                         }
                                     >
                                         <Plus className="h-4 w-4" />
@@ -833,7 +1129,7 @@ export default function IntegrationsPage() {
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    className={`h-6 w-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-brand/50 ${selectedFile === file ? "hover:bg-brand/20 text-brand" : ""}`}
+                                                    className={`h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-brand/50 ${selectedFile === file ? "hover:bg-brand/20 text-brand" : ""}`}
                                                     onClick={(e) =>
                                                         e.stopPropagation()
                                                     }
@@ -869,30 +1165,38 @@ export default function IntegrationsPage() {
                 </aside>
 
                 {/* Main Content */}
-                <main className="flex-1 flex flex-col">
+                <main className="flex-1 min-w-0 flex flex-col">
                     {selectedFile ? (
                         <>
                             {/* Toolbar */}
-                            <div className="h-14 border-b border-border px-4 flex items-center justify-between bg-surface/50">
-                                <div className="flex items-center gap-2">
-                                    <h3 className="font-medium">
+                            <div className="h-14 border-b border-border px-4 flex items-center justify-between gap-2 bg-surface/50">
+                                <div className="flex min-w-0 flex-1 items-center gap-2">
+                                    <h3 className="font-medium truncate">
                                         {selectedFile}
                                     </h3>
+                                    {selectedFilePath && (
+                                        <span
+                                            className="hidden max-w-[38vw] truncate text-xs text-muted-foreground lg:inline"
+                                            title={selectedFilePath}
+                                        >
+                                            {selectedFilePath}
+                                        </span>
+                                    )}
                                     {content !== originalContent && (
                                         <Badge variant="secondary">
                                             Unsaved
                                         </Badge>
                                     )}
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    {error && (
-                                        <span className="text-destructive text-sm flex items-center gap-1">
+                                <div className="flex shrink-0 items-center gap-2 min-w-0">
+                                    {editorError && (
+                                        <span className="hidden max-w-[32vw] truncate text-destructive text-sm sm:flex items-center gap-1">
                                             <AlertCircle className="h-4 w-4" />
-                                            {error}
+                                            {editorError}
                                         </span>
                                     )}
                                     {success && (
-                                        <span className="text-green-500 text-sm flex items-center gap-1">
+                                        <span className="hidden max-w-[24vw] truncate text-green-500 text-sm sm:flex items-center gap-1">
                                             <CheckCircle className="h-4 w-4" />
                                             {success}
                                         </span>
@@ -902,12 +1206,9 @@ export default function IntegrationsPage() {
                                             <Button
                                                 variant="outline"
                                                 size="icon"
+                                                aria-label="Reload file"
                                                 className="h-8 w-8 hover:bg-foreground hover:text-background transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand/50"
-                                                onClick={() =>
-                                                    loadIntegrationContent(
-                                                        selectedFile,
-                                                    )
-                                                }
+                                                onClick={handleReloadFile}
                                             >
                                                 <RotateCcw className="h-4 w-4" />
                                             </Button>
@@ -924,8 +1225,10 @@ export default function IntegrationsPage() {
                                                 onClick={handleSave}
                                                 disabled={
                                                     saving ||
-                                                    content === originalContent ||
-                                                    selectedDiagnostics.length > 0
+                                                    content ===
+                                                        originalContent ||
+                                                    selectedDiagnostics.length >
+                                                        0
                                                 }
                                             >
                                                 <Save className="h-4 w-4" />
@@ -941,7 +1244,7 @@ export default function IntegrationsPage() {
                             </div>
 
                             {/* Editor */}
-                            <div className="flex-1 overflow-hidden">
+                            <div className="flex-1 min-w-0 overflow-hidden">
                                 <Editor
                                     height="100%"
                                     path={editorModelPath}
@@ -957,6 +1260,9 @@ export default function IntegrationsPage() {
                                     options={{
                                         minimap: { enabled: false },
                                         fontSize: 14,
+                                        tabSize: 2,
+                                        insertSpaces: true,
+                                        detectIndentation: false,
                                         wordWrap: "on",
                                         automaticLayout: true,
                                         renderValidationDecorations: "on",
@@ -968,23 +1274,37 @@ export default function IntegrationsPage() {
                             <div className="h-64 border-t border-border bg-surface/30 flex flex-col relative overflow-hidden">
                                 {selectedDiagnostics.length > 0 && (
                                     <div
-                                        className={`absolute bottom-0 left-0 right-0 bg-background/95 border-t border-error/30 z-10 transition-all duration-200 ease-out flex flex-col backdrop-blur-sm ${diagnosticsExpanded ? 'h-full' : 'h-10'}`}
+                                        className={`absolute bottom-0 left-0 right-0 bg-background/95 border-t border-error/30 z-10 transition-all duration-200 ease-out flex flex-col backdrop-blur-sm ${diagnosticsExpanded ? "h-full" : "h-10"}`}
                                     >
                                         <div
                                             className="h-10 px-4 flex items-center justify-between cursor-pointer border-b border-border hover:bg-surface/50 transition-colors duration-150"
-                                            onClick={() => setDiagnosticsExpanded(!diagnosticsExpanded)}
+                                            onClick={() =>
+                                                setDiagnosticsExpanded(
+                                                    !diagnosticsExpanded,
+                                                )
+                                            }
                                         >
                                             <div className="flex items-center gap-2 text-sm font-medium text-error">
                                                 <AlertCircle className="h-4 w-4" />
-                                                配置错误 ({selectedDiagnostics.length})
+                                                配置错误 (
+                                                {selectedDiagnostics.length})
                                             </div>
-                                            <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${diagnosticsExpanded ? "rotate-90" : "-rotate-90"}`} />
+                                            <ChevronRight
+                                                className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${diagnosticsExpanded ? "rotate-90" : "-rotate-90"}`}
+                                            />
                                         </div>
                                         {diagnosticsExpanded && (
                                             <div className="flex-1 overflow-y-auto p-4 bg-error/5">
-                                                {selectedDiagnostics.map((diagnostic, index) => (
-                                                    <DiagnosticItem key={`${diagnostic.code || "diag"}-${index}`} diagnostic={diagnostic} />
-                                                ))}
+                                                {selectedDiagnostics.map(
+                                                    (diagnostic, index) => (
+                                                        <DiagnosticItem
+                                                            key={`${diagnostic.code || "diag"}-${index}`}
+                                                            diagnostic={
+                                                                diagnostic
+                                                            }
+                                                        />
+                                                    ),
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -997,7 +1317,9 @@ export default function IntegrationsPage() {
                                     </h3>
                                     <Dialog
                                         open={showNewSourceDialog}
-                                        onOpenChange={setShowNewSourceDialog}
+                                        onOpenChange={
+                                            handleNewSourceDialogChange
+                                        }
                                     >
                                         <DialogTrigger asChild>
                                             <Button variant="outline" size="sm">
@@ -1036,12 +1358,13 @@ export default function IntegrationsPage() {
                                                         unique hash.
                                                     </p>
                                                 </div>
+                                                <InlineError message={newSourceError} />
                                             </div>
                                             <DialogFooter>
                                                 <Button
                                                     variant="outline"
                                                     onClick={() =>
-                                                        setShowNewSourceDialog(
+                                                        handleNewSourceDialogChange(
                                                             false,
                                                         )
                                                     }
@@ -1086,12 +1409,12 @@ export default function IntegrationsPage() {
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
+                                                            aria-label={`Delete source ${source.id}`}
                                                             className="h-8 w-8 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand/50"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                setDeletingSourceId(
-                                                                    source.id,
-                                                                );
+                                                                setDeletingSourceId(source.id);
+                                                                setDeleteSourceError(null);
                                                             }}
                                                         >
                                                             <Trash2 className="h-4 w-4" />
@@ -1110,15 +1433,13 @@ export default function IntegrationsPage() {
                         </>
                     ) : (
                         <div className="flex-1 flex items-center justify-center">
-                            <Card className="w-96 bg-surface border-border">
-                                <CardHeader>
-                                    <CardTitle>Select an Integration</CardTitle>
-                                    <CardDescription>
-                                        Choose an integration from the sidebar
-                                        or create a new one.
-                                    </CardDescription>
-                                </CardHeader>
-                            </Card>
+                            <EmptyState
+                                icon={<FileJson className="h-8 w-8" />}
+                                title="Select an Integration"
+                                description="Choose an integration from the sidebar or create a new one to get started."
+                                actionLabel="Create Integration"
+                                onAction={() => handleNewIntegrationDialogChange(true)}
+                            />
                         </div>
                     )}
                 </main>
@@ -1126,22 +1447,30 @@ export default function IntegrationsPage() {
 
             <Dialog
                 open={deletingIntegration !== null}
-                onOpenChange={(open) => !open && setDeletingIntegration(null)}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setDeletingIntegration(null);
+                        setDeleteIntegrationError(null);
+                    }
+                }}
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Confirm Delete</DialogTitle>
+                        <DialogTitle>确认删除集成文件</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to delete{" "}
-                            {deletingIntegration}?
+                            删除 "{deletingIntegration}" 后，该文件内配置将不可恢复。使用该集成的数据源不会自动删除，但可能因配置缺失而失效。
                         </DialogDescription>
                     </DialogHeader>
+                    <InlineError message={deleteIntegrationError} className="mt-2" />
                     <DialogFooter>
                         <Button
                             variant="outline"
-                            onClick={() => setDeletingIntegration(null)}
+                            onClick={() => {
+                                setDeletingIntegration(null);
+                                setDeleteIntegrationError(null);
+                            }}
                         >
-                            Cancel
+                            取消
                         </Button>
                         <Button
                             variant="destructive"
@@ -1150,7 +1479,7 @@ export default function IntegrationsPage() {
                                 handleDeleteIntegration(deletingIntegration)
                             }
                         >
-                            Delete
+                            确认删除
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -1158,22 +1487,30 @@ export default function IntegrationsPage() {
 
             <Dialog
                 open={deletingSourceId !== null}
-                onOpenChange={(open) => !open && setDeletingSourceId(null)}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setDeletingSourceId(null);
+                        setDeleteSourceError(null);
+                    }
+                }}
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Confirm Delete</DialogTitle>
+                        <DialogTitle>确认删除数据源</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to delete source "
-                            {deletingSourceId}"?
+                            {`删除 "${deletingSourceId}" 后将同时清理该 source_id 下的数据、密钥，以及绑定到该 source_id 的视图组件。此操作不可撤销。`}
                         </DialogDescription>
                     </DialogHeader>
+                    <InlineError message={deleteSourceError} className="mt-2" />
                     <DialogFooter>
                         <Button
                             variant="outline"
-                            onClick={() => setDeletingSourceId(null)}
+                            onClick={() => {
+                                setDeletingSourceId(null);
+                                setDeleteSourceError(null);
+                            }}
                         >
-                            Cancel
+                            取消
                         </Button>
                         <Button
                             variant="destructive"
@@ -1182,7 +1519,7 @@ export default function IntegrationsPage() {
                                 handleDeleteSource(deletingSourceId)
                             }
                         >
-                            Delete
+                            确认删除
                         </Button>
                     </DialogFooter>
                 </DialogContent>

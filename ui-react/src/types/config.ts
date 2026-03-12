@@ -59,7 +59,7 @@ export interface ProgressBarWidget extends WidgetConfigBase {
 }
 
 export interface ListWidgetConfig extends WidgetConfigBase {
-    type: "list";
+    type: "List";
     data_source: string;
     item_alias?: string;
     layout?: "col" | "row" | "grid";
@@ -124,9 +124,6 @@ export interface SourceConfig {
     description: string;
     icon?: string;
     enabled: boolean;
-    auth: AuthConfig;
-    request: RequestConfig;
-    parser: ParserConfig;
     schedule: ScheduleConfig;
     flow?: StepConfig[];
 }
@@ -145,11 +142,12 @@ export interface StepConfig {
 
 // Extended ViewComponent with more properties
 export interface ViewComponent {
+    id: string;
     type: ViewComponentType;
     source_id?: string;
     field?: string;
     icon?: string;
-    label: string;
+    label?: string;
     format?: string;
     delta_field?: string;
     // For source_card type
@@ -225,6 +223,7 @@ export type SourceStatus = "active" | "error" | "suspended" | "disabled" | "refr
 export type InteractionType =
     | "input_text"
     | "oauth_start"
+    | "oauth_device_flow"
     | "captcha"
     | "confirm"
     | "webview_scrape"

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { api } from "../api/client";
+import { useSettings } from "../hooks/useSWR";
 
 type Theme = "dark" | "light" | "system";
 
@@ -28,16 +29,15 @@ export function ThemeProvider({
 }: ThemeProviderProps) {
     const [theme, setThemeState] = useState<Theme>(defaultTheme);
 
-    // Load from backend on mount
+    // Use SWR to fetch settings - handles dedup and StrictMode automatically
+    const { settings } = useSettings();
+
+    // Sync theme from settings
     useEffect(() => {
-        api.getSettings()
-            .then((settings) => {
-                if (settings.theme) {
-                    setThemeState(settings.theme as Theme);
-                }
-            })
-            .catch(console.error);
-    }, []);
+        if (settings?.theme) {
+            setThemeState(settings.theme as Theme);
+        }
+    }, [settings?.theme]);
 
     useEffect(() => {
         const root = window.document.documentElement;
@@ -58,12 +58,10 @@ export function ThemeProvider({
 
     const setTheme = (newTheme: Theme) => {
         setThemeState(newTheme);
-        // Also update backend asynchronously
-        api.getSettings()
-            .then((settings) => {
-                api.updateSettings({ ...settings, theme: newTheme });
-            })
-            .catch(console.error);
+        // Update backend via SWR cache update
+        if (settings) {
+            api.updateSettings({ ...settings, theme: newTheme });
+        }
     };
 
     return (

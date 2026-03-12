@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { api } from "../../api/client";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
+
+const OAUTH_PENDING_SOURCE_ID_KEY = "oauth_pending_source_id";
 
 export function OAuthCallback() {
   const [status, setStatus] = useState<"loading" | "success" | "error">(
@@ -10,12 +12,33 @@ export function OAuthCallback() {
   );
   const [message, setMessage] = useState("Authenticating...");
 
+  // Prevent StrictMode double invocation
+  const callbackRef = useRef(false);
+
   useEffect(() => {
+    if (callbackRef.current) return;
+    callbackRef.current = true;
+
     const handleCallback = async () => {
       const params = new URLSearchParams(window.location.search);
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const queryPayload = Object.fromEntries(params.entries());
+      const hashPayload = Object.fromEntries(hash.entries());
       const code = params.get("code");
       const state = params.get("state");
       const error = params.get("error");
+      const accessToken = hash.get("access_token");
+      const tokenType = hash.get("token_type");
+      const expiresIn = hash.get("expires_in");
+      const scope = hash.get("scope");
+      const hashState = hash.get("state");
+      const pendingSourceId = (() => {
+        try {
+          return window.localStorage.getItem(OAUTH_PENDING_SOURCE_ID_KEY) || undefined;
+        } catch (_e) {
+          return undefined;
+        }
+      })();
 
       if (error) {
         setStatus("error");
@@ -23,17 +46,18 @@ export function OAuthCallback() {
         return;
       }
 
-      if (!code) {
+      if (
+        !code &&
+        Object.keys(queryPayload).length === 0 &&
+        Object.keys(hashPayload).length === 0
+      ) {
         setStatus("error");
-        setMessage("Missing code parameter");
+        setMessage("Missing authorization payload");
         return;
       }
 
-      // state is optional - some providers like OpenRouter don't return it
-      // If missing, we'll use the source ID from the path (e.g., /oauth/callback/my_openrouter_keys)
-      const pathParts = window.location.pathname.split("/");
-      const sourceIdFromPath = pathParts.length > 3 ? pathParts[3] : undefined;
-      const sourceId = state || sourceIdFromPath;
+      // state is optional for some providers, fallback to pending source id cache.
+      const sourceId = state || hashState || pendingSourceId;
 
       if (!sourceId) {
         setStatus("error");
@@ -41,15 +65,36 @@ export function OAuthCallback() {
         return;
       }
 
+      if (pendingSourceId && pendingSourceId === sourceId) {
+        try {
+          window.localStorage.removeItem(OAUTH_PENDING_SOURCE_ID_KEY);
+        } catch (_e) {
+          // Ignore localStorage errors.
+        }
+      }
+
       try {
         // Determine redirect_uri (current URL without query)
         const redirectUri = window.location.origin + window.location.pathname;
 
-        await api.interact(sourceId, {
-          type: "oauth_code_exchange",
-          code,
-          redirect_uri: redirectUri,
-        });
+        if (code || Object.keys(queryPayload).length > 0) {
+          await api.interact(sourceId, {
+            type: "oauth_code_exchange",
+            ...queryPayload,
+            code: code ?? undefined,
+            redirect_uri: redirectUri,
+          });
+        } else {
+          await api.interact(sourceId, {
+            type: "oauth_implicit_token",
+            oauth_payload: hashPayload,
+            access_token: accessToken ?? undefined,
+            token_type: tokenType ?? "Bearer",
+            expires_in: expiresIn ? Number(expiresIn) : undefined,
+            scope: scope ?? undefined,
+            state: hashState ?? undefined,
+          });
+        }
 
         setStatus("success");
         setMessage("Authorization successful! You can close this window.");
@@ -58,11 +103,6 @@ export function OAuthCallback() {
         const channel = new BroadcastChannel("oauth_channel");
         channel.postMessage({ type: "success", sourceId });
         channel.close();
-
-        // Also try window.opener for legacy popup support
-        if (window.opener) {
-          window.opener.postMessage({ type: "oauth-success", sourceId }, "*");
-        }
 
         // Auto close after 2 seconds
         setTimeout(() => {
@@ -75,6 +115,8 @@ export function OAuthCallback() {
     };
 
     handleCallback();
+
+    // No cleanup - prevent StrictMode double invocation by never resetting the flag
   }, []);
 
   return (

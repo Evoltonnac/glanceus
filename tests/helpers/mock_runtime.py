@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any
 
-from core.config_loader import AuthConfig, AuthType, IntegrationConfig
+from core.config_loader import IntegrationConfig, StepConfig, StepType
 from core.models import StoredSource
 
 
@@ -65,8 +65,11 @@ class MockAuthManager:
         return self._oauth_handlers.get(source_id)
 
 
-def make_integration_config(integration_id: str, auth_type: AuthType) -> IntegrationConfig:
-    return IntegrationConfig(id=integration_id, auth=AuthConfig(type=auth_type))
+def make_integration_config(integration_id: str, auth_type: str = "none") -> IntegrationConfig:
+    flow = []
+    if auth_type != "none":
+        flow.append(StepConfig(id="auth", use=StepType(auth_type)))
+    return IntegrationConfig(id=integration_id, flow=flow)
 
 
 def make_api_runtime(

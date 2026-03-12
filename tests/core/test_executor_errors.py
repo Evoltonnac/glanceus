@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from core.config_loader import AuthType, StepType
+from core.config_loader import StepType
 from core.source_state import InteractionType, SourceStatus
 from tests.factories import build_source_config, build_step
 
@@ -68,12 +68,15 @@ async def test_script_stdout_and_stderr_are_captured_in_error_details(executor):
 
 
 @pytest.mark.asyncio
-async def test_oauth_gate_blocks_curl_before_step_runs(executor, data_controller):
+async def test_oauth_step_blocks_curl_until_authorized(executor, data_controller):
     source = build_source_config(
-        source_id="flow-auth-gate",
-        name="Auth Gate Source",
-        auth_type=AuthType.OAUTH,
+        source_id="flow-auth-step-gate",
+        name="Auth Step Gate Source",
         flow=[
+            build_step(
+                step_id="oauth-step",
+                use=StepType.OAUTH,
+            ),
             build_step(
                 step_id="curl-step",
                 use=StepType.CURL,
@@ -89,5 +92,6 @@ async def test_oauth_gate_blocks_curl_before_step_runs(executor, data_controller
     assert state.interaction is not None
     assert state.interaction.type == InteractionType.OAUTH_START
     assert "Authorization required" in (state.message or "")
+    # Should not have started curl step yet
     assert "curl-step" not in (state.message or "")
     data_controller.upsert.assert_not_called()

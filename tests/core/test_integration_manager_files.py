@@ -29,6 +29,20 @@ def test_list_files_and_extract_file_based_id(tmp_path):
     assert manager.get_integration_ids_in_file("multi.yaml") == ["multi"]
 
 
+def test_list_files_ignores_hidden_yaml_files(tmp_path):
+    config_root = tmp_path / "config"
+    integrations_dir = config_root / "integrations"
+    integrations_dir.mkdir(parents=True)
+    (integrations_dir / "visible.yaml").write_text("flow: []\n", encoding="utf-8")
+    (integrations_dir / "._hidden.yaml").write_bytes(
+        b"\x00\x05\x16\x07\x00\x02\x00\x00Mac OS X\x00\x00\x00\xa3"
+    )
+
+    manager = IntegrationManager(config_root=str(config_root))
+
+    assert manager.list_integration_files() == ["visible.yaml"]
+
+
 def test_metadata_reads_optional_display_name(tmp_path):
     config_root = tmp_path / "config"
     integrations_dir = config_root / "integrations"
@@ -48,3 +62,6 @@ def test_metadata_reads_optional_display_name(tmp_path):
             "name": "中文显示名",
         }
     ]
+    assert manager.get_integration_path("named.yaml").endswith(
+        "/config/integrations/named.yaml",
+    )

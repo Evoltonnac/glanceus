@@ -3,10 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 from core.config_loader import (
-    AuthConfig,
-    AuthType,
-    ParserConfig,
-    RequestConfig,
     SourceConfig,
     StepConfig,
     StepType,
@@ -34,17 +30,12 @@ def build_source_config(
     *,
     source_id: str = "test-source",
     name: str = "Test Source",
-    auth_type: AuthType | None = None,
     flow: list[StepConfig] | None = None,
 ) -> SourceConfig:
-    auth = AuthConfig(type=auth_type or AuthType.NONE)
     return SourceConfig(
         id=source_id,
         name=name,
         description=f"{name} for tests",
         enabled=True,
-        auth=auth,
-        request=RequestConfig(url="https://example.com/api"),
-        parser=ParserConfig(),
         flow=flow,
     )

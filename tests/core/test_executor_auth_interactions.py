@@ -20,6 +20,14 @@ from tests.factories import build_source_config, build_step
             InteractionType.OAUTH_START,
         ),
         (
+            build_step(
+                step_id="oauth-device",
+                use=StepType.OAUTH,
+                args={"oauth_flow": "device"},
+            ),
+            InteractionType.OAUTH_DEVICE_FLOW,
+        ),
+        (
             build_step(step_id="curl", use=StepType.CURL),
             InteractionType.INPUT_TEXT,
         ),

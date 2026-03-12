@@ -9,7 +9,9 @@ from core.encryption import (
     encrypt_dict,
     encrypt_value,
     generate_master_key,
+    get_keychain_master_key,
     is_encrypted,
+    set_keychain_master_key,
 )
 
 
@@ -54,3 +56,57 @@ def test_decrypt_with_wrong_key_raises_value_error():
 
     with pytest.raises(ValueError):
         decrypt_value(encrypted, wrong_key)
+
+
+def test_keychain_helpers_fallback_when_keyring_unavailable(monkeypatch):
+    import core.encryption as encryption_module
+
+    monkeypatch.setattr(encryption_module, "keyring", None)
+    key = generate_master_key()
+
+    assert set_keychain_master_key(key, service="test-service", account="test-account") is False
+    assert get_keychain_master_key(service="test-service", account="test-account") is None
+
+
+def test_get_keychain_master_key_strips_surrounding_whitespace(monkeypatch):
+    import core.encryption as encryption_module
+
+    key = generate_master_key()
+
+    class _FakeKeyring:
+        @staticmethod
+        def get_password(service: str, account: str) -> str:
+            assert service == "test-service"
+            assert account == "test-account"
+            return f"  {key}\n"
+
+    monkeypatch.setattr(encryption_module, "keyring", _FakeKeyring())
+
+    assert (
+        get_keychain_master_key(service="test-service", account="test-account")
+        == key
+    )
+
+
+def test_set_keychain_master_key_strips_whitespace_before_store(monkeypatch):
+    import core.encryption as encryption_module
+
+    key = generate_master_key()
+    calls: list[tuple[str, str, str]] = []
+
+    class _FakeKeyring:
+        @staticmethod
+        def set_password(service: str, account: str, value: str) -> None:
+            calls.append((service, account, value))
+
+    monkeypatch.setattr(encryption_module, "keyring", _FakeKeyring())
+
+    assert (
+        set_keychain_master_key(
+            f"  {key}\n",
+            service="test-service",
+            account="test-account",
+        )
+        is True
+    )
+    assert calls == [("test-service", "test-account", key)]

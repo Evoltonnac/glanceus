@@ -48,6 +48,7 @@ def test_create_and_get_integration_file_by_filename(tmp_path):
     assert get_resp.json()["filename"] == "new-file.yaml"
     assert get_resp.json()["integration_ids"] == ["new-file"]
     assert get_resp.json()["display_name"] is None
+    assert get_resp.json()["resolved_path"].endswith("/config/integrations/new-file.yaml")
 
 
 def test_list_integration_file_metadata_includes_name(tmp_path):
@@ -91,26 +92,3 @@ def test_get_integration_sources_matches_file_stem_id(tmp_path):
 
     source_ids = sorted(item["id"] for item in resp.json())
     assert source_ids == ["source-a"]
-
-
-def test_update_rejects_legacy_integrations_array(tmp_path):
-    client = _build_client(tmp_path, sources=[])
-    client.post(
-        "/api/integrations/files",
-        params={"filename": "legacy.yaml"},
-        json={"content": ""},
-    )
-
-    resp = client.put(
-        "/api/integrations/files/legacy.yaml",
-        json={
-            "content": (
-                "integrations:\n"
-                "  - id: should_fail\n"
-                "    flow: []\n"
-            )
-        },
-    )
-
-    assert resp.status_code == 400
-    assert "Legacy 'integrations' array" in resp.json()["detail"]

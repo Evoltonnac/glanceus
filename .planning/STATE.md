@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: 跃迁 —— Glancier 正式版发布计划
 status: in_progress
-last_updated: "2026-03-12T08:38:00Z"
+last_updated: "2026-03-12T11:05:31Z"
 progress:
   total_phases: 15
   completed_phases: 14
@@ -28,7 +28,7 @@ Status: Phase 15 execution in progress; 15-03 human verification checkpoint pend
 ## Session Continuity
 
 Last session: 2026-03-12
-Last activity: 2026-03-12 - Completed quick task 16: source_id keyed data storage + source deletion cascade cleanup + secondary confirmation reminders
+Last activity: 2026-03-12 - Completed quick task 17: docs reorganization (SDUI/Flow/WebView subdirectories + UI doc rename + concise testing guide)
 - 2026-03-11: Executed Phase 15 plans 01/02/04/05 (Authlib refactor, device flow backend, client credentials + refresh hardening, integration tests).
 - 2026-03-11: Implemented Phase 15-03 frontend work and created plan summaries (`15-01` ~ `15-05`), with `15-03` remaining `checkpoint_pending`.
 - Pending checkpoint: manually verify device flow modal and callback fragment handling before closing milestone v1.0.
@@ -76,3 +76,4 @@ Last activity: 2026-03-12 - Completed quick task 16: source_id keyed data storag
 | 13 | 目前在tauri中点击链接等无法打开网页，比如oauth、action.openurl、monaco editor cmd+click link | 2026-03-11 | 696a0e3 | [13-tauri-oauth-action-openurl-monaco-editor](./quick/13-tauri-oauth-action-openurl-monaco-editor/) |
 | 15 | 去掉当前的启动程序时自动刷新数据源的逻辑，只保留创建数据源时自动启动该数据源加载流程 | 2026-03-11 | - | [15-remove-startup-refresh](./quick/15-remove-startup-refresh/) |
 | 16 | 检查数据存储格式并改为按 source_id 存储；删除数据源时级联清理 data/secrets/view 绑定并增加二次确认提醒 | 2026-03-12 | dabc242 | [16-id-id-sourceid](./quick/16-id-id-sourceid/) |
+| 17 | docs 文档重组：合并 SDUI 模板文档，拆分 Flow/WebView 子目录，重命名 UI 设计文档并精简测试内容 | 2026-03-12 | 4f4df3b | [17-coauthoring-docs-view-template-configura](./quick/17-coauthoring-docs-view-template-configura/) |

@@ -122,7 +122,11 @@ python -m pytest tests/smoke/test_phase11_smoke.py -q
 
 ## 架构指引
 
-- **UI 规范与设计红线**：[`docs/view_micro_widget_architecture.md`](docs/view_micro_widget_architecture.md)
+- **文档总览**：[`docs/README.md`](docs/README.md)
+- **SDUI 架构与模板规范**：[`docs/sdui/`](docs/sdui/)
+- **Flow 编排与 Step 说明**：[`docs/flow/`](docs/flow/)
+- **WebView Scraper 核心能力**：[`docs/webview-scraper/`](docs/webview-scraper/)
+- **UI 设计原则**：[`docs/ui_design_guidelines.md`](docs/ui_design_guidelines.md)
 - **配置架构详解**：[`CONFIG.md`](CONFIG.md)
 - **构建路径与命令契约**：[`docs/build-path-contract.md`](docs/build-path-contract.md)
 - **AI 助手编程规范**：[`Agent.md`](Agent.md)

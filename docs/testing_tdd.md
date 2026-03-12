@@ -1,58 +1,30 @@
-# Testing & TDD Policy (Phase 11)
+# Testing & TDD Policy（精简版）
 
-This document defines the release-blocking testing baseline introduced in Phase 11.
+本文件定义当前发布阻断测试门禁。详细失败样例见 [flow/04_step_failure_test_inputs.md](./flow/04_step_failure_test_inputs.md)。
 
-## Scope
+## 1. 必测范围
 
-- Backend core modules are **mandatory TDD** scope:
-  - `core/executor.py`
-  - `core/source_state.py`
-  - `core/encryption.py`
-  - high-risk auth paths in `core/api.py`
-- Frontend core behavior is mandatory test scope with `Vitest + React Testing Library`.
-- Full E2E matrix is deferred to Phase 12; Phase 11 keeps a minimal smoke path.
+- 后端核心：`core/executor.py`、`core/source_state.py`、`core/encryption.py`、`core/api.py` 高风险鉴权路径。
+- 前端核心：`Vitest + React Testing Library` 覆盖关键交互与状态流。
 
-## Backend TDD Rules
+## 2. 后端 TDD 规则
 
-- Required workflow: **RED -> GREEN -> REFACTOR**.
-- Every backend core behavior change must start with a failing pytest test (RED).
-- Hotfix exception:
-  - You may patch production code first for urgent restore.
-  - The same delivery must add a regression pytest test before completion.
-- No "proof artifact" requirement for commit order, but the final state must contain:
-  - reproducible tests for changed behavior
-  - passing quality gates
+- 标准流程：RED -> GREEN -> REFACTOR。
+- 核心行为改动必须包含可复现 pytest 用例。
+- 紧急修复允许先改代码，但同次交付必须补回归测试。
 
-## Quality Gates
+## 3. 阻断命令
 
-### Local baseline
-
-- Backend baseline: `make test-backend`
-- Backend targeted checks: `python -m pytest tests -q -k "interaction or auth or encryption"`
-- Frontend baseline: `make test-frontend`
-- Frontend type safety: `make test-typecheck`
-- Impacted-only gate: `make test-impacted`
-
-### CI blocking checks
-
-- Backend core suite must pass.
-- Frontend core suite must pass.
-- Frontend typecheck must pass.
-- Any gate failure blocks merge/release.
-
-## Test Organization Rules
-
-- Use shared fixtures and source factories from `tests/conftest.py` and `tests/factories/`.
-- Keep tests deterministic (no network, no timing race dependencies).
-- Prefer behavior assertions over snapshots for release-blocking paths.
-
-## Command Matrix
-
-| Layer | Command | Purpose |
+| 层级 | 命令 | 用途 |
 | --- | --- | --- |
-| Backend | `make test-backend` | Core backend baseline |
-| Backend | `python -m pytest tests/api/test_auth_status.py -q` | Auth status route gate |
-| Frontend | `make test-frontend` | Frontend behavior baseline |
-| Frontend | `npm --prefix ui-react run test:core` | Core component/page contracts (direct npm form) |
-| Frontend | `make test-typecheck` | Type-level gate |
-| Cross-layer | `make test-impacted` | Changed-file driven gate |
+| Backend | `make test-backend` | 后端核心门禁 |
+| Backend | `python -m pytest tests -q -k "interaction or auth or encryption"` | 高风险路径回归 |
+| Frontend | `make test-frontend` | 前端核心行为门禁 |
+| Frontend | `make test-typecheck` | TS 类型门禁 |
+| Cross-layer | `make test-impacted` | 变更文件驱动门禁 |
+
+## 4. 测试组织约束
+
+- 复用 `tests/conftest.py` 与 `tests/factories/`。
+- 测试必须可重复、无网络依赖、避免时序竞态。
+- 阻断路径优先行为断言，避免脆弱快照。

@@ -108,8 +108,8 @@ Glancier 是一个面向重度数字用户的个人全能数据枢纽 (Personal 
 2. `README.md`
 3. `Agent.md`
 4. `CONFIG.md`
-5. `docs/flow_configuration.md`
-6. `docs/view_micro_widget_architecture.md`
-7. `docs/webview_scraper_architecture.md`
-8. `docs/view_template_configuration.md`
-9. `docs/custom_design_prompt.md`
+5. `docs/flow/README.md`
+6. `docs/sdui/README.md`
+7. `docs/webview-scraper/README.md`
+8. `docs/testing_tdd.md`
+9. `docs/ui_design_guidelines.md`

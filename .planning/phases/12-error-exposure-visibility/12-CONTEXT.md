@@ -34,8 +34,7 @@ This document captures the scope and implementation boundary for Phase 12. The f
   - related auth/scraper hooks and widgets in `ui-react/src/`
 - Integration Schema Definition:
   - Add logic to serve or export JSON Schema for Monaco.
-- Diagnostics baseline quick plan:
-  - `.planning/quick/1-integration-editor/1-PLAN.md`
+- Diagnostics baseline quick plan (已整合到 Phase 12)
 
 ## Deferred Ideas
 - Full release E2E matrix and release pipeline hardening remain in Phase 13.

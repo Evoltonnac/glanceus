@@ -507,8 +507,22 @@ export default function Dashboard() {
             try {
                 const updatedSources = await api.getSources();
 
-                // Get all source data for the new cache
-                const dataPromises = updatedSources.map((s) =>
+                // 优化：只请求 updated_at 变化的数据源详情
+                const needsUpdate = (source: SourceSummary): boolean => {
+                    const cachedData = dataMap[source.id];
+                    if (!cachedData) return true;
+                    if (!source.updated_at) return true;
+                    if (!cachedData.updated_at) return true;
+                    return source.updated_at > cachedData.updated_at;
+                };
+
+                const sourcesToFetch = updatedSources.filter(needsUpdate);
+                const sourcesNeedingNoFetch = updatedSources.filter(
+                    (s) => !needsUpdate(s)
+                );
+
+                // 只获取需要更新的数据源详情
+                const dataPromises = sourcesToFetch.map((s) =>
                     api
                         .getSourceData(s.id)
                         .then((data) => ({ id: s.id, data }))
@@ -516,8 +530,17 @@ export default function Dashboard() {
                 const results = await Promise.all(dataPromises);
 
                 const newDataMap: Record<string, DataResponse> = {};
+
+                // 添加需要更新的数据源
                 results.forEach(({ id, data }) => {
                     newDataMap[id] = data;
+                });
+
+                // 使用缓存中不需要更新的数据源
+                sourcesNeedingNoFetch.forEach((s) => {
+                    if (dataMap[s.id]) {
+                        newDataMap[s.id] = dataMap[s.id];
+                    }
                 });
 
                 // Update SWR cache

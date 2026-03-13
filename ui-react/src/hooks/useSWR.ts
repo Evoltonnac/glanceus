@@ -1,8 +1,10 @@
-import useSWR, { mutate } from "swr";
+import useSWR, { mutate, useSWRConfig } from "swr";
 export { mutate };
 
 import { api } from "../api/client";
 import type { SourceSummary, DataResponse } from "../types/config";
+
+const CACHE_KEY = "sources-with-data";
 
 const fetcher = async (key: string) => {
   // 根据 key 映射到对应的 API 方法
@@ -37,23 +39,62 @@ const fetcher = async (key: string) => {
   }
 };
 
-// Fetcher that gets sources AND their data (like the old loadData)
-const sourcesWithDataFetcher = async (): Promise<{
+// Fetcher that gets sources AND their data (with optimized fetching based on updated_at)
+// cachedData is passed from the useSources hook via closure
+const sourcesWithDataFetcher = async (
+  cachedData?: { sources: SourceSummary[]; dataMap: Record<string, DataResponse> }
+): Promise<{
   sources: SourceSummary[];
   dataMap: Record<string, DataResponse>;
 }> => {
   const sourcesData = await api.getSources();
 
-  const dataPromises = sourcesData.map((s) =>
-    api
-      .getSourceData(s.id)
-      .then((data) => ({ id: s.id, data }))
+  // 如果没有缓存数据，则获取所有数据源的详情
+  if (!cachedData) {
+    const dataPromises = sourcesData.map((s) =>
+      api.getSourceData(s.id).then((data) => ({ id: s.id, data }))
+    );
+    const results = await Promise.all(dataPromises);
+
+    const dataMap: Record<string, DataResponse> = {};
+    results.forEach(({ id, data }) => {
+      dataMap[id] = data;
+    });
+
+    return { sources: sourcesData, dataMap };
+  }
+
+  // 优化：只请求 updated_at 比缓存新的数据源详情
+  const needsUpdate = (source: SourceSummary): boolean => {
+    const cachedSourceData = cachedData.dataMap?.[source.id];
+    if (!cachedSourceData) return true; // 没有缓存，需要获取
+    if (!source.updated_at) return true; // 没有更新时间，始终获取
+    if (!cachedSourceData.updated_at) return true; // 缓存没有更新时间，始终获取
+    return source.updated_at > cachedSourceData.updated_at; // 比较更新时间
+  };
+
+  const sourcesToFetch = sourcesData.filter(needsUpdate);
+  const sourcesNeedingNoFetch = sourcesData.filter((s) => !needsUpdate(s));
+
+  // 并行获取需要更新的数据源详情
+  const dataPromises = sourcesToFetch.map((s) =>
+    api.getSourceData(s.id).then((data) => ({ id: s.id, data }))
   );
   const results = await Promise.all(dataPromises);
 
+  // 构建新的 dataMap：合并缓存数据和最新数据
   const dataMap: Record<string, DataResponse> = {};
+
+  // 首先添加需要更新的数据源
   results.forEach(({ id, data }) => {
     dataMap[id] = data;
+  });
+
+  // 然后添加不需要更新的数据源（使用缓存数据）
+  sourcesNeedingNoFetch.forEach((s) => {
+    if (cachedData.dataMap?.[s.id]) {
+      dataMap[s.id] = cachedData.dataMap[s.id];
+    }
   });
 
   return { sources: sourcesData, dataMap };
@@ -62,9 +103,17 @@ const sourcesWithDataFetcher = async (): Promise<{
 // --- Dashboard Hooks ---
 
 export function useSources() {
+  const { cache } = useSWRConfig();
+
+  // 使用 getter 函数确保每次 fetcher 运行时都能获取最新缓存
+  const getCachedData = () =>
+    cache.get(CACHE_KEY) as
+      | { sources: SourceSummary[]; dataMap: Record<string, DataResponse> }
+      | undefined;
+
   const { data, error, isLoading, mutate: mutateSources } = useSWR(
-    "sources-with-data",
-    sourcesWithDataFetcher,
+    CACHE_KEY,
+    () => sourcesWithDataFetcher(getCachedData()),
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
@@ -217,7 +266,7 @@ export function useIntegrationSources(filename: string) {
 // --- Utility Functions ---
 
 export async function invalidateSources() {
-  mutate("sources-with-data");
+  mutate(CACHE_KEY);
 }
 
 // Optimistically update sources cache for immediate UI feedback
@@ -225,7 +274,7 @@ export async function optimisticUpdateSources(
   updateFn: (data: { sources: SourceSummary[]; dataMap: Record<string, DataResponse> }) => { sources: SourceSummary[]; dataMap: Record<string, DataResponse> }
 ) {
   mutate(
-    "sources-with-data",
+    CACHE_KEY,
     async (currentData) => {
       if (!currentData) return currentData;
       return updateFn(currentData);

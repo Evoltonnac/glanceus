@@ -9,6 +9,7 @@ import {
     useIntegrationFiles,
     useIntegrationPresets,
     useIntegrationMetadata,
+    invalidateViews,
 } from "../hooks/useSWR";
 import {
     Card,
@@ -573,6 +574,7 @@ export default function IntegrationsPage() {
                 } else {
                     setSuccess("Saved and reloaded config.");
                 }
+                await invalidateViews();
             } catch (reloadErr) {
                 const typedReloadErr = reloadErr as ReloadConfigError;
                 const reloadMessage =

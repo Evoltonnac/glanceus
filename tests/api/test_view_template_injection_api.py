@@ -38,7 +38,11 @@ class InMemoryResourceManager:
         return view
 
 
-def _build_client():
+def _build_client(
+    *,
+    template_title: str = "Demo Card",
+    resource_manager: InMemoryResourceManager | None = None,
+):
     integration = IntegrationConfig.model_validate(
         {
             "id": "demo",
@@ -46,14 +50,15 @@ def _build_client():
                 {
                     "id": "demo_template",
                     "type": "source_card",
-                    "ui": {"title": "Demo Card", "icon": "D"},
+                    "ui": {"title": template_title, "icon": "D"},
                     "widgets": [{"type": "TextBlock", "text": "{value}"}],
                 }
             ],
         }
     )
 
-    resource_manager = InMemoryResourceManager()
+    if resource_manager is None:
+        resource_manager = InMemoryResourceManager()
     api_module.init_api(
         executor=SimpleNamespace(get_source_state=lambda _source_id: None),
         data_controller=SimpleNamespace(),
@@ -66,31 +71,33 @@ def _build_client():
     )
     app = FastAPI()
     app.include_router(api_module.router)
-    return TestClient(app)
+    return TestClient(app), resource_manager
 
 
-def test_create_view_injects_template_props_when_missing():
-    client = _build_client()
+def _build_view_payload(props: dict | None = None) -> dict:
+    item_payload = {
+        "id": "widget-1",
+        "x": 0,
+        "y": 0,
+        "w": 4,
+        "h": 4,
+        "source_id": "demo-source",
+        "template_id": "demo_template",
+    }
+    if props is not None:
+        item_payload["props"] = props
+    return {
+        "id": "starter_pack_overview",
+        "name": "Starter",
+        "layout_columns": 12,
+        "items": [item_payload],
+    }
 
-    response = client.post(
-        "/api/views",
-        json={
-            "id": "starter_pack_overview",
-            "name": "Starter",
-            "layout_columns": 12,
-            "items": [
-                {
-                    "id": "widget-1",
-                    "x": 0,
-                    "y": 0,
-                    "w": 4,
-                    "h": 4,
-                    "source_id": "demo-source",
-                    "template_id": "demo_template",
-                }
-            ],
-        },
-    )
+
+def test_create_view_returns_hydrated_props_but_stores_only_overrides():
+    client, resource_manager = _build_client()
+
+    response = client.post("/api/views", json=_build_view_payload())
 
     assert response.status_code == 200
     payload = response.json()
@@ -99,3 +106,72 @@ def test_create_view_injects_template_props_when_missing():
     assert props["id"] == "demo_template"
     assert props["type"] == "source_card"
     assert props["ui"]["title"] == "Demo Card"
+    assert resource_manager.views[0].items[0].props == {}
+
+
+def test_list_views_syncs_with_latest_template_after_config_change():
+    initial_client, resource_manager = _build_client(template_title="Demo Card")
+
+    create_response = initial_client.post(
+        "/api/views",
+        json=_build_view_payload(
+            props={
+                "id": "demo_template",
+                "type": "source_card",
+                "ui": {"title": "Demo Card", "icon": "D"},
+                "widgets": [{"type": "TextBlock", "text": "{value}"}],
+            }
+        ),
+    )
+    assert create_response.status_code == 200
+    assert resource_manager.views[0].items[0].props == {}
+
+    updated_client, _ = _build_client(
+        template_title="Demo Card Updated",
+        resource_manager=resource_manager,
+    )
+
+    response = updated_client.get("/api/views")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload[0]["items"][0]["props"]["ui"]["title"] == "Demo Card Updated"
+
+
+def test_list_views_ignores_legacy_template_snapshots():
+    resource_manager = InMemoryResourceManager()
+    resource_manager.views.append(
+        StoredView.model_validate(
+            {
+                "id": "starter_pack_overview",
+                "name": "Starter",
+                "layout_columns": 12,
+                "items": [
+                    {
+                        "id": "widget-1",
+                        "x": 0,
+                        "y": 0,
+                        "w": 4,
+                        "h": 4,
+                        "source_id": "demo-source",
+                        "template_id": "demo_template",
+                        "props": {
+                            "id": "demo_template",
+                            "type": "source_card",
+                            "ui": {"title": "Old Snapshot Title", "icon": "D"},
+                            "widgets": [{"type": "TextBlock", "text": "{value}"}],
+                        },
+                    }
+                ],
+            }
+        )
+    )
+
+    client, _ = _build_client(
+        template_title="Demo Card Latest",
+        resource_manager=resource_manager,
+    )
+
+    response = client.get("/api/views")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload[0]["items"][0]["props"]["ui"]["title"] == "Demo Card Latest"

@@ -320,7 +320,7 @@ export default function Dashboard() {
             h: 4,
             source_id: sourceId,
             template_id: template.id,
-            props: { ...template },
+            props: {},
         };
 
         const updatedView = {

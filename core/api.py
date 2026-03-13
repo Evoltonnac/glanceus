@@ -3,6 +3,7 @@ FastAPI 路由：暴露 REST API 供展现层和外部调用。
 """
 
 import logging
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, Optional
 
@@ -281,32 +282,121 @@ def build_template_lookup_from_config(config) -> dict[str, dict[str, dict[str, A
     return template_lookup
 
 
+def _merge_template_props(
+    template_payload: dict[str, Any],
+    overrides: dict[str, Any],
+) -> dict[str, Any]:
+    merged = deepcopy(template_payload)
+    for key, value in overrides.items():
+        base_value = merged.get(key)
+        if isinstance(base_value, dict) and isinstance(value, dict):
+            merged[key] = _merge_template_props(base_value, value)
+            continue
+        merged[key] = deepcopy(value)
+    return merged
+
+
+def _extract_template_overrides(
+    current_props: dict[str, Any],
+    template_payload: dict[str, Any],
+) -> dict[str, Any]:
+    overrides: dict[str, Any] = {}
+    for key, value in current_props.items():
+        if key not in template_payload:
+            overrides[key] = deepcopy(value)
+            continue
+
+        template_value = template_payload[key]
+        if isinstance(value, dict) and isinstance(template_value, dict):
+            nested_overrides = _extract_template_overrides(value, template_value)
+            if nested_overrides:
+                overrides[key] = nested_overrides
+            continue
+
+        if value != template_value:
+            overrides[key] = deepcopy(value)
+    return overrides
+
+
+def _resolve_item_template_payload(
+    item: ViewItem,
+    *,
+    source_by_id: dict[str, StoredSource],
+    template_lookup_by_integration: dict[str, dict[str, dict[str, Any]]],
+) -> dict[str, Any] | None:
+    source = source_by_id.get(item.source_id)
+    if source is None:
+        return None
+    integration_templates = template_lookup_by_integration.get(source.integration_id, {})
+    return integration_templates.get(item.template_id)
+
+
+def _is_legacy_template_snapshot(item: ViewItem, props: dict[str, Any]) -> bool:
+    """
+    Legacy view items stored full template snapshots in props (`id` + `type` etc).
+    Treat those as no overrides so template updates can flow through.
+    """
+    return props.get("id") == item.template_id and "type" in props
+
+
 def inject_view_item_props_from_templates(
     view: StoredView,
     *,
     source_by_id: dict[str, StoredSource],
     template_lookup_by_integration: dict[str, dict[str, dict[str, Any]]],
 ) -> StoredView:
+    """
+    Build effective runtime props by combining current template payload with item overrides.
+    """
     hydrated_items: list[ViewItem] = []
     for item in view.items:
-        if item.props:
-            hydrated_items.append(item)
-            continue
-
-        source = source_by_id.get(item.source_id)
-        if source is None:
-            hydrated_items.append(item)
-            continue
-
-        integration_templates = template_lookup_by_integration.get(source.integration_id, {})
-        template_payload = integration_templates.get(item.template_id)
+        template_payload = _resolve_item_template_payload(
+            item,
+            source_by_id=source_by_id,
+            template_lookup_by_integration=template_lookup_by_integration,
+        )
         if template_payload is None:
             hydrated_items.append(item)
             continue
 
-        hydrated_items.append(item.model_copy(update={"props": dict(template_payload)}))
+        raw_props = item.props if isinstance(item.props, dict) else {}
+        if _is_legacy_template_snapshot(item, raw_props):
+            raw_props = {}
+
+        merged_props = _merge_template_props(dict(template_payload), raw_props)
+        hydrated_items.append(item.model_copy(update={"props": merged_props}))
 
     return view.model_copy(update={"items": hydrated_items})
+
+
+def normalize_view_item_props_for_storage(
+    view: StoredView,
+    *,
+    source_by_id: dict[str, StoredSource],
+    template_lookup_by_integration: dict[str, dict[str, dict[str, Any]]],
+) -> StoredView:
+    """
+    Persist only item-level overrides instead of full template snapshots.
+    """
+    normalized_items: list[ViewItem] = []
+    for item in view.items:
+        template_payload = _resolve_item_template_payload(
+            item,
+            source_by_id=source_by_id,
+            template_lookup_by_integration=template_lookup_by_integration,
+        )
+        if template_payload is None:
+            normalized_items.append(item)
+            continue
+
+        raw_props = item.props if isinstance(item.props, dict) else {}
+        if _is_legacy_template_snapshot(item, raw_props):
+            raw_props = {}
+
+        overrides = _extract_template_overrides(raw_props, dict(template_payload))
+        normalized_items.append(item.model_copy(update={"props": overrides}))
+
+    return view.model_copy(update={"items": normalized_items})
 
 
 def create_stored_view_record(
@@ -325,13 +415,22 @@ def create_stored_view_record(
         template_lookup_by_integration = build_template_lookup_from_config(config)
 
     if source_by_id and template_lookup_by_integration:
-        prepared_view = inject_view_item_props_from_templates(
+        prepared_view = normalize_view_item_props_for_storage(
             view,
             source_by_id=source_by_id,
             template_lookup_by_integration=template_lookup_by_integration,
         )
 
-    return resource_manager.save_view(prepared_view)
+    saved_view = resource_manager.save_view(prepared_view)
+
+    if source_by_id and template_lookup_by_integration:
+        return inject_view_item_props_from_templates(
+            saved_view,
+            source_by_id=source_by_id,
+            template_lookup_by_integration=template_lookup_by_integration,
+        )
+
+    return saved_view
 
 
 @router.post("/refresh/{source_id}")
@@ -808,7 +907,23 @@ async def delete_stored_source(source_id: str) -> dict:
 @router.get("/views")
 async def list_stored_views() -> list[StoredView]:
     """获取所有存储的视图。"""
-    return _resource_manager.load_views()
+    views = _resource_manager.load_views()
+    if not views:
+        return views
+
+    source_by_id = {source.id: source for source in _resource_manager.load_sources()}
+    template_lookup_by_integration = build_template_lookup_from_config(_config)
+    if not source_by_id or not template_lookup_by_integration:
+        return views
+
+    return [
+        inject_view_item_props_from_templates(
+            view,
+            source_by_id=source_by_id,
+            template_lookup_by_integration=template_lookup_by_integration,
+        )
+        for view in views
+    ]
 
 
 @router.post("/views")

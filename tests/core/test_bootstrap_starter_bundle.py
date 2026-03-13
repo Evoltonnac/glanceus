@@ -88,7 +88,7 @@ def test_bootstrap_starter_bundle_seeds_required_presets_on_empty_workspace():
     view = resource_manager.views[0]
     assert view.id == STARTER_VIEW_ID
     assert len(view.items) == 5
-    assert all(item.props.get("type") == "source_card" for item in view.items)
+    assert all(item.props == {} for item in view.items)
 
 
 def test_bootstrap_starter_bundle_is_idempotent_for_starter_only_workspace():
@@ -130,7 +130,7 @@ def test_bootstrap_starter_bundle_is_idempotent_for_starter_only_workspace():
     assert len(resource_manager.sources) == len(STARTER_SOURCE_INTEGRATION_IDS)
     assert len(resource_manager.views) == 1
     assert len(resource_manager.views[0].items) == len(STARTER_SOURCE_INTEGRATION_IDS)
-    assert all(item.props.get("type") == "source_card" for item in resource_manager.views[0].items)
+    assert all(item.props == {} for item in resource_manager.views[0].items)
 
 
 def test_bootstrap_starter_bundle_skips_nonstarter_workspace():

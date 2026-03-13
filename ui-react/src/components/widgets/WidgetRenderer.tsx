@@ -123,10 +123,19 @@ interface ListWidgetRendererProps {
 function ListWidgetRenderer({ widget, data }: ListWidgetRendererProps) {
     const [currentPage, setCurrentPage] = useState(1);
 
-    // Extract array data from data context
-    const dataSource = widget.data_source
-        .split(".")
-        .reduce((obj: any, key: string) => obj?.[key], data);
+    // Extract array data - handle both string path and inline array
+    let dataSource: any;
+    if (typeof widget.data_source === "string") {
+        // String path: resolve from data context (existing behavior)
+        dataSource = widget.data_source
+            .split(".")
+            .reduce((obj: any, key: string) => obj?.[key], data);
+    } else if (Array.isArray(widget.data_source)) {
+        // Inline array: use directly (new feature)
+        dataSource = widget.data_source;
+    } else {
+        dataSource = [];
+    }
     const sourceItems = Array.isArray(dataSource) ? dataSource : [];
 
     let processedData = [...sourceItems];

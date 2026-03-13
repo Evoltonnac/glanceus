@@ -35,11 +35,28 @@
 
     /* GridStack grid row height tokens — keep in sync with GRID_ROW_HEIGHT / GRID_MARGIN in App.tsx */
     --qb-row-height: 60px;
+    --qb-grid-row-height: 60px;
     --qb-grid-margin: 8px;
-    /* Card header height = one full GridStack row minus top+bottom margin */
-    --qb-card-header-height: calc(var(--qb-row-height) - var(--qb-grid-margin) * 2);
+    --qb-grid-gap: 12px; /* GridStack cell spacing */
+    /* Card header height = fixed 40px (normal density size), not affected by density */
+    --qb-card-header-height: 40px;
     /* Inner card padding */
     --qb-card-padding: 12px;
+
+    /* ── Card density presets: compact (0.7), normal (1), relaxed (1.3) ── */
+    --qb-density: 1;
+
+    /* Card internal spacing scale (multiplied by density) */
+    --qb-gap-1: calc(2px * var(--qb-density));
+    --qb-gap-2: calc(4px * var(--qb-density));
+    --qb-gap-3: calc(8px * var(--qb-density));
+    --qb-gap-4: calc(12px * var(--qb-density));
+    --qb-gap-5: calc(16px * var(--qb-density));
+    --qb-gap-6: calc(20px * var(--qb-density));
+
+    /* Card internal padding - fixed values, not affected by density */
+    --qb-card-pad-x: 12px;
+    --qb-card-pad-y: 8px;
   }
 
   .dark {
@@ -69,6 +86,49 @@
     --warning: 24.6 95% 53.1%; /* Orange 500 */
     --success: 142.1 70.6% 45.3%; /* Emerald 500 */
     --error: 0 84.2% 60.2%; /* Red 500 */
+
+    /* Card density - uses [data-density] selector to override */
+    --qb-density: 1;
+    --qb-gap-1: calc(2px * var(--qb-density));
+    --qb-gap-2: calc(4px * var(--qb-density));
+    --qb-gap-3: calc(8px * var(--qb-density));
+    --qb-gap-4: calc(12px * var(--qb-density));
+    --qb-gap-5: calc(16px * var(--qb-density));
+    --qb-gap-6: calc(20px * var(--qb-density));
+    /* Card internal padding - fixed values, not affected by density */
+    --qb-card-pad-x: 12px;
+    --qb-card-pad-y: 8px;
+  }
+
+  /* Density selectors - must override .dark */
+  :root[data-density="compact"] {
+    --qb-density: 0.5;
+    --qb-grid-gap: 8px;
+    --qb-grid-row-height: 60px;
+  }
+
+  :root[data-density="normal"] {
+    --qb-density: 0.75;
+    --qb-grid-gap: 8px;
+    --qb-grid-row-height: 60px;
+  }
+
+  :root[data-density="relaxed"] {
+    --qb-density: 1;
+    --qb-grid-gap: 8px;
+    --qb-grid-row-height: 60px;
+  }
+
+  /* GridStack spacing - fixed gap across all densities */
+  :root[data-density="compact"] .grid-stack-item-content,
+  :root[data-density="normal"] .grid-stack-item-content,
+  :root[data-density="relaxed"] .grid-stack-item-content {
+    margin: 4px !important;
+  }
+
+  /* GridStack row height */
+  .grid-stack {
+    min-height: var(--qb-grid-row-height) !important;
   }
 }
 
@@ -78,6 +138,18 @@
 .qb-rows-3 { min-height: calc(var(--qb-row-height) * 3 - var(--qb-grid-margin) * 2); }
 .qb-rows-4 { min-height: calc(var(--qb-row-height) * 4 - var(--qb-grid-margin) * 2); }
 .qb-rows-5 { min-height: calc(var(--qb-row-height) * 5 - var(--qb-grid-margin) * 2); }
+
+/* ── Card density-based spacing utilities ── */
+.qb-gap-1 { gap: var(--qb-gap-1); }
+.qb-gap-2 { gap: var(--qb-gap-2); }
+.qb-gap-3 { gap: var(--qb-gap-3); }
+.qb-gap-4 { gap: var(--qb-gap-4); }
+.qb-gap-5 { gap: var(--qb-gap-5); }
+.qb-gap-6 { gap: var(--qb-gap-6); }
+
+.qb-pad-x { padding-left: var(--qb-card-pad-x); padding-right: var(--qb-card-pad-x); }
+.qb-pad-y { padding-top: var(--qb-card-pad-y); padding-bottom: var(--qb-card-pad-y); }
+.qb-pad { padding: var(--qb-card-pad-y) var(--qb-card-pad-x); }
 
 @layer base {
   * {

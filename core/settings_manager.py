@@ -19,6 +19,8 @@ class SystemSettings(BaseModel):
     # base64 encoded AES-256 master key; stored locally, never synced
     master_key: Optional[str] = None
     theme: str = "system" # can be 'light', 'dark', or 'system'
+    # UI density: 'compact', 'normal', or 'relaxed'
+    density: str = "normal"
 
 
 _SETTINGS_DIR = Path(os.getenv("GLANCIER_DATA_DIR", ".")) / "data"

@@ -87,9 +87,9 @@ export function BaseSourceCard({
             </div>
 
             {/* Content area — fills remaining card height */}
-            <div className="relative z-10 flex-1 flex flex-col overflow-hidden min-h-0 px-4 py-3 bg-surface/50">
+            <div className="relative z-10 flex-1 flex flex-col overflow-hidden min-h-0 qb-pad bg-surface/50">
                 {hasWidgetData && (
-                    <div className="flex flex-col gap-2 h-full min-h-0">
+                    <div className="flex flex-col qb-gap-2 h-full min-h-0">
                         {component.widgets!.map((widget, idx) => (
                             <WidgetRenderer
                                 key={idx}

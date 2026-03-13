@@ -47,6 +47,8 @@ const DEFAULT_SETTINGS: SystemSettings = {
     debug_logging_enabled: false,
     scraper_timeout_seconds: 10,
     master_key: null,
+    theme: "system",
+    density: "normal",
 };
 
 const SCRAPER_TIMEOUT_MIN_SECONDS = 1;

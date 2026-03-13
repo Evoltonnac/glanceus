@@ -622,6 +622,7 @@ export interface SystemSettings {
   scraper_timeout_seconds: number;
   master_key?: string | null;
   theme?: string;
+  density?: string;
 }
 
 export const api = new ApiClient();

@@ -68,7 +68,7 @@ export function Progress({
         const offset = circumference - (value / 100) * circumference;
 
         return (
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center qb-gap-2">
                 <div className={`relative ${ring.box}`}>
                     <svg className="w-full h-full transform -rotate-90">
                         <circle
@@ -105,7 +105,7 @@ export function Progress({
     }
 
     return (
-        <div className="flex flex-col gap-1 w-full">
+        <div className="flex flex-col qb-gap-1 w-full">
             {(label || showPercentage) && (
                 <div className="flex justify-between items-baseline">
                     {label && <span className="text-sm text-muted-foreground">{label}</span>}

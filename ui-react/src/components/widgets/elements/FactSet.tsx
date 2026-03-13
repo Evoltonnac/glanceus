@@ -37,7 +37,7 @@ export function FactSet({ facts, spacing = "md" }: FactSetProps) {
                     },
                     index: number,
                 ) => (
-                    <div key={index} className="flex justify-between items-baseline gap-4">
+                    <div key={index} className="flex justify-between items-baseline qb-gap-3">
                         <span className="text-sm text-muted-foreground shrink-0">{fact.label}:</span>
                         <span
                             className={`text-sm font-medium text-right truncate ${toneTextClassMap[fact.tone || "default"]}`}

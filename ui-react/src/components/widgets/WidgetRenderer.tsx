@@ -192,7 +192,7 @@ function ListWidgetRenderer({ widget, data }: ListWidgetRendererProps) {
         : processedData;
 
     return (
-        <div className="flex flex-col w-full flex-1 min-h-0 gap-3">
+        <div className="flex flex-col w-full flex-1 min-h-0 qb-gap-4">
             <div className="flex-1 min-h-0 overflow-auto">
                 <List
                     layout={widget.layout}
@@ -224,7 +224,7 @@ function ListWidgetRenderer({ widget, data }: ListWidgetRendererProps) {
             </div>
 
             {widget.pagination && totalPages > 1 && (
-                <div className="flex items-center justify-end gap-2 text-xs">
+                <div className="flex items-center justify-end qb-gap-2 text-xs">
                     <button
                         type="button"
                         onClick={() =>

@@ -54,6 +54,13 @@ templates:
 - 不再支持旧值（如 `small/default/large`、`compact/relaxed`、`good/attention`、`left/right/top/bottom`）。
 - 视觉细节（padding、radius、复杂 style 变体）由项目 UI 层统一控制，不通过模板暴露。
 
+> **SDUI 组件编码规范**：在编写 SDUI 组件时，所有间距（gap、padding、margin）必须使用 CSS 变量，禁止硬编码像素值。项目提供以下间距变量：
+> - `--qb-gap-1` ~ `--qb-gap-6`：2px ~ 20px（可配合 `--qb-density` 实现密度响应式）
+> - `--qb-card-pad-x` / `--qb-card-pad-y`：卡片内边距
+> - `--qb-grid-gap`：网格间距
+>
+> 示例：`className="gap-[var(--qb-gap-3)]"` 或 `style={{ padding: 'var(--qb-card-pad-y) var(--qb-card-pad-x)' }}`
+
 ## 4. 模板绑定语法
 
 ### 4.1 直接值绑定

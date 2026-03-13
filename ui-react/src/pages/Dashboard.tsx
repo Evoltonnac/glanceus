@@ -23,7 +23,7 @@ import {
 import { Badge, badgeVariants } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { cn } from "../lib/utils";
-import { useSources, useViews, invalidateSources, invalidateViews, optimisticRemoveSource, optimisticUpdateSourceStatus, mutate } from "../hooks/useSWR";
+import { useSources, useViews, invalidateSources, invalidateViews, optimisticRemoveSource, optimisticUpdateSourceStatus, mutate, useSettings } from "../hooks/useSWR";
 
 import {
     Dialog,
@@ -66,11 +66,10 @@ import {
     Plus,
     Clock,
     MoreVertical,
+    LayoutGrid,
 } from "lucide-react";
 
-// GridStack layout constants
-const GRID_ROW_HEIGHT = 60;
-const GRID_MARGIN = 12;
+// GridStack layout constants - now dynamically read from CSS variables
 const warnedCompatibilityKeys = new Set<string>();
 
 function warnDashboardCompatibilityOnce(key: string, message: string): void {
@@ -270,6 +269,53 @@ export default function Dashboard() {
     const viewConfig: StoredView | null = swrViews.length > 0 ? swrViews[0] : storeViewConfig;
     const isDataLoading = swrLoading && storeSources.length === 0;
 
+    // Density settings
+    const { settings, mutateSettings } = useSettings();
+    const densityOptions = ["compact", "normal", "relaxed"] as const;
+    const densityLabels: Record<string, string> = {
+        compact: "紧凑",
+        normal: "普通",
+        relaxed: "宽松",
+    };
+
+    // Get current density (default to "normal")
+    const currentDensity = settings?.density || "normal";
+
+    // Get grid gap and row height from CSS variable
+    const gridGap = typeof window !== "undefined"
+        ? parseInt(getComputedStyle(document.documentElement).getPropertyValue("--qb-grid-gap") || "8", 10)
+        : 8;
+    const gridRowHeight = typeof window !== "undefined"
+        ? parseInt(getComputedStyle(document.documentElement).getPropertyValue("--qb-grid-row-height") || "56", 10)
+        : 56;
+
+    // Apply density to document
+    useEffect(() => {
+        document.documentElement.setAttribute("data-density", currentDensity);
+    }, [currentDensity]);
+
+    const cycleDensity = async () => {
+        const currentIndex = densityOptions.indexOf(currentDensity as typeof densityOptions[number]);
+        const nextIndex = (currentIndex + 1) % densityOptions.length;
+        const newDensity = densityOptions[nextIndex];
+
+        // Optimistic update
+        document.documentElement.setAttribute("data-density", newDensity);
+
+        // Save to backend
+        try {
+            await api.updateSettings({
+                ...settings,
+                density: newDensity,
+            } as any);
+            mutateSettings();
+        } catch (error) {
+            console.error("Failed to save density setting:", error);
+            // Revert on error
+            document.documentElement.setAttribute("data-density", currentDensity);
+        }
+    };
+
     useEffect(() => {
         if (swrLoading) {
             return;
@@ -446,8 +492,8 @@ export default function Dashboard() {
             const instance = GridStack.init(
                 {
                     column: viewConfig.layout_columns || 12,
-                    cellHeight: GRID_ROW_HEIGHT,
-                    margin: GRID_MARGIN,
+                    cellHeight: gridRowHeight,
+                    margin: gridGap,
                     float: false,
                     animate: true,
                     draggable: { handle: ".qb-card-header" },
@@ -492,6 +538,25 @@ export default function Dashboard() {
 
     // Note: Data fetching is now handled by SWR hooks (useSources, useViews)
     // No need for manual loadData() call
+
+    // Update GridStack when density changes
+    useEffect(() => {
+        const gs = gsInstanceRef.current;
+        if (!gs) return;
+
+        // Get fresh values from CSS after density attribute change
+        const newGridGap = parseInt(
+            getComputedStyle(document.documentElement).getPropertyValue("--qb-grid-gap") || "8",
+            10
+        );
+        const newGridRowHeight = parseInt(
+            getComputedStyle(document.documentElement).getPropertyValue("--qb-grid-row-height") || "56",
+            10
+        );
+
+        gs.margin(newGridGap);
+        gs.cellHeight(newGridRowHeight);
+    }, [currentDensity]);
 
     // Poll for status updates if any source is in a transient state
     useEffect(() => {
@@ -1132,6 +1197,22 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg font-semibold">监控视图</h2>
                         <div className="flex gap-2">
+                            {/* TODO: Re-enable density toggle after fixing spacing issues
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <button
+                                        className="h-8 px-3 flex items-center gap-1.5 text-sm font-medium rounded-md border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150"
+                                        onClick={cycleDensity}
+                                    >
+                                        <LayoutGrid className="w-4 h-4" />
+                                        {densityLabels[settings?.density || "normal"]}
+                                    </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom">
+                                    点击切换密度: 紧凑 → 普通 → 宽松
+                                </TooltipContent>
+                            </Tooltip>
+                            */}
                             <button
                                 className="h-8 px-3 flex items-center gap-1.5 text-sm font-medium rounded-md bg-brand-gradient text-white hover:opacity-90 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 shadow-sm"
                                 onClick={() => setIsAddDialogOpen(true)}

@@ -21,9 +21,9 @@ export type Align = z.infer<typeof AlignSchema>;
 
 export const spacingClassMap: Record<Spacing, string> = {
     none: "gap-0",
-    sm: "gap-2",
-    md: "gap-4",
-    lg: "gap-6",
+    sm: "qb-gap-1",
+    md: "qb-gap-2",
+    lg: "qb-gap-3",
 };
 
 export const justifyClassMap: Record<Align, string> = {

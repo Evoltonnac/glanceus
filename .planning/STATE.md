@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: **v1.0 Milestone Shipped** — 2026-03-13
-last_updated: "2026-03-14T02:34:26.000Z"
-last_activity: "2026-03-14 - Completed quick task 004: integration 重载页面级生效 + 逻辑改动自动刷新 source + toast 结果提示"
+last_updated: "2026-03-14T02:50:03.000Z"
+last_activity: "2026-03-14 - Completed quick task 005: bento 布局微组件参数模板解析架构升级（全局参数解析 + size/spacing 覆盖 + 性能缓存）"
 progress:
   total_phases: 7
   completed_phases: 6
@@ -29,7 +29,7 @@ All 7 phases (09-15) completed. Milestone archived.
 ## Session Continuity
 
 Last session: 2026-03-14T02:34:26.000Z
-Last activity: 2026-03-14 - Completed quick task 004: integration 重载页面级生效 + 逻辑改动自动刷新 source + toast 结果提示
+Last activity: 2026-03-14 - Completed quick task 005: bento 布局微组件参数模板解析架构升级（全局参数解析 + size/spacing 覆盖 + 性能缓存）
 - 2026-03-11: Executed Phase 15 plans 01/02/04/05 (Authlib refactor, device flow backend, client credentials + refresh hardening, integration tests).
 - 2026-03-11: Implemented Phase 15-03 frontend work and created plan summaries (`15-01` ~ `15-05`), with `15-03` remaining `checkpoint_pending`.
 - Pending checkpoint: manually verify device flow modal and callback fragment handling before closing milestone v1.0.
@@ -46,6 +46,7 @@ Last activity: 2026-03-14 - Completed quick task 004: integration 重载页面�
 | 002 | widgets data_source 支持 inline array | 2026-03-13 | 92195f5 | [002-widgets-datasource](./quick/2-widgets-datasource/) |
 | 003 | 将布局密度的 CSS 变量从 PX 转换为 REM，检查 widgets 组件，统一使用 REM 进行间距布局 | 2026-03-13 | 2ff61cc | [3-css-px-rem-widgets-rem](./quick/3-css-px-rem-widgets-rem/) |
 | 004 | integration 重载按钮页面级生效，保存/重载结果 toast 提示并区分视图改动与逻辑改动，逻辑改动自动刷新受影响 source | 2026-03-14 | dd6b011 | [4-integration-toast-source-source-source](./quick/4-integration-toast-source-source-source/) |
+| 005 | bento 布局微组件参数模板解析架构升级：全局参数解析 + size/spacing 等非 value 参数模板化 + 性能缓存优化 | 2026-03-14 | 373b9a5 | [5-bento-value-size-spacing](./quick/5-bento-value-size-spacing/) |
 
 ## Pending Todos
 - [ ] [2026-03-10] global-state-chat-sidebar (Area: architecture, ui)

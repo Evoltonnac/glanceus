@@ -4,7 +4,7 @@ plan: 5
 status: completed
 owner: codex
 created_at: 2026-03-14
-commit: 373b9a5
+commit: 0309b86
 ---
 
 ## Objective

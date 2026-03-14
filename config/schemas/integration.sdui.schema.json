@@ -2,1291 +2,49 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Glancier React SDUI Fragment",
   "description": "Generated from React SDUI zod schemas.",
-  "widget_tree": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "oneOf": [
-      {
-        "type": "object",
-        "properties": {
-          "type": {
-            "anyOf": [
-              {
-                "type": "string",
-                "const": "Container"
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "items": {
-            "anyOf": [
-              {
-                "type": "array",
-                "items": {
-                  "$ref": "#"
-                }
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "spacing": {
-            "anyOf": [
-              {
-                "default": "md",
-                "type": "string",
-                "enum": [
-                  "none",
-                  "sm",
-                  "md",
-                  "lg"
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "align_y": {
-            "anyOf": [
-              {
-                "default": "start",
-                "type": "string",
-                "enum": [
-                  "start",
-                  "center",
-                  "end"
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          }
-        },
-        "required": [
-          "type",
-          "items"
-        ],
-        "additionalProperties": false
-      },
-      {
-        "type": "object",
-        "properties": {
-          "type": {
-            "anyOf": [
-              {
-                "type": "string",
-                "const": "ColumnSet"
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "columns": {
-            "anyOf": [
-              {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "type": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "Column"
-                        },
-                        {
-                          "type": "string",
-                          "pattern": "^\\{.*\\}$"
-                        }
-                      ]
-                    },
-                    "items": {
-                      "anyOf": [
-                        {
-                          "type": "array",
-                          "items": {
-                            "$ref": "#"
-                          }
-                        },
-                        {
-                          "type": "string",
-                          "pattern": "^\\{.*\\}$"
-                        }
-                      ]
-                    },
-                    "width": {
-                      "anyOf": [
-                        {
-                          "default": "auto",
-                          "anyOf": [
-                            {
-                              "type": "string",
-                              "const": "auto"
-                            },
-                            {
-                              "type": "string",
-                              "const": "stretch"
-                            },
-                            {
-                              "type": "number",
-                              "exclusiveMinimum": 0
-                            }
-                          ]
-                        },
-                        {
-                          "type": "string",
-                          "pattern": "^\\{.*\\}$"
-                        }
-                      ]
-                    },
-                    "align_y": {
-                      "anyOf": [
-                        {
-                          "default": "start",
-                          "type": "string",
-                          "enum": [
-                            "start",
-                            "center",
-                            "end"
-                          ]
-                        },
-                        {
-                          "type": "string",
-                          "pattern": "^\\{.*\\}$"
-                        }
-                      ]
-                    },
-                    "spacing": {
-                      "anyOf": [
-                        {
-                          "default": "md",
-                          "type": "string",
-                          "enum": [
-                            "none",
-                            "sm",
-                            "md",
-                            "lg"
-                          ]
-                        },
-                        {
-                          "type": "string",
-                          "pattern": "^\\{.*\\}$"
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "type",
-                    "items"
-                  ],
-                  "additionalProperties": false
-                }
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "spacing": {
-            "anyOf": [
-              {
-                "default": "md",
-                "type": "string",
-                "enum": [
-                  "none",
-                  "sm",
-                  "md",
-                  "lg"
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "align_x": {
-            "anyOf": [
-              {
-                "default": "start",
-                "type": "string",
-                "enum": [
-                  "start",
-                  "center",
-                  "end"
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          }
-        },
-        "required": [
-          "type",
-          "columns"
-        ],
-        "additionalProperties": false
-      },
-      {
-        "type": "object",
-        "properties": {
-          "type": {
-            "anyOf": [
-              {
-                "type": "string",
-                "const": "List"
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "data_source": {
-            "anyOf": [
-              {
-                "type": "array",
-                "items": {}
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "item_alias": {
-            "type": "string"
-          },
-          "render": {
-            "anyOf": [
-              {
-                "type": "array",
-                "items": {
-                  "$ref": "#"
-                }
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "layout": {
-            "anyOf": [
-              {
-                "default": "col",
-                "type": "string",
-                "enum": [
-                  "col",
-                  "grid"
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "columns": {
-            "anyOf": [
-              {
-                "type": "number",
-                "minimum": 1,
-                "maximum": 6
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "spacing": {
-            "anyOf": [
-              {
-                "default": "md",
-                "type": "string",
-                "enum": [
-                  "none",
-                  "sm",
-                  "md",
-                  "lg"
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "filter": {
-            "type": "string"
-          },
-          "sort_by": {
-            "type": "string"
-          },
-          "sort_order": {
-            "anyOf": [
-              {
-                "default": "asc",
-                "type": "string",
-                "enum": [
-                  "asc",
-                  "desc"
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "limit": {
-            "anyOf": [
-              {
-                "type": "number",
-                "exclusiveMinimum": 0
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "pagination": {
-            "anyOf": [
-              {
-                "default": false,
-                "type": "boolean"
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "page_size": {
-            "anyOf": [
-              {
-                "default": 10,
-                "type": "number",
-                "exclusiveMinimum": 0
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          }
-        },
-        "required": [
-          "type",
-          "data_source",
-          "item_alias",
-          "render"
-        ],
-        "additionalProperties": false
-      },
-      {
-        "type": "object",
-        "properties": {
-          "type": {
-            "anyOf": [
-              {
-                "type": "string",
-                "const": "TextBlock"
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "text": {
-            "anyOf": [
-              {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "boolean"
-                  }
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "size": {
-            "anyOf": [
-              {
-                "default": "md",
-                "type": "string",
-                "enum": [
-                  "sm",
-                  "md",
-                  "lg",
-                  "xl"
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "weight": {
-            "anyOf": [
-              {
-                "default": "normal",
-                "type": "string",
-                "enum": [
-                  "normal",
-                  "medium",
-                  "semibold",
-                  "bold"
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "tone": {
-            "anyOf": [
-              {
-                "default": "default",
-                "type": "string",
-                "enum": [
-                  "default",
-                  "muted",
-                  "info",
-                  "success",
-                  "warning",
-                  "danger"
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "align_x": {
-            "anyOf": [
-              {
-                "default": "start",
-                "type": "string",
-                "enum": [
-                  "start",
-                  "center",
-                  "end"
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "wrap": {
-            "anyOf": [
-              {
-                "default": true,
-                "type": "boolean"
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "max_lines": {
-            "anyOf": [
-              {
-                "type": "number",
-                "exclusiveMinimum": 0
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          }
-        },
-        "required": [
-          "type",
-          "text"
-        ],
-        "additionalProperties": false
-      },
-      {
-        "type": "object",
-        "properties": {
-          "type": {
-            "anyOf": [
-              {
-                "type": "string",
-                "const": "FactSet"
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "facts": {
-            "anyOf": [
-              {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "label": {
-                      "anyOf": [
-                        {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "number"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "string",
-                          "pattern": "^\\{.*\\}$"
-                        }
-                      ]
-                    },
-                    "value": {
-                      "anyOf": [
-                        {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "number"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "string",
-                          "pattern": "^\\{.*\\}$"
-                        }
-                      ]
-                    },
-                    "tone": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "enum": [
-                            "default",
-                            "muted",
-                            "info",
-                            "success",
-                            "warning",
-                            "danger"
-                          ]
-                        },
-                        {
-                          "type": "string",
-                          "pattern": "^\\{.*\\}$"
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "label",
-                    "value"
-                  ],
-                  "additionalProperties": false
-                }
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "spacing": {
-            "anyOf": [
-              {
-                "default": "md",
-                "type": "string",
-                "enum": [
-                  "none",
-                  "sm",
-                  "md",
-                  "lg"
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          }
-        },
-        "required": [
-          "type",
-          "facts"
-        ],
-        "additionalProperties": false
-      },
-      {
-        "type": "object",
-        "properties": {
-          "type": {
-            "anyOf": [
-              {
-                "type": "string",
-                "const": "Image"
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "url": {
-            "type": "string"
-          },
-          "altText": {
-            "default": "",
-            "type": "string"
-          },
-          "size": {
-            "anyOf": [
-              {
-                "default": "md",
-                "type": "string",
-                "enum": [
-                  "sm",
-                  "md",
-                  "lg",
-                  "xl"
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          }
-        },
-        "required": [
-          "type",
-          "url"
-        ],
-        "additionalProperties": false
-      },
-      {
-        "type": "object",
-        "properties": {
-          "type": {
-            "anyOf": [
-              {
-                "type": "string",
-                "const": "Badge"
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "text": {
-            "anyOf": [
-              {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "number"
-                  }
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "tone": {
-            "anyOf": [
-              {
-                "default": "default",
-                "type": "string",
-                "enum": [
-                  "default",
-                  "muted",
-                  "info",
-                  "success",
-                  "warning",
-                  "danger"
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "size": {
-            "anyOf": [
-              {
-                "default": "md",
-                "type": "string",
-                "enum": [
-                  "sm",
-                  "md",
-                  "lg",
-                  "xl"
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          }
-        },
-        "required": [
-          "type",
-          "text"
-        ],
-        "additionalProperties": false
-      },
-      {
-        "type": "object",
-        "properties": {
-          "type": {
-            "anyOf": [
-              {
-                "type": "string",
-                "const": "Progress"
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "value": {
-            "anyOf": [
-              {
-                "type": "number",
-                "minimum": 0,
-                "maximum": 100
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "label": {
-            "anyOf": [
-              {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "number"
-                  }
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "style": {
-            "anyOf": [
-              {
-                "default": "bar",
-                "type": "string",
-                "enum": [
-                  "bar",
-                  "ring"
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "size": {
-            "anyOf": [
-              {
-                "default": "md",
-                "type": "string",
-                "enum": [
-                  "sm",
-                  "md",
-                  "lg",
-                  "xl"
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "tone": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "default",
-                  "muted",
-                  "info",
-                  "success",
-                  "warning",
-                  "danger"
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "show_percentage": {
-            "anyOf": [
-              {
-                "default": true,
-                "type": "boolean"
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "thresholds": {
-            "anyOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "warning": {
-                    "anyOf": [
-                      {
-                        "default": 70,
-                        "type": "number",
-                        "minimum": 0,
-                        "maximum": 100
-                      },
-                      {
-                        "type": "string",
-                        "pattern": "^\\{.*\\}$"
-                      }
-                    ]
-                  },
-                  "danger": {
-                    "anyOf": [
-                      {
-                        "default": 90,
-                        "type": "number",
-                        "minimum": 0,
-                        "maximum": 100
-                      },
-                      {
-                        "type": "string",
-                        "pattern": "^\\{.*\\}$"
-                      }
-                    ]
-                  }
-                },
-                "additionalProperties": false
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          }
-        },
-        "required": [
-          "type",
-          "value"
-        ],
-        "additionalProperties": false
-      },
-      {
-        "type": "object",
-        "properties": {
-          "type": {
-            "anyOf": [
-              {
-                "type": "string",
-                "const": "ActionSet"
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "actions": {
-            "anyOf": [
-              {
-                "type": "array",
-                "items": {
-                  "anyOf": [
-                    {
-                      "type": "object",
-                      "properties": {
-                        "type": {
-                          "anyOf": [
-                            {
-                              "type": "string",
-                              "const": "Action.OpenUrl"
-                            },
-                            {
-                              "type": "string",
-                              "pattern": "^\\{.*\\}$"
-                            }
-                          ]
-                        },
-                        "title": {
-                          "type": "string"
-                        },
-                        "url": {
-                          "type": "string",
-                          "format": "uri"
-                        },
-                        "size": {
-                          "anyOf": [
-                            {
-                              "default": "md",
-                              "type": "string",
-                              "enum": [
-                                "sm",
-                                "md",
-                                "lg",
-                                "xl"
-                              ]
-                            },
-                            {
-                              "type": "string",
-                              "pattern": "^\\{.*\\}$"
-                            }
-                          ]
-                        },
-                        "tone": {
-                          "anyOf": [
-                            {
-                              "default": "default",
-                              "type": "string",
-                              "enum": [
-                                "default",
-                                "muted",
-                                "info",
-                                "success",
-                                "warning",
-                                "danger"
-                              ]
-                            },
-                            {
-                              "type": "string",
-                              "pattern": "^\\{.*\\}$"
-                            }
-                          ]
-                        }
-                      },
-                      "required": [
-                        "type",
-                        "title",
-                        "url"
-                      ],
-                      "additionalProperties": false
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "type": {
-                          "anyOf": [
-                            {
-                              "type": "string",
-                              "const": "Action.Copy"
-                            },
-                            {
-                              "type": "string",
-                              "pattern": "^\\{.*\\}$"
-                            }
-                          ]
-                        },
-                        "title": {
-                          "type": "string"
-                        },
-                        "text": {
-                          "type": "string"
-                        },
-                        "size": {
-                          "anyOf": [
-                            {
-                              "default": "md",
-                              "type": "string",
-                              "enum": [
-                                "sm",
-                                "md",
-                                "lg",
-                                "xl"
-                              ]
-                            },
-                            {
-                              "type": "string",
-                              "pattern": "^\\{.*\\}$"
-                            }
-                          ]
-                        },
-                        "tone": {
-                          "anyOf": [
-                            {
-                              "default": "default",
-                              "type": "string",
-                              "enum": [
-                                "default",
-                                "muted",
-                                "info",
-                                "success",
-                                "warning",
-                                "danger"
-                              ]
-                            },
-                            {
-                              "type": "string",
-                              "pattern": "^\\{.*\\}$"
-                            }
-                          ]
-                        }
-                      },
-                      "required": [
-                        "type",
-                        "title",
-                        "text"
-                      ],
-                      "additionalProperties": false
-                    }
-                  ]
-                }
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "align_x": {
-            "anyOf": [
-              {
-                "default": "start",
-                "type": "string",
-                "enum": [
-                  "start",
-                  "center",
-                  "end"
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "spacing": {
-            "anyOf": [
-              {
-                "default": "md",
-                "type": "string",
-                "enum": [
-                  "none",
-                  "sm",
-                  "md",
-                  "lg"
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          }
-        },
-        "required": [
-          "type",
-          "actions"
-        ],
-        "additionalProperties": false
-      },
-      {
-        "type": "object",
-        "properties": {
-          "type": {
-            "anyOf": [
-              {
-                "type": "string",
-                "const": "Action.OpenUrl"
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "title": {
-            "type": "string"
-          },
-          "url": {
-            "type": "string",
-            "format": "uri"
-          },
-          "size": {
-            "anyOf": [
-              {
-                "default": "md",
-                "type": "string",
-                "enum": [
-                  "sm",
-                  "md",
-                  "lg",
-                  "xl"
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "tone": {
-            "anyOf": [
-              {
-                "default": "default",
-                "type": "string",
-                "enum": [
-                  "default",
-                  "muted",
-                  "info",
-                  "success",
-                  "warning",
-                  "danger"
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          }
-        },
-        "required": [
-          "type",
-          "title",
-          "url"
-        ],
-        "additionalProperties": false
-      },
-      {
-        "type": "object",
-        "properties": {
-          "type": {
-            "anyOf": [
-              {
-                "type": "string",
-                "const": "Action.Copy"
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "title": {
-            "type": "string"
-          },
-          "text": {
-            "type": "string"
-          },
-          "size": {
-            "anyOf": [
-              {
-                "default": "md",
-                "type": "string",
-                "enum": [
-                  "sm",
-                  "md",
-                  "lg",
-                  "xl"
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          },
-          "tone": {
-            "anyOf": [
-              {
-                "default": "default",
-                "type": "string",
-                "enum": [
-                  "default",
-                  "muted",
-                  "info",
-                  "success",
-                  "warning",
-                  "danger"
-                ]
-              },
-              {
-                "type": "string",
-                "pattern": "^\\{.*\\}$"
-              }
-            ]
-          }
-        },
-        "required": [
-          "type",
-          "title",
-          "text"
-        ],
-        "additionalProperties": false
-      }
-    ]
-  },
-  "widget_defs": {
+  "$defs": {
+    "templatedString": {
+      "type": "string",
+      "pattern": "^\\{.*\\}$"
+    },
+    "spacingValue": {
+      "type": "string",
+      "enum": [
+        "none",
+        "sm",
+        "md",
+        "lg"
+      ]
+    },
+    "sizeValue": {
+      "type": "string",
+      "enum": [
+        "sm",
+        "md",
+        "lg",
+        "xl"
+      ]
+    },
+    "toneValue": {
+      "type": "string",
+      "enum": [
+        "default",
+        "muted",
+        "info",
+        "success",
+        "warning",
+        "danger"
+      ]
+    },
+    "alignValue": {
+      "type": "string",
+      "enum": [
+        "start",
+        "center",
+        "end"
+      ]
+    },
     "Container": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "type": {
@@ -1296,8 +54,7 @@
               "const": "Container"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
@@ -1305,46 +62,34 @@
           "anyOf": [
             {
               "type": "array",
-              "items": {}
+              "items": {
+                "$ref": "#/$defs/Widget"
+              }
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
         "spacing": {
           "anyOf": [
             {
-              "default": "md",
-              "type": "string",
-              "enum": [
-                "none",
-                "sm",
-                "md",
-                "lg"
-              ]
+              "$ref": "#/$defs/spacingValue",
+              "default": "md"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
         "align_y": {
           "anyOf": [
             {
-              "default": "start",
-              "type": "string",
-              "enum": [
-                "start",
-                "center",
-                "end"
-              ]
+              "$ref": "#/$defs/alignValue",
+              "default": "start"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         }
@@ -1356,7 +101,6 @@
       "additionalProperties": false
     },
     "ColumnSet": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "type": {
@@ -1366,8 +110,7 @@
               "const": "ColumnSet"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
@@ -1375,46 +118,111 @@
           "anyOf": [
             {
               "type": "array",
-              "items": {}
+              "items": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "Column"
+                      },
+                      {
+                        "$ref": "#/$defs/templatedString"
+                      }
+                    ]
+                  },
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/Widget"
+                        }
+                      },
+                      {
+                        "$ref": "#/$defs/templatedString"
+                      }
+                    ]
+                  },
+                  "width": {
+                    "anyOf": [
+                      {
+                        "default": "auto",
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "const": "auto"
+                          },
+                          {
+                            "type": "string",
+                            "const": "stretch"
+                          },
+                          {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          }
+                        ]
+                      },
+                      {
+                        "$ref": "#/$defs/templatedString"
+                      }
+                    ]
+                  },
+                  "align_y": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/alignValue",
+                        "default": "start"
+                      },
+                      {
+                        "$ref": "#/$defs/templatedString"
+                      }
+                    ]
+                  },
+                  "spacing": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/spacingValue",
+                        "default": "md"
+                      },
+                      {
+                        "$ref": "#/$defs/templatedString"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "type",
+                  "items"
+                ],
+                "additionalProperties": false
+              }
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
         "spacing": {
           "anyOf": [
             {
-              "default": "md",
-              "type": "string",
-              "enum": [
-                "none",
-                "sm",
-                "md",
-                "lg"
-              ]
+              "$ref": "#/$defs/spacingValue",
+              "default": "md"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
         "align_x": {
           "anyOf": [
             {
-              "default": "start",
-              "type": "string",
-              "enum": [
-                "start",
-                "center",
-                "end"
-              ]
+              "$ref": "#/$defs/alignValue",
+              "default": "start"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         }
@@ -1425,103 +233,7 @@
       ],
       "additionalProperties": false
     },
-    "Column": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "type": "object",
-      "properties": {
-        "type": {
-          "anyOf": [
-            {
-              "type": "string",
-              "const": "Column"
-            },
-            {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
-            }
-          ]
-        },
-        "items": {
-          "anyOf": [
-            {
-              "type": "array",
-              "items": {}
-            },
-            {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
-            }
-          ]
-        },
-        "width": {
-          "anyOf": [
-            {
-              "default": "auto",
-              "anyOf": [
-                {
-                  "type": "string",
-                  "const": "auto"
-                },
-                {
-                  "type": "string",
-                  "const": "stretch"
-                },
-                {
-                  "type": "number",
-                  "exclusiveMinimum": 0
-                }
-              ]
-            },
-            {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
-            }
-          ]
-        },
-        "align_y": {
-          "anyOf": [
-            {
-              "default": "start",
-              "type": "string",
-              "enum": [
-                "start",
-                "center",
-                "end"
-              ]
-            },
-            {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
-            }
-          ]
-        },
-        "spacing": {
-          "anyOf": [
-            {
-              "default": "md",
-              "type": "string",
-              "enum": [
-                "none",
-                "sm",
-                "md",
-                "lg"
-              ]
-            },
-            {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
-            }
-          ]
-        }
-      },
-      "required": [
-        "type",
-        "items"
-      ],
-      "additionalProperties": false
-    },
     "List": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "type": {
@@ -1531,8 +243,7 @@
               "const": "List"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
@@ -1543,8 +254,7 @@
               "items": {}
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
@@ -1555,11 +265,12 @@
           "anyOf": [
             {
               "type": "array",
-              "items": {}
+              "items": {
+                "$ref": "#/$defs/Widget"
+              }
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
@@ -1574,8 +285,7 @@
               ]
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
@@ -1587,26 +297,18 @@
               "maximum": 6
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
         "spacing": {
           "anyOf": [
             {
-              "default": "md",
-              "type": "string",
-              "enum": [
-                "none",
-                "sm",
-                "md",
-                "lg"
-              ]
+              "$ref": "#/$defs/spacingValue",
+              "default": "md"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
@@ -1627,8 +329,7 @@
               ]
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
@@ -1639,8 +340,7 @@
               "exclusiveMinimum": 0
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
@@ -1651,8 +351,7 @@
               "type": "boolean"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
@@ -1664,8 +363,7 @@
               "exclusiveMinimum": 0
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         }
@@ -1679,7 +377,6 @@
       "additionalProperties": false
     },
     "TextBlock": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "type": {
@@ -1689,8 +386,7 @@
               "const": "TextBlock"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
@@ -1710,26 +406,18 @@
               ]
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
         "size": {
           "anyOf": [
             {
-              "default": "md",
-              "type": "string",
-              "enum": [
-                "sm",
-                "md",
-                "lg",
-                "xl"
-              ]
+              "$ref": "#/$defs/sizeValue",
+              "default": "md"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
@@ -1746,45 +434,29 @@
               ]
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
         "tone": {
           "anyOf": [
             {
-              "default": "default",
-              "type": "string",
-              "enum": [
-                "default",
-                "muted",
-                "info",
-                "success",
-                "warning",
-                "danger"
-              ]
+              "$ref": "#/$defs/toneValue",
+              "default": "default"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
         "align_x": {
           "anyOf": [
             {
-              "default": "start",
-              "type": "string",
-              "enum": [
-                "start",
-                "center",
-                "end"
-              ]
+              "$ref": "#/$defs/alignValue",
+              "default": "start"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
@@ -1795,8 +467,7 @@
               "type": "boolean"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
@@ -1807,8 +478,7 @@
               "exclusiveMinimum": 0
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         }
@@ -1820,7 +490,6 @@
       "additionalProperties": false
     },
     "FactSet": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "type": {
@@ -1830,8 +499,7 @@
               "const": "FactSet"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
@@ -1855,8 +523,7 @@
                         ]
                       },
                       {
-                        "type": "string",
-                        "pattern": "^\\{.*\\}$"
+                        "$ref": "#/$defs/templatedString"
                       }
                     ]
                   },
@@ -1873,27 +540,17 @@
                         ]
                       },
                       {
-                        "type": "string",
-                        "pattern": "^\\{.*\\}$"
+                        "$ref": "#/$defs/templatedString"
                       }
                     ]
                   },
                   "tone": {
                     "anyOf": [
                       {
-                        "type": "string",
-                        "enum": [
-                          "default",
-                          "muted",
-                          "info",
-                          "success",
-                          "warning",
-                          "danger"
-                        ]
+                        "$ref": "#/$defs/toneValue"
                       },
                       {
-                        "type": "string",
-                        "pattern": "^\\{.*\\}$"
+                        "$ref": "#/$defs/templatedString"
                       }
                     ]
                   }
@@ -1906,26 +563,18 @@
               }
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
         "spacing": {
           "anyOf": [
             {
-              "default": "md",
-              "type": "string",
-              "enum": [
-                "none",
-                "sm",
-                "md",
-                "lg"
-              ]
+              "$ref": "#/$defs/spacingValue",
+              "default": "md"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         }
@@ -1937,7 +586,6 @@
       "additionalProperties": false
     },
     "Image": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "type": {
@@ -1947,8 +595,7 @@
               "const": "Image"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
@@ -1962,18 +609,11 @@
         "size": {
           "anyOf": [
             {
-              "default": "md",
-              "type": "string",
-              "enum": [
-                "sm",
-                "md",
-                "lg",
-                "xl"
-              ]
+              "$ref": "#/$defs/sizeValue",
+              "default": "md"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         }
@@ -1985,7 +625,6 @@
       "additionalProperties": false
     },
     "Badge": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "type": {
@@ -1995,8 +634,7 @@
               "const": "Badge"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
@@ -2013,46 +651,29 @@
               ]
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
         "tone": {
           "anyOf": [
             {
-              "default": "default",
-              "type": "string",
-              "enum": [
-                "default",
-                "muted",
-                "info",
-                "success",
-                "warning",
-                "danger"
-              ]
+              "$ref": "#/$defs/toneValue",
+              "default": "default"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
         "size": {
           "anyOf": [
             {
-              "default": "md",
-              "type": "string",
-              "enum": [
-                "sm",
-                "md",
-                "lg",
-                "xl"
-              ]
+              "$ref": "#/$defs/sizeValue",
+              "default": "md"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         }
@@ -2064,7 +685,6 @@
       "additionalProperties": false
     },
     "Progress": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "type": {
@@ -2074,8 +694,7 @@
               "const": "Progress"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
@@ -2087,8 +706,7 @@
               "maximum": 100
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
@@ -2105,8 +723,7 @@
               ]
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
@@ -2121,45 +738,28 @@
               ]
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
         "size": {
           "anyOf": [
             {
-              "default": "md",
-              "type": "string",
-              "enum": [
-                "sm",
-                "md",
-                "lg",
-                "xl"
-              ]
+              "$ref": "#/$defs/sizeValue",
+              "default": "md"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
         "tone": {
           "anyOf": [
             {
-              "type": "string",
-              "enum": [
-                "default",
-                "muted",
-                "info",
-                "success",
-                "warning",
-                "danger"
-              ]
+              "$ref": "#/$defs/toneValue"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
@@ -2170,8 +770,7 @@
               "type": "boolean"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
@@ -2189,8 +788,7 @@
                       "maximum": 100
                     },
                     {
-                      "type": "string",
-                      "pattern": "^\\{.*\\}$"
+                      "$ref": "#/$defs/templatedString"
                     }
                   ]
                 },
@@ -2203,8 +801,7 @@
                       "maximum": 100
                     },
                     {
-                      "type": "string",
-                      "pattern": "^\\{.*\\}$"
+                      "$ref": "#/$defs/templatedString"
                     }
                   ]
                 }
@@ -2212,8 +809,7 @@
               "additionalProperties": false
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         }
@@ -2225,7 +821,6 @@
       "additionalProperties": false
     },
     "ActionSet": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "type": {
@@ -2235,8 +830,7 @@
               "const": "ActionSet"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
@@ -2244,46 +838,136 @@
           "anyOf": [
             {
               "type": "array",
-              "items": {}
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "const": "Action.OpenUrl"
+                          },
+                          {
+                            "$ref": "#/$defs/templatedString"
+                          }
+                        ]
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "url": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "size": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/$defs/sizeValue",
+                            "default": "md"
+                          },
+                          {
+                            "$ref": "#/$defs/templatedString"
+                          }
+                        ]
+                      },
+                      "tone": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/$defs/toneValue",
+                            "default": "default"
+                          },
+                          {
+                            "$ref": "#/$defs/templatedString"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "title",
+                      "url"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "const": "Action.Copy"
+                          },
+                          {
+                            "$ref": "#/$defs/templatedString"
+                          }
+                        ]
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      },
+                      "size": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/$defs/sizeValue",
+                            "default": "md"
+                          },
+                          {
+                            "$ref": "#/$defs/templatedString"
+                          }
+                        ]
+                      },
+                      "tone": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/$defs/toneValue",
+                            "default": "default"
+                          },
+                          {
+                            "$ref": "#/$defs/templatedString"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "title",
+                      "text"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
         "align_x": {
           "anyOf": [
             {
-              "default": "start",
-              "type": "string",
-              "enum": [
-                "start",
-                "center",
-                "end"
-              ]
+              "$ref": "#/$defs/alignValue",
+              "default": "start"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
         "spacing": {
           "anyOf": [
             {
-              "default": "md",
-              "type": "string",
-              "enum": [
-                "none",
-                "sm",
-                "md",
-                "lg"
-              ]
+              "$ref": "#/$defs/spacingValue",
+              "default": "md"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         }
@@ -2295,7 +979,6 @@
       "additionalProperties": false
     },
     "Action.OpenUrl": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "type": {
@@ -2305,8 +988,7 @@
               "const": "Action.OpenUrl"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
@@ -2320,38 +1002,22 @@
         "size": {
           "anyOf": [
             {
-              "default": "md",
-              "type": "string",
-              "enum": [
-                "sm",
-                "md",
-                "lg",
-                "xl"
-              ]
+              "$ref": "#/$defs/sizeValue",
+              "default": "md"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
         "tone": {
           "anyOf": [
             {
-              "default": "default",
-              "type": "string",
-              "enum": [
-                "default",
-                "muted",
-                "info",
-                "success",
-                "warning",
-                "danger"
-              ]
+              "$ref": "#/$defs/toneValue",
+              "default": "default"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         }
@@ -2364,7 +1030,6 @@
       "additionalProperties": false
     },
     "Action.Copy": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "type": {
@@ -2374,8 +1039,7 @@
               "const": "Action.Copy"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
@@ -2388,38 +1052,22 @@
         "size": {
           "anyOf": [
             {
-              "default": "md",
-              "type": "string",
-              "enum": [
-                "sm",
-                "md",
-                "lg",
-                "xl"
-              ]
+              "$ref": "#/$defs/sizeValue",
+              "default": "md"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         },
         "tone": {
           "anyOf": [
             {
-              "default": "default",
-              "type": "string",
-              "enum": [
-                "default",
-                "muted",
-                "info",
-                "success",
-                "warning",
-                "danger"
-              ]
+              "$ref": "#/$defs/toneValue",
+              "default": "default"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/templatedString"
             }
           ]
         }
@@ -2430,6 +1078,178 @@
         "text"
       ],
       "additionalProperties": false
+    },
+    "Column": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "Column"
+            },
+            {
+              "$ref": "#/$defs/templatedString"
+            }
+          ]
+        },
+        "items": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Widget"
+              }
+            },
+            {
+              "$ref": "#/$defs/templatedString"
+            }
+          ]
+        },
+        "width": {
+          "anyOf": [
+            {
+              "default": "auto",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "string",
+                  "const": "stretch"
+                },
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              ]
+            },
+            {
+              "$ref": "#/$defs/templatedString"
+            }
+          ]
+        },
+        "align_y": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/alignValue",
+              "default": "start"
+            },
+            {
+              "$ref": "#/$defs/templatedString"
+            }
+          ]
+        },
+        "spacing": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/spacingValue",
+              "default": "md"
+            },
+            {
+              "$ref": "#/$defs/templatedString"
+            }
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "items"
+      ],
+      "additionalProperties": false
+    },
+    "ContainerWidget": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Container"
+        },
+        {
+          "$ref": "#/$defs/ColumnSet"
+        },
+        {
+          "$ref": "#/$defs/List"
+        }
+      ]
+    },
+    "PrimitiveWidget": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/TextBlock"
+        },
+        {
+          "$ref": "#/$defs/FactSet"
+        },
+        {
+          "$ref": "#/$defs/Image"
+        },
+        {
+          "$ref": "#/$defs/Badge"
+        },
+        {
+          "$ref": "#/$defs/Progress"
+        },
+        {
+          "$ref": "#/$defs/ActionSet"
+        },
+        {
+          "$ref": "#/$defs/Action.OpenUrl"
+        },
+        {
+          "$ref": "#/$defs/Action.Copy"
+        }
+      ]
+    },
+    "Widget": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ContainerWidget"
+        },
+        {
+          "$ref": "#/$defs/PrimitiveWidget"
+        }
+      ]
+    }
+  },
+  "widget_tree": {
+    "$ref": "#/$defs/Widget"
+  },
+  "widget_defs": {
+    "Container": {
+      "$ref": "#/$defs/Container"
+    },
+    "ColumnSet": {
+      "$ref": "#/$defs/ColumnSet"
+    },
+    "Column": {
+      "$ref": "#/$defs/Column"
+    },
+    "List": {
+      "$ref": "#/$defs/List"
+    },
+    "TextBlock": {
+      "$ref": "#/$defs/TextBlock"
+    },
+    "FactSet": {
+      "$ref": "#/$defs/FactSet"
+    },
+    "Image": {
+      "$ref": "#/$defs/Image"
+    },
+    "Badge": {
+      "$ref": "#/$defs/Badge"
+    },
+    "Progress": {
+      "$ref": "#/$defs/Progress"
+    },
+    "ActionSet": {
+      "$ref": "#/$defs/ActionSet"
+    },
+    "Action.OpenUrl": {
+      "$ref": "#/$defs/Action.OpenUrl"
+    },
+    "Action.Copy": {
+      "$ref": "#/$defs/Action.Copy"
     }
   }
 }

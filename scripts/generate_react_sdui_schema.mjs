@@ -18,18 +18,21 @@ const ESBUILD_MAIN = path.join(
 
 const WIDGET_SCHEMA_IMPORTS = [
     ["WidgetSchema", "src/components/widgets/WidgetRenderer.tsx"],
-    ["ContainerSchema", "src/components/widgets/layouts/Container.tsx"],
-    ["ColumnSetSchema", "src/components/widgets/layouts/ColumnSet.tsx"],
-    ["ColumnSchema", "src/components/widgets/layouts/Column.tsx"],
-    ["ListSchema", "src/components/widgets/containers/List.tsx"],
-    ["TextBlockSchema", "src/components/widgets/elements/TextBlock.tsx"],
-    ["FactSetSchema", "src/components/widgets/elements/FactSet.tsx"],
-    ["ImageSchema", "src/components/widgets/elements/Image.tsx"],
-    ["BadgeSchema", "src/components/widgets/elements/Badge.tsx"],
-    ["ProgressSchema", "src/components/widgets/visualizations/Progress.tsx"],
-    ["ActionSetSchema", "src/components/widgets/actions/ActionSet.tsx"],
-    ["ActionOpenUrlSchema", "src/components/widgets/actions/ActionOpenUrl.tsx"],
-    ["ActionCopySchema", "src/components/widgets/actions/ActionCopy.tsx"],
+];
+
+const COMPAT_WIDGET_DEF_EXPORTS = [
+    "Container",
+    "ColumnSet",
+    "Column",
+    "List",
+    "TextBlock",
+    "FactSet",
+    "Image",
+    "Badge",
+    "Progress",
+    "ActionSet",
+    "Action.OpenUrl",
+    "Action.Copy",
 ];
 
 function parseArgs() {
@@ -51,23 +54,24 @@ function buildEntrySource() {
         }),
     ];
 
-    const widgetDefs = [
-        ["Container", "ContainerSchema"],
-        ["ColumnSet", "ColumnSetSchema"],
-        ["Column", "ColumnSchema"],
-        ["List", "ListSchema"],
-        ["TextBlock", "TextBlockSchema"],
-        ["FactSet", "FactSetSchema"],
-        ["Image", "ImageSchema"],
-        ["Badge", "BadgeSchema"],
-        ["Progress", "ProgressSchema"],
-        ["ActionSet", "ActionSetSchema"],
-        ["Action.OpenUrl", "ActionOpenUrlSchema"],
-        ["Action.Copy", "ActionCopySchema"],
-    ];
-
     const schemaPostProcessHelper = `
 const TEMPLATE_SYNTAX_PATTERN = "^\\\\{.*\\\\}$";
+const TEMPLATE_DEF_REF = "#/$defs/templatedString";
+const SHARED_ENUM_VALUES = {
+  spacingValue: ["none", "sm", "md", "lg"],
+  sizeValue: ["sm", "md", "lg", "xl"],
+  toneValue: ["default", "muted", "info", "success", "warning", "danger"],
+  alignValue: ["start", "center", "end"],
+};
+const ENUM_ANNOTATION_KEYS = [
+  "default",
+  "title",
+  "description",
+  "examples",
+  "deprecated",
+  "readOnly",
+  "writeOnly",
+];
 
 function isTemplatePatternSchema(node) {
   return (
@@ -78,12 +82,22 @@ function isTemplatePatternSchema(node) {
   );
 }
 
+function isTemplateRefSchema(node) {
+  return (
+    node &&
+    typeof node === "object" &&
+    node.$ref === TEMPLATE_DEF_REF
+  );
+}
+
 function hasTemplateFallback(node) {
   if (!node || typeof node !== "object" || !Array.isArray(node.anyOf)) {
     return false;
   }
 
-  return node.anyOf.some((item) => isTemplatePatternSchema(item));
+  return node.anyOf.some(
+    (item) => isTemplatePatternSchema(item) || isTemplateRefSchema(item)
+  );
 }
 
 function isPlainStringSchema(node) {
@@ -112,6 +126,194 @@ function wrapPropertySchemaForTemplate(node) {
       node,
       { type: "string", pattern: TEMPLATE_SYNTAX_PATTERN }
     ],
+  };
+}
+
+function walkSchema(schema, onNode) {
+  const stack = [schema];
+  const processed = new WeakSet();
+  while (stack.length > 0) {
+    const node = stack.pop();
+    if (!node || typeof node !== "object") {
+      continue;
+    }
+
+    if (processed.has(node)) {
+      continue;
+    }
+    processed.add(node);
+    onNode(node);
+
+    for (const value of Object.values(node)) {
+      if (Array.isArray(value)) {
+        for (const item of value) {
+          if (item && typeof item === "object") {
+            stack.push(item);
+          }
+        }
+      } else if (value && typeof value === "object") {
+        stack.push(value);
+      }
+    }
+  }
+}
+
+function rewriteRootRefs(schema, targetRef) {
+  walkSchema(schema, (node) => {
+    for (const [key, value] of Object.entries(node)) {
+      if (key === "$ref" && value === "#") {
+        node[key] = targetRef;
+      } else if (key === "$schema") {
+        delete node[key];
+      }
+    }
+  });
+  return schema;
+}
+
+function replaceTemplateFallbackWithDefRef(schema) {
+  walkSchema(schema, (node) => {
+    if (!Array.isArray(node.anyOf)) {
+      return;
+    }
+
+    node.anyOf = node.anyOf.map((item) =>
+      isTemplatePatternSchema(item) || isTemplateRefSchema(item)
+        ? { $ref: TEMPLATE_DEF_REF }
+        : item,
+    );
+  });
+  return schema;
+}
+
+function hasExactStringEnum(node, values) {
+  return (
+    node &&
+    typeof node === "object" &&
+    node.type === "string" &&
+    Array.isArray(node.enum) &&
+    node.enum.length === values.length &&
+    node.enum.every((item, index) => item === values[index])
+  );
+}
+
+function createEnumRefBranch(refName, schemaNode) {
+  const refBranch = {
+    $ref: "#/$defs/" + refName,
+  };
+  for (const key of ENUM_ANNOTATION_KEYS) {
+    if (schemaNode[key] !== undefined) {
+      refBranch[key] = schemaNode[key];
+    }
+  }
+  return refBranch;
+}
+
+function extractNonTemplateBranch(schemaNode) {
+  if (!schemaNode || typeof schemaNode !== "object") {
+    return null;
+  }
+  if (!Array.isArray(schemaNode.anyOf)) {
+    return schemaNode;
+  }
+  for (const branch of schemaNode.anyOf) {
+    if (!isTemplatePatternSchema(branch) && !isTemplateRefSchema(branch)) {
+      return branch;
+    }
+  }
+  return null;
+}
+
+function applySharedEnumReferences(schema) {
+  walkSchema(schema, (node) => {
+    if (!Array.isArray(node.anyOf) || node.anyOf.length !== 2) {
+      return;
+    }
+
+    const templateIndex = node.anyOf.findIndex(
+      (item) => isTemplatePatternSchema(item) || isTemplateRefSchema(item),
+    );
+    if (templateIndex === -1) {
+      return;
+    }
+
+    const valueIndex = templateIndex === 0 ? 1 : 0;
+    const valueBranch = node.anyOf[valueIndex];
+    const enumRefName = Object.entries(SHARED_ENUM_VALUES).find(([, enumValues]) =>
+      hasExactStringEnum(valueBranch, enumValues),
+    )?.[0];
+
+    if (!enumRefName) {
+      return;
+    }
+
+    node.anyOf[valueIndex] = createEnumRefBranch(enumRefName, valueBranch);
+    node.anyOf[templateIndex] = { $ref: TEMPLATE_DEF_REF };
+  });
+  return schema;
+}
+
+function getWidgetTypeName(widgetSchema) {
+  const typeSchema = widgetSchema?.properties?.type;
+  if (!typeSchema || typeof typeSchema !== "object") {
+    return null;
+  }
+
+  if (typeof typeSchema.const === "string") {
+    return typeSchema.const;
+  }
+
+  if (Array.isArray(typeSchema.anyOf)) {
+    const literalSchema = typeSchema.anyOf.find(
+      (branch) =>
+        branch &&
+        typeof branch === "object" &&
+        typeof branch.const === "string",
+    );
+    return literalSchema?.const ?? null;
+  }
+
+  return null;
+}
+
+function cloneSchema(schema) {
+  return JSON.parse(JSON.stringify(schema));
+}
+
+function extractWidgetDefinitions(widgetTreeSchema) {
+  const definitions = {};
+  const oneOf = Array.isArray(widgetTreeSchema.oneOf) ? widgetTreeSchema.oneOf : [];
+
+  for (const widgetSchema of oneOf) {
+    const typeName = getWidgetTypeName(widgetSchema);
+    if (!typeName) {
+      continue;
+    }
+    definitions[typeName] = cloneSchema(widgetSchema);
+  }
+
+  const columnSetSchema = definitions.ColumnSet;
+  const columnsSchema = extractNonTemplateBranch(columnSetSchema?.properties?.columns);
+  const columnItemSchema =
+    columnsSchema &&
+    typeof columnsSchema === "object" &&
+    columnsSchema.items &&
+    typeof columnsSchema.items === "object"
+      ? columnsSchema.items
+      : null;
+
+  if (columnItemSchema) {
+    definitions.Column = cloneSchema(columnItemSchema);
+  }
+
+  return definitions;
+}
+
+function buildRefOneOf(definitionNames, allowedNames) {
+  return {
+    oneOf: definitionNames
+      .filter((name) => allowedNames.has(name))
+      .map((name) => ({ $ref: "#/$defs/" + name })),
   };
 }
 
@@ -168,24 +370,92 @@ function finalizeSchemaForEditor(schema) {
 }
 `;
 
-    const defLines = widgetDefs.map(
-        ([name, symbol]) =>
-            `${JSON.stringify(name)}: finalizeSchemaForEditor(z.toJSONSchema(${symbol}, { target: "draft-2020-12", io: "input" })),`,
-    );
-
     return `${importLines.join("\n")}
 
 ${schemaPostProcessHelper}
 
 export function buildSduiSchemaFragment() {
+  const widgetTreeSchema = finalizeSchemaForEditor(
+    z.toJSONSchema(WidgetSchema, { target: "draft-2020-12", io: "input" }),
+  );
+  rewriteRootRefs(widgetTreeSchema, "#/$defs/Widget");
+  replaceTemplateFallbackWithDefRef(widgetTreeSchema);
+
+  const widgetDefinitions = extractWidgetDefinitions(widgetTreeSchema);
+  for (const schema of Object.values(widgetDefinitions)) {
+    replaceTemplateFallbackWithDefRef(schema);
+    applySharedEnumReferences(schema);
+  }
+
+  const definitionNames = new Set(Object.keys(widgetDefinitions));
+  const defs = {
+    templatedString: {
+      type: "string",
+      pattern: TEMPLATE_SYNTAX_PATTERN,
+    },
+    spacingValue: {
+      type: "string",
+      enum: SHARED_ENUM_VALUES.spacingValue,
+    },
+    sizeValue: {
+      type: "string",
+      enum: SHARED_ENUM_VALUES.sizeValue,
+    },
+    toneValue: {
+      type: "string",
+      enum: SHARED_ENUM_VALUES.toneValue,
+    },
+    alignValue: {
+      type: "string",
+      enum: SHARED_ENUM_VALUES.alignValue,
+    },
+    ...widgetDefinitions,
+    ContainerWidget: buildRefOneOf(
+      ["Container", "ColumnSet", "List"],
+      definitionNames,
+    ),
+    PrimitiveWidget: buildRefOneOf(
+      [
+        "TextBlock",
+        "FactSet",
+        "Image",
+        "Badge",
+        "Progress",
+        "ActionSet",
+        "Action.OpenUrl",
+        "Action.Copy",
+      ],
+      definitionNames,
+    ),
+    Widget: {
+      oneOf: [
+        { $ref: "#/$defs/ContainerWidget" },
+        { $ref: "#/$defs/PrimitiveWidget" },
+      ],
+    },
+  };
+
+  for (const schema of Object.values(defs)) {
+    if (schema && typeof schema === "object") {
+      replaceTemplateFallbackWithDefRef(schema);
+      applySharedEnumReferences(schema);
+    }
+  }
+
+  const widgetDefs = {};
+  for (const name of ${JSON.stringify(COMPAT_WIDGET_DEF_EXPORTS)}) {
+    if (definitionNames.has(name)) {
+      widgetDefs[name] = { $ref: "#/$defs/" + name };
+    }
+  }
+
   return {
     $schema: "https://json-schema.org/draft/2020-12/schema",
     title: "Glancier React SDUI Fragment",
     description: "Generated from React SDUI zod schemas.",
-    widget_tree: finalizeSchemaForEditor(z.toJSONSchema(WidgetSchema, { target: "draft-2020-12", io: "input" })),
-    widget_defs: {
-      ${defLines.join("\n      ")}
-    },
+    $defs: defs,
+    widget_tree: { $ref: "#/$defs/Widget" },
+    widget_defs: widgetDefs,
   };
 }
 `;

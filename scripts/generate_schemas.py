@@ -93,20 +93,29 @@ def rewrite_schema_refs(
     *,
     root_ref_target: str,
     strip_schema_keyword: bool = False,
+    defs_ref_prefix: str = "#/$defs/Sdui",
 ) -> Any:
-    """Rewrite internal root refs from '#' to root_ref_target."""
+    """Rewrite internal refs to composed-schema targets."""
     if isinstance(value, dict):
         rewritten: dict[str, Any] = {}
         for key, nested in value.items():
             if strip_schema_keyword and key == "$schema":
                 continue
-            if key == "$ref" and nested == "#":
-                rewritten[key] = root_ref_target
+            if key == "$ref" and isinstance(nested, str):
+                if nested == "#":
+                    rewritten[key] = root_ref_target
+                    continue
+                if nested.startswith("#/$defs/"):
+                    def_name = nested.removeprefix("#/$defs/")
+                    rewritten[key] = f"{defs_ref_prefix}{normalize_def_name(def_name)}"
+                    continue
+                rewritten[key] = nested
                 continue
             rewritten[key] = rewrite_schema_refs(
                 nested,
                 root_ref_target=root_ref_target,
                 strip_schema_keyword=strip_schema_keyword,
+                defs_ref_prefix=defs_ref_prefix,
             )
         return rewritten
     if isinstance(value, list):
@@ -115,6 +124,7 @@ def rewrite_schema_refs(
                 item,
                 root_ref_target=root_ref_target,
                 strip_schema_keyword=strip_schema_keyword,
+                defs_ref_prefix=defs_ref_prefix,
             )
             for item in value
         ]
@@ -138,17 +148,46 @@ def compose_integration_schema(
         raise ValueError("React SDUI fragment missing required 'widget_tree' schema object.")
 
     defs = combined.setdefault("$defs", {})
-    defs["SduiWidget"] = rewrite_schema_refs(
+    react_defs = react_sdui_fragment.get("$defs", {})
+    if isinstance(react_defs, dict):
+        for name, fragment in react_defs.items():
+            if not isinstance(fragment, dict):
+                continue
+            defs[f"Sdui{normalize_def_name(name)}"] = rewrite_schema_refs(
+                fragment,
+                root_ref_target="#/$defs/SduiWidget",
+                strip_schema_keyword=True,
+            )
+
+    rewritten_widget_tree = rewrite_schema_refs(
         widget_tree,
         root_ref_target="#/$defs/SduiWidget",
         strip_schema_keyword=True,
     )
+    if (
+        isinstance(rewritten_widget_tree, dict)
+        and rewritten_widget_tree.get("$ref") == "#/$defs/SduiWidget"
+    ):
+        if "SduiWidget" not in defs:
+            raise ValueError(
+                "React SDUI fragment widget_tree references '$defs.Widget' "
+                "but '$defs.Widget' is missing."
+            )
+    else:
+        defs["SduiWidget"] = rewritten_widget_tree
 
     widget_defs = react_sdui_fragment.get("widget_defs", {})
     if isinstance(widget_defs, dict):
         for name, fragment in widget_defs.items():
             if isinstance(fragment, dict):
-                defs[f"Sdui{normalize_def_name(name)}"] = fragment
+                target_name = f"Sdui{normalize_def_name(name)}"
+                if target_name in defs:
+                    continue
+                defs[target_name] = rewrite_schema_refs(
+                    fragment,
+                    root_ref_target="#/$defs/SduiWidget",
+                    strip_schema_keyword=True,
+                )
 
     view_component_schema = defs.get("ViewComponent")
     if not isinstance(view_component_schema, dict):

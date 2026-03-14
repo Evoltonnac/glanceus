@@ -217,1289 +217,48 @@
       "title": "ViewComponentType",
       "type": "string"
     },
-    "SduiWidget": {
-      "oneOf": [
-        {
-          "type": "object",
-          "properties": {
-            "type": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "const": "Container"
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "items": {
-              "anyOf": [
-                {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/SduiWidget"
-                  }
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "spacing": {
-              "anyOf": [
-                {
-                  "default": "md",
-                  "type": "string",
-                  "enum": [
-                    "none",
-                    "sm",
-                    "md",
-                    "lg"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "align_y": {
-              "anyOf": [
-                {
-                  "default": "start",
-                  "type": "string",
-                  "enum": [
-                    "start",
-                    "center",
-                    "end"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            }
-          },
-          "required": [
-            "type",
-            "items"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "type": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "const": "ColumnSet"
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "columns": {
-              "anyOf": [
-                {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "type": {
-                        "anyOf": [
-                          {
-                            "type": "string",
-                            "const": "Column"
-                          },
-                          {
-                            "type": "string",
-                            "pattern": "^\\{.*\\}$"
-                          }
-                        ]
-                      },
-                      "items": {
-                        "anyOf": [
-                          {
-                            "type": "array",
-                            "items": {
-                              "$ref": "#/$defs/SduiWidget"
-                            }
-                          },
-                          {
-                            "type": "string",
-                            "pattern": "^\\{.*\\}$"
-                          }
-                        ]
-                      },
-                      "width": {
-                        "anyOf": [
-                          {
-                            "default": "auto",
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "const": "auto"
-                              },
-                              {
-                                "type": "string",
-                                "const": "stretch"
-                              },
-                              {
-                                "type": "number",
-                                "exclusiveMinimum": 0
-                              }
-                            ]
-                          },
-                          {
-                            "type": "string",
-                            "pattern": "^\\{.*\\}$"
-                          }
-                        ]
-                      },
-                      "align_y": {
-                        "anyOf": [
-                          {
-                            "default": "start",
-                            "type": "string",
-                            "enum": [
-                              "start",
-                              "center",
-                              "end"
-                            ]
-                          },
-                          {
-                            "type": "string",
-                            "pattern": "^\\{.*\\}$"
-                          }
-                        ]
-                      },
-                      "spacing": {
-                        "anyOf": [
-                          {
-                            "default": "md",
-                            "type": "string",
-                            "enum": [
-                              "none",
-                              "sm",
-                              "md",
-                              "lg"
-                            ]
-                          },
-                          {
-                            "type": "string",
-                            "pattern": "^\\{.*\\}$"
-                          }
-                        ]
-                      }
-                    },
-                    "required": [
-                      "type",
-                      "items"
-                    ],
-                    "additionalProperties": false
-                  }
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "spacing": {
-              "anyOf": [
-                {
-                  "default": "md",
-                  "type": "string",
-                  "enum": [
-                    "none",
-                    "sm",
-                    "md",
-                    "lg"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "align_x": {
-              "anyOf": [
-                {
-                  "default": "start",
-                  "type": "string",
-                  "enum": [
-                    "start",
-                    "center",
-                    "end"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            }
-          },
-          "required": [
-            "type",
-            "columns"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "type": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "const": "List"
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "data_source": {
-              "anyOf": [
-                {
-                  "type": "array",
-                  "items": {}
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "item_alias": {
-              "type": "string"
-            },
-            "render": {
-              "anyOf": [
-                {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/SduiWidget"
-                  }
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "layout": {
-              "anyOf": [
-                {
-                  "default": "col",
-                  "type": "string",
-                  "enum": [
-                    "col",
-                    "grid"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "columns": {
-              "anyOf": [
-                {
-                  "type": "number",
-                  "minimum": 1,
-                  "maximum": 6
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "spacing": {
-              "anyOf": [
-                {
-                  "default": "md",
-                  "type": "string",
-                  "enum": [
-                    "none",
-                    "sm",
-                    "md",
-                    "lg"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "filter": {
-              "type": "string"
-            },
-            "sort_by": {
-              "type": "string"
-            },
-            "sort_order": {
-              "anyOf": [
-                {
-                  "default": "asc",
-                  "type": "string",
-                  "enum": [
-                    "asc",
-                    "desc"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "limit": {
-              "anyOf": [
-                {
-                  "type": "number",
-                  "exclusiveMinimum": 0
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "pagination": {
-              "anyOf": [
-                {
-                  "default": false,
-                  "type": "boolean"
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "page_size": {
-              "anyOf": [
-                {
-                  "default": 10,
-                  "type": "number",
-                  "exclusiveMinimum": 0
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            }
-          },
-          "required": [
-            "type",
-            "data_source",
-            "item_alias",
-            "render"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "type": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "const": "TextBlock"
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "text": {
-              "anyOf": [
-                {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "number"
-                    },
-                    {
-                      "type": "boolean"
-                    }
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "size": {
-              "anyOf": [
-                {
-                  "default": "md",
-                  "type": "string",
-                  "enum": [
-                    "sm",
-                    "md",
-                    "lg",
-                    "xl"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "weight": {
-              "anyOf": [
-                {
-                  "default": "normal",
-                  "type": "string",
-                  "enum": [
-                    "normal",
-                    "medium",
-                    "semibold",
-                    "bold"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "tone": {
-              "anyOf": [
-                {
-                  "default": "default",
-                  "type": "string",
-                  "enum": [
-                    "default",
-                    "muted",
-                    "info",
-                    "success",
-                    "warning",
-                    "danger"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "align_x": {
-              "anyOf": [
-                {
-                  "default": "start",
-                  "type": "string",
-                  "enum": [
-                    "start",
-                    "center",
-                    "end"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "wrap": {
-              "anyOf": [
-                {
-                  "default": true,
-                  "type": "boolean"
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "max_lines": {
-              "anyOf": [
-                {
-                  "type": "number",
-                  "exclusiveMinimum": 0
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            }
-          },
-          "required": [
-            "type",
-            "text"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "type": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "const": "FactSet"
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "facts": {
-              "anyOf": [
-                {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "label": {
-                        "anyOf": [
-                          {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "number"
-                              }
-                            ]
-                          },
-                          {
-                            "type": "string",
-                            "pattern": "^\\{.*\\}$"
-                          }
-                        ]
-                      },
-                      "value": {
-                        "anyOf": [
-                          {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "number"
-                              }
-                            ]
-                          },
-                          {
-                            "type": "string",
-                            "pattern": "^\\{.*\\}$"
-                          }
-                        ]
-                      },
-                      "tone": {
-                        "anyOf": [
-                          {
-                            "type": "string",
-                            "enum": [
-                              "default",
-                              "muted",
-                              "info",
-                              "success",
-                              "warning",
-                              "danger"
-                            ]
-                          },
-                          {
-                            "type": "string",
-                            "pattern": "^\\{.*\\}$"
-                          }
-                        ]
-                      }
-                    },
-                    "required": [
-                      "label",
-                      "value"
-                    ],
-                    "additionalProperties": false
-                  }
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "spacing": {
-              "anyOf": [
-                {
-                  "default": "md",
-                  "type": "string",
-                  "enum": [
-                    "none",
-                    "sm",
-                    "md",
-                    "lg"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            }
-          },
-          "required": [
-            "type",
-            "facts"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "type": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "const": "Image"
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "url": {
-              "type": "string"
-            },
-            "altText": {
-              "default": "",
-              "type": "string"
-            },
-            "size": {
-              "anyOf": [
-                {
-                  "default": "md",
-                  "type": "string",
-                  "enum": [
-                    "sm",
-                    "md",
-                    "lg",
-                    "xl"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            }
-          },
-          "required": [
-            "type",
-            "url"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "type": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "const": "Badge"
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "text": {
-              "anyOf": [
-                {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "number"
-                    }
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "tone": {
-              "anyOf": [
-                {
-                  "default": "default",
-                  "type": "string",
-                  "enum": [
-                    "default",
-                    "muted",
-                    "info",
-                    "success",
-                    "warning",
-                    "danger"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "size": {
-              "anyOf": [
-                {
-                  "default": "md",
-                  "type": "string",
-                  "enum": [
-                    "sm",
-                    "md",
-                    "lg",
-                    "xl"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            }
-          },
-          "required": [
-            "type",
-            "text"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "type": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "const": "Progress"
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "value": {
-              "anyOf": [
-                {
-                  "type": "number",
-                  "minimum": 0,
-                  "maximum": 100
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "label": {
-              "anyOf": [
-                {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "number"
-                    }
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "style": {
-              "anyOf": [
-                {
-                  "default": "bar",
-                  "type": "string",
-                  "enum": [
-                    "bar",
-                    "ring"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "size": {
-              "anyOf": [
-                {
-                  "default": "md",
-                  "type": "string",
-                  "enum": [
-                    "sm",
-                    "md",
-                    "lg",
-                    "xl"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "tone": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "enum": [
-                    "default",
-                    "muted",
-                    "info",
-                    "success",
-                    "warning",
-                    "danger"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "show_percentage": {
-              "anyOf": [
-                {
-                  "default": true,
-                  "type": "boolean"
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "thresholds": {
-              "anyOf": [
-                {
-                  "type": "object",
-                  "properties": {
-                    "warning": {
-                      "anyOf": [
-                        {
-                          "default": 70,
-                          "type": "number",
-                          "minimum": 0,
-                          "maximum": 100
-                        },
-                        {
-                          "type": "string",
-                          "pattern": "^\\{.*\\}$"
-                        }
-                      ]
-                    },
-                    "danger": {
-                      "anyOf": [
-                        {
-                          "default": 90,
-                          "type": "number",
-                          "minimum": 0,
-                          "maximum": 100
-                        },
-                        {
-                          "type": "string",
-                          "pattern": "^\\{.*\\}$"
-                        }
-                      ]
-                    }
-                  },
-                  "additionalProperties": false
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            }
-          },
-          "required": [
-            "type",
-            "value"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "type": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "const": "ActionSet"
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "actions": {
-              "anyOf": [
-                {
-                  "type": "array",
-                  "items": {
-                    "anyOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "type": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "const": "Action.OpenUrl"
-                              },
-                              {
-                                "type": "string",
-                                "pattern": "^\\{.*\\}$"
-                              }
-                            ]
-                          },
-                          "title": {
-                            "type": "string"
-                          },
-                          "url": {
-                            "type": "string",
-                            "format": "uri"
-                          },
-                          "size": {
-                            "anyOf": [
-                              {
-                                "default": "md",
-                                "type": "string",
-                                "enum": [
-                                  "sm",
-                                  "md",
-                                  "lg",
-                                  "xl"
-                                ]
-                              },
-                              {
-                                "type": "string",
-                                "pattern": "^\\{.*\\}$"
-                              }
-                            ]
-                          },
-                          "tone": {
-                            "anyOf": [
-                              {
-                                "default": "default",
-                                "type": "string",
-                                "enum": [
-                                  "default",
-                                  "muted",
-                                  "info",
-                                  "success",
-                                  "warning",
-                                  "danger"
-                                ]
-                              },
-                              {
-                                "type": "string",
-                                "pattern": "^\\{.*\\}$"
-                              }
-                            ]
-                          }
-                        },
-                        "required": [
-                          "type",
-                          "title",
-                          "url"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "type": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "const": "Action.Copy"
-                              },
-                              {
-                                "type": "string",
-                                "pattern": "^\\{.*\\}$"
-                              }
-                            ]
-                          },
-                          "title": {
-                            "type": "string"
-                          },
-                          "text": {
-                            "type": "string"
-                          },
-                          "size": {
-                            "anyOf": [
-                              {
-                                "default": "md",
-                                "type": "string",
-                                "enum": [
-                                  "sm",
-                                  "md",
-                                  "lg",
-                                  "xl"
-                                ]
-                              },
-                              {
-                                "type": "string",
-                                "pattern": "^\\{.*\\}$"
-                              }
-                            ]
-                          },
-                          "tone": {
-                            "anyOf": [
-                              {
-                                "default": "default",
-                                "type": "string",
-                                "enum": [
-                                  "default",
-                                  "muted",
-                                  "info",
-                                  "success",
-                                  "warning",
-                                  "danger"
-                                ]
-                              },
-                              {
-                                "type": "string",
-                                "pattern": "^\\{.*\\}$"
-                              }
-                            ]
-                          }
-                        },
-                        "required": [
-                          "type",
-                          "title",
-                          "text"
-                        ],
-                        "additionalProperties": false
-                      }
-                    ]
-                  }
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "align_x": {
-              "anyOf": [
-                {
-                  "default": "start",
-                  "type": "string",
-                  "enum": [
-                    "start",
-                    "center",
-                    "end"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "spacing": {
-              "anyOf": [
-                {
-                  "default": "md",
-                  "type": "string",
-                  "enum": [
-                    "none",
-                    "sm",
-                    "md",
-                    "lg"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            }
-          },
-          "required": [
-            "type",
-            "actions"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "type": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "const": "Action.OpenUrl"
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "title": {
-              "type": "string"
-            },
-            "url": {
-              "type": "string",
-              "format": "uri"
-            },
-            "size": {
-              "anyOf": [
-                {
-                  "default": "md",
-                  "type": "string",
-                  "enum": [
-                    "sm",
-                    "md",
-                    "lg",
-                    "xl"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "tone": {
-              "anyOf": [
-                {
-                  "default": "default",
-                  "type": "string",
-                  "enum": [
-                    "default",
-                    "muted",
-                    "info",
-                    "success",
-                    "warning",
-                    "danger"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            }
-          },
-          "required": [
-            "type",
-            "title",
-            "url"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "type": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "const": "Action.Copy"
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "title": {
-              "type": "string"
-            },
-            "text": {
-              "type": "string"
-            },
-            "size": {
-              "anyOf": [
-                {
-                  "default": "md",
-                  "type": "string",
-                  "enum": [
-                    "sm",
-                    "md",
-                    "lg",
-                    "xl"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            },
-            "tone": {
-              "anyOf": [
-                {
-                  "default": "default",
-                  "type": "string",
-                  "enum": [
-                    "default",
-                    "muted",
-                    "info",
-                    "success",
-                    "warning",
-                    "danger"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^\\{.*\\}$"
-                }
-              ]
-            }
-          },
-          "required": [
-            "type",
-            "title",
-            "text"
-          ],
-          "additionalProperties": false
-        }
+    "SduitemplatedString": {
+      "type": "string",
+      "pattern": "^\\{.*\\}$"
+    },
+    "SduispacingValue": {
+      "type": "string",
+      "enum": [
+        "none",
+        "sm",
+        "md",
+        "lg"
+      ]
+    },
+    "SduisizeValue": {
+      "type": "string",
+      "enum": [
+        "sm",
+        "md",
+        "lg",
+        "xl"
+      ]
+    },
+    "SduitoneValue": {
+      "type": "string",
+      "enum": [
+        "default",
+        "muted",
+        "info",
+        "success",
+        "warning",
+        "danger"
+      ]
+    },
+    "SduialignValue": {
+      "type": "string",
+      "enum": [
+        "start",
+        "center",
+        "end"
       ]
     },
     "SduiContainer": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "type": {
@@ -1509,8 +268,7 @@
               "const": "Container"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
@@ -1518,46 +276,34 @@
           "anyOf": [
             {
               "type": "array",
-              "items": {}
+              "items": {
+                "$ref": "#/$defs/SduiWidget"
+              }
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
         "spacing": {
           "anyOf": [
             {
-              "default": "md",
-              "type": "string",
-              "enum": [
-                "none",
-                "sm",
-                "md",
-                "lg"
-              ]
+              "$ref": "#/$defs/SduispacingValue",
+              "default": "md"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
         "align_y": {
           "anyOf": [
             {
-              "default": "start",
-              "type": "string",
-              "enum": [
-                "start",
-                "center",
-                "end"
-              ]
+              "$ref": "#/$defs/SduialignValue",
+              "default": "start"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         }
@@ -1569,7 +315,6 @@
       "additionalProperties": false
     },
     "SduiColumnSet": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "type": {
@@ -1579,8 +324,7 @@
               "const": "ColumnSet"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
@@ -1588,46 +332,111 @@
           "anyOf": [
             {
               "type": "array",
-              "items": {}
+              "items": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "Column"
+                      },
+                      {
+                        "$ref": "#/$defs/SduitemplatedString"
+                      }
+                    ]
+                  },
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/SduiWidget"
+                        }
+                      },
+                      {
+                        "$ref": "#/$defs/SduitemplatedString"
+                      }
+                    ]
+                  },
+                  "width": {
+                    "anyOf": [
+                      {
+                        "default": "auto",
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "const": "auto"
+                          },
+                          {
+                            "type": "string",
+                            "const": "stretch"
+                          },
+                          {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          }
+                        ]
+                      },
+                      {
+                        "$ref": "#/$defs/SduitemplatedString"
+                      }
+                    ]
+                  },
+                  "align_y": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/SduialignValue",
+                        "default": "start"
+                      },
+                      {
+                        "$ref": "#/$defs/SduitemplatedString"
+                      }
+                    ]
+                  },
+                  "spacing": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/SduispacingValue",
+                        "default": "md"
+                      },
+                      {
+                        "$ref": "#/$defs/SduitemplatedString"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "type",
+                  "items"
+                ],
+                "additionalProperties": false
+              }
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
         "spacing": {
           "anyOf": [
             {
-              "default": "md",
-              "type": "string",
-              "enum": [
-                "none",
-                "sm",
-                "md",
-                "lg"
-              ]
+              "$ref": "#/$defs/SduispacingValue",
+              "default": "md"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
         "align_x": {
           "anyOf": [
             {
-              "default": "start",
-              "type": "string",
-              "enum": [
-                "start",
-                "center",
-                "end"
-              ]
+              "$ref": "#/$defs/SduialignValue",
+              "default": "start"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         }
@@ -1638,103 +447,7 @@
       ],
       "additionalProperties": false
     },
-    "SduiColumn": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "type": "object",
-      "properties": {
-        "type": {
-          "anyOf": [
-            {
-              "type": "string",
-              "const": "Column"
-            },
-            {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
-            }
-          ]
-        },
-        "items": {
-          "anyOf": [
-            {
-              "type": "array",
-              "items": {}
-            },
-            {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
-            }
-          ]
-        },
-        "width": {
-          "anyOf": [
-            {
-              "default": "auto",
-              "anyOf": [
-                {
-                  "type": "string",
-                  "const": "auto"
-                },
-                {
-                  "type": "string",
-                  "const": "stretch"
-                },
-                {
-                  "type": "number",
-                  "exclusiveMinimum": 0
-                }
-              ]
-            },
-            {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
-            }
-          ]
-        },
-        "align_y": {
-          "anyOf": [
-            {
-              "default": "start",
-              "type": "string",
-              "enum": [
-                "start",
-                "center",
-                "end"
-              ]
-            },
-            {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
-            }
-          ]
-        },
-        "spacing": {
-          "anyOf": [
-            {
-              "default": "md",
-              "type": "string",
-              "enum": [
-                "none",
-                "sm",
-                "md",
-                "lg"
-              ]
-            },
-            {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
-            }
-          ]
-        }
-      },
-      "required": [
-        "type",
-        "items"
-      ],
-      "additionalProperties": false
-    },
     "SduiList": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "type": {
@@ -1744,8 +457,7 @@
               "const": "List"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
@@ -1756,8 +468,7 @@
               "items": {}
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
@@ -1768,11 +479,12 @@
           "anyOf": [
             {
               "type": "array",
-              "items": {}
+              "items": {
+                "$ref": "#/$defs/SduiWidget"
+              }
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
@@ -1787,8 +499,7 @@
               ]
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
@@ -1800,26 +511,18 @@
               "maximum": 6
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
         "spacing": {
           "anyOf": [
             {
-              "default": "md",
-              "type": "string",
-              "enum": [
-                "none",
-                "sm",
-                "md",
-                "lg"
-              ]
+              "$ref": "#/$defs/SduispacingValue",
+              "default": "md"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
@@ -1840,8 +543,7 @@
               ]
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
@@ -1852,8 +554,7 @@
               "exclusiveMinimum": 0
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
@@ -1864,8 +565,7 @@
               "type": "boolean"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
@@ -1877,8 +577,7 @@
               "exclusiveMinimum": 0
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         }
@@ -1892,7 +591,6 @@
       "additionalProperties": false
     },
     "SduiTextBlock": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "type": {
@@ -1902,8 +600,7 @@
               "const": "TextBlock"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
@@ -1923,26 +620,18 @@
               ]
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
         "size": {
           "anyOf": [
             {
-              "default": "md",
-              "type": "string",
-              "enum": [
-                "sm",
-                "md",
-                "lg",
-                "xl"
-              ]
+              "$ref": "#/$defs/SduisizeValue",
+              "default": "md"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
@@ -1959,45 +648,29 @@
               ]
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
         "tone": {
           "anyOf": [
             {
-              "default": "default",
-              "type": "string",
-              "enum": [
-                "default",
-                "muted",
-                "info",
-                "success",
-                "warning",
-                "danger"
-              ]
+              "$ref": "#/$defs/SduitoneValue",
+              "default": "default"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
         "align_x": {
           "anyOf": [
             {
-              "default": "start",
-              "type": "string",
-              "enum": [
-                "start",
-                "center",
-                "end"
-              ]
+              "$ref": "#/$defs/SduialignValue",
+              "default": "start"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
@@ -2008,8 +681,7 @@
               "type": "boolean"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
@@ -2020,8 +692,7 @@
               "exclusiveMinimum": 0
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         }
@@ -2033,7 +704,6 @@
       "additionalProperties": false
     },
     "SduiFactSet": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "type": {
@@ -2043,8 +713,7 @@
               "const": "FactSet"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
@@ -2068,8 +737,7 @@
                         ]
                       },
                       {
-                        "type": "string",
-                        "pattern": "^\\{.*\\}$"
+                        "$ref": "#/$defs/SduitemplatedString"
                       }
                     ]
                   },
@@ -2086,27 +754,17 @@
                         ]
                       },
                       {
-                        "type": "string",
-                        "pattern": "^\\{.*\\}$"
+                        "$ref": "#/$defs/SduitemplatedString"
                       }
                     ]
                   },
                   "tone": {
                     "anyOf": [
                       {
-                        "type": "string",
-                        "enum": [
-                          "default",
-                          "muted",
-                          "info",
-                          "success",
-                          "warning",
-                          "danger"
-                        ]
+                        "$ref": "#/$defs/SduitoneValue"
                       },
                       {
-                        "type": "string",
-                        "pattern": "^\\{.*\\}$"
+                        "$ref": "#/$defs/SduitemplatedString"
                       }
                     ]
                   }
@@ -2119,26 +777,18 @@
               }
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
         "spacing": {
           "anyOf": [
             {
-              "default": "md",
-              "type": "string",
-              "enum": [
-                "none",
-                "sm",
-                "md",
-                "lg"
-              ]
+              "$ref": "#/$defs/SduispacingValue",
+              "default": "md"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         }
@@ -2150,7 +800,6 @@
       "additionalProperties": false
     },
     "SduiImage": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "type": {
@@ -2160,8 +809,7 @@
               "const": "Image"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
@@ -2175,18 +823,11 @@
         "size": {
           "anyOf": [
             {
-              "default": "md",
-              "type": "string",
-              "enum": [
-                "sm",
-                "md",
-                "lg",
-                "xl"
-              ]
+              "$ref": "#/$defs/SduisizeValue",
+              "default": "md"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         }
@@ -2198,7 +839,6 @@
       "additionalProperties": false
     },
     "SduiBadge": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "type": {
@@ -2208,8 +848,7 @@
               "const": "Badge"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
@@ -2226,46 +865,29 @@
               ]
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
         "tone": {
           "anyOf": [
             {
-              "default": "default",
-              "type": "string",
-              "enum": [
-                "default",
-                "muted",
-                "info",
-                "success",
-                "warning",
-                "danger"
-              ]
+              "$ref": "#/$defs/SduitoneValue",
+              "default": "default"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
         "size": {
           "anyOf": [
             {
-              "default": "md",
-              "type": "string",
-              "enum": [
-                "sm",
-                "md",
-                "lg",
-                "xl"
-              ]
+              "$ref": "#/$defs/SduisizeValue",
+              "default": "md"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         }
@@ -2277,7 +899,6 @@
       "additionalProperties": false
     },
     "SduiProgress": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "type": {
@@ -2287,8 +908,7 @@
               "const": "Progress"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
@@ -2300,8 +920,7 @@
               "maximum": 100
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
@@ -2318,8 +937,7 @@
               ]
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
@@ -2334,45 +952,28 @@
               ]
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
         "size": {
           "anyOf": [
             {
-              "default": "md",
-              "type": "string",
-              "enum": [
-                "sm",
-                "md",
-                "lg",
-                "xl"
-              ]
+              "$ref": "#/$defs/SduisizeValue",
+              "default": "md"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
         "tone": {
           "anyOf": [
             {
-              "type": "string",
-              "enum": [
-                "default",
-                "muted",
-                "info",
-                "success",
-                "warning",
-                "danger"
-              ]
+              "$ref": "#/$defs/SduitoneValue"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
@@ -2383,8 +984,7 @@
               "type": "boolean"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
@@ -2402,8 +1002,7 @@
                       "maximum": 100
                     },
                     {
-                      "type": "string",
-                      "pattern": "^\\{.*\\}$"
+                      "$ref": "#/$defs/SduitemplatedString"
                     }
                   ]
                 },
@@ -2416,8 +1015,7 @@
                       "maximum": 100
                     },
                     {
-                      "type": "string",
-                      "pattern": "^\\{.*\\}$"
+                      "$ref": "#/$defs/SduitemplatedString"
                     }
                   ]
                 }
@@ -2425,8 +1023,7 @@
               "additionalProperties": false
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         }
@@ -2438,7 +1035,6 @@
       "additionalProperties": false
     },
     "SduiActionSet": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "type": {
@@ -2448,8 +1044,7 @@
               "const": "ActionSet"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
@@ -2457,46 +1052,136 @@
           "anyOf": [
             {
               "type": "array",
-              "items": {}
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "const": "Action.OpenUrl"
+                          },
+                          {
+                            "$ref": "#/$defs/SduitemplatedString"
+                          }
+                        ]
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "url": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "size": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/$defs/SduisizeValue",
+                            "default": "md"
+                          },
+                          {
+                            "$ref": "#/$defs/SduitemplatedString"
+                          }
+                        ]
+                      },
+                      "tone": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/$defs/SduitoneValue",
+                            "default": "default"
+                          },
+                          {
+                            "$ref": "#/$defs/SduitemplatedString"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "title",
+                      "url"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "const": "Action.Copy"
+                          },
+                          {
+                            "$ref": "#/$defs/SduitemplatedString"
+                          }
+                        ]
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      },
+                      "size": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/$defs/SduisizeValue",
+                            "default": "md"
+                          },
+                          {
+                            "$ref": "#/$defs/SduitemplatedString"
+                          }
+                        ]
+                      },
+                      "tone": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/$defs/SduitoneValue",
+                            "default": "default"
+                          },
+                          {
+                            "$ref": "#/$defs/SduitemplatedString"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "title",
+                      "text"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
         "align_x": {
           "anyOf": [
             {
-              "default": "start",
-              "type": "string",
-              "enum": [
-                "start",
-                "center",
-                "end"
-              ]
+              "$ref": "#/$defs/SduialignValue",
+              "default": "start"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
         "spacing": {
           "anyOf": [
             {
-              "default": "md",
-              "type": "string",
-              "enum": [
-                "none",
-                "sm",
-                "md",
-                "lg"
-              ]
+              "$ref": "#/$defs/SduispacingValue",
+              "default": "md"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         }
@@ -2508,7 +1193,6 @@
       "additionalProperties": false
     },
     "SduiAction_OpenUrl": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "type": {
@@ -2518,8 +1202,7 @@
               "const": "Action.OpenUrl"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
@@ -2533,38 +1216,22 @@
         "size": {
           "anyOf": [
             {
-              "default": "md",
-              "type": "string",
-              "enum": [
-                "sm",
-                "md",
-                "lg",
-                "xl"
-              ]
+              "$ref": "#/$defs/SduisizeValue",
+              "default": "md"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
         "tone": {
           "anyOf": [
             {
-              "default": "default",
-              "type": "string",
-              "enum": [
-                "default",
-                "muted",
-                "info",
-                "success",
-                "warning",
-                "danger"
-              ]
+              "$ref": "#/$defs/SduitoneValue",
+              "default": "default"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         }
@@ -2577,7 +1244,6 @@
       "additionalProperties": false
     },
     "SduiAction_Copy": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
         "type": {
@@ -2587,8 +1253,7 @@
               "const": "Action.Copy"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
@@ -2601,38 +1266,22 @@
         "size": {
           "anyOf": [
             {
-              "default": "md",
-              "type": "string",
-              "enum": [
-                "sm",
-                "md",
-                "lg",
-                "xl"
-              ]
+              "$ref": "#/$defs/SduisizeValue",
+              "default": "md"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         },
         "tone": {
           "anyOf": [
             {
-              "default": "default",
-              "type": "string",
-              "enum": [
-                "default",
-                "muted",
-                "info",
-                "success",
-                "warning",
-                "danger"
-              ]
+              "$ref": "#/$defs/SduitoneValue",
+              "default": "default"
             },
             {
-              "type": "string",
-              "pattern": "^\\{.*\\}$"
+              "$ref": "#/$defs/SduitemplatedString"
             }
           ]
         }
@@ -2643,6 +1292,137 @@
         "text"
       ],
       "additionalProperties": false
+    },
+    "SduiColumn": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "Column"
+            },
+            {
+              "$ref": "#/$defs/SduitemplatedString"
+            }
+          ]
+        },
+        "items": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/SduiWidget"
+              }
+            },
+            {
+              "$ref": "#/$defs/SduitemplatedString"
+            }
+          ]
+        },
+        "width": {
+          "anyOf": [
+            {
+              "default": "auto",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "string",
+                  "const": "stretch"
+                },
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              ]
+            },
+            {
+              "$ref": "#/$defs/SduitemplatedString"
+            }
+          ]
+        },
+        "align_y": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SduialignValue",
+              "default": "start"
+            },
+            {
+              "$ref": "#/$defs/SduitemplatedString"
+            }
+          ]
+        },
+        "spacing": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SduispacingValue",
+              "default": "md"
+            },
+            {
+              "$ref": "#/$defs/SduitemplatedString"
+            }
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "items"
+      ],
+      "additionalProperties": false
+    },
+    "SduiContainerWidget": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/SduiContainer"
+        },
+        {
+          "$ref": "#/$defs/SduiColumnSet"
+        },
+        {
+          "$ref": "#/$defs/SduiList"
+        }
+      ]
+    },
+    "SduiPrimitiveWidget": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/SduiTextBlock"
+        },
+        {
+          "$ref": "#/$defs/SduiFactSet"
+        },
+        {
+          "$ref": "#/$defs/SduiImage"
+        },
+        {
+          "$ref": "#/$defs/SduiBadge"
+        },
+        {
+          "$ref": "#/$defs/SduiProgress"
+        },
+        {
+          "$ref": "#/$defs/SduiActionSet"
+        },
+        {
+          "$ref": "#/$defs/SduiAction_OpenUrl"
+        },
+        {
+          "$ref": "#/$defs/SduiAction_Copy"
+        }
+      ]
+    },
+    "SduiWidget": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/SduiContainerWidget"
+        },
+        {
+          "$ref": "#/$defs/SduiPrimitiveWidget"
+        }
+      ]
     }
   },
   "additionalProperties": false,

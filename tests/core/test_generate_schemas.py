@@ -119,3 +119,55 @@ def test_compose_integration_schema_rewrites_recursive_root_refs() -> None:
     sdui_widget = combined["$defs"]["SduiWidget"]
 
     assert sdui_widget["items"]["$ref"] == "#/$defs/SduiWidget"
+
+
+def test_compose_integration_schema_supports_react_defs_single_source() -> None:
+    python_fragment = generate_python_fragment()
+    react_fragment = {
+        "$defs": {
+            "Widget": {
+                "oneOf": [
+                    {"$ref": "#/$defs/TextBlock"},
+                    {"$ref": "#/$defs/Container"},
+                ]
+            },
+            "TextBlock": {
+                "type": "object",
+                "properties": {"type": {"const": "TextBlock"}, "text": {"type": "string"}},
+                "required": ["type", "text"],
+                "additionalProperties": False,
+            },
+            "Container": {
+                "type": "object",
+                "properties": {
+                    "type": {"const": "Container"},
+                    "items": {"type": "array", "items": {"$ref": "#/$defs/Widget"}},
+                },
+                "required": ["type", "items"],
+                "additionalProperties": False,
+            },
+        },
+        "widget_tree": {"$ref": "#/$defs/Widget"},
+        "widget_defs": {
+            "TextBlock": {"$ref": "#/$defs/TextBlock"},
+        },
+    }
+
+    combined = compose_integration_schema(python_fragment, react_fragment)
+    defs = combined["$defs"]
+
+    assert defs["SduiWidget"]["oneOf"][0]["$ref"] == "#/$defs/SduiTextBlock"
+    assert defs["SduiWidget"]["oneOf"][1]["$ref"] == "#/$defs/SduiContainer"
+    assert defs["SduiContainer"]["properties"]["items"]["items"]["$ref"] == "#/$defs/SduiWidget"
+    assert defs["SduiTextBlock"]["properties"]["type"]["const"] == "TextBlock"
+
+
+def test_compose_integration_schema_rejects_missing_widget_def_for_ref_tree() -> None:
+    python_fragment = generate_python_fragment()
+    react_fragment = {
+        "widget_tree": {"$ref": "#/$defs/Widget"},
+        "widget_defs": {},
+    }
+
+    with pytest.raises(ValueError, match="widget_tree references '\\$defs.Widget'"):
+        compose_integration_schema(python_fragment, react_fragment)

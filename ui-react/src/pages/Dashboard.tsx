@@ -275,7 +275,7 @@ function getFreshnessText(
 ): string {
     const deltaSeconds = Math.max(0, Math.floor(nowSeconds - updatedAt));
     if (deltaSeconds < 60) {
-        return `${deltaSeconds}s`;
+        return "刚刚";
     }
     if (deltaSeconds < 3600) {
         return `${Math.floor(deltaSeconds / 60)}m`;
@@ -387,7 +387,7 @@ export default function Dashboard() {
     useEffect(() => {
         const timer = window.setInterval(() => {
             setNowSeconds(Math.floor(Date.now() / 1000));
-        }, 1000);
+        }, 60000);
         return () => window.clearInterval(timer);
     }, []);
 

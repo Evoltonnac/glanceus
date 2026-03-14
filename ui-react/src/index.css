@@ -47,12 +47,12 @@
     --qb-density: 1;
 
     /* Card internal spacing scale (multiplied by density) */
-    --qb-gap-1: calc(0.125rem * var(--qb-density));
-    --qb-gap-2: calc(0.25rem * var(--qb-density));
-    --qb-gap-3: calc(0.5rem * var(--qb-density));
-    --qb-gap-4: calc(0.75rem * var(--qb-density));
-    --qb-gap-5: calc(1rem * var(--qb-density));
-    --qb-gap-6: calc(1.25rem * var(--qb-density));
+    --qb-gap-1: calc(0.25rem * var(--qb-density));
+    --qb-gap-2: calc(0.5rem * var(--qb-density));
+    --qb-gap-3: calc(0.75rem * var(--qb-density));
+    --qb-gap-4: calc(1rem * var(--qb-density));
+    --qb-gap-5: calc(1.25rem * var(--qb-density));
+    --qb-gap-6: calc(1.5rem * var(--qb-density));
 
     /* Card internal padding - fixed values, not affected by density */
     --qb-card-pad-x: 0.75rem;
@@ -89,12 +89,12 @@
 
     /* Card density - uses [data-density] selector to override */
     --qb-density: 1;
-    --qb-gap-1: calc(0.125rem * var(--qb-density));
-    --qb-gap-2: calc(0.25rem * var(--qb-density));
-    --qb-gap-3: calc(0.5rem * var(--qb-density));
-    --qb-gap-4: calc(0.75rem * var(--qb-density));
-    --qb-gap-5: calc(1rem * var(--qb-density));
-    --qb-gap-6: calc(1.25rem * var(--qb-density));
+    --qb-gap-1: calc(0.25rem * var(--qb-density));
+    --qb-gap-2: calc(0.5rem * var(--qb-density));
+    --qb-gap-3: calc(0.75rem * var(--qb-density));
+    --qb-gap-4: calc(1rem * var(--qb-density));
+    --qb-gap-5: calc(1.25rem * var(--qb-density));
+    --qb-gap-6: calc(1.5rem * var(--qb-density));
     /* Card internal padding - fixed values, not affected by density */
     --qb-card-pad-x: 0.75rem;
     --qb-card-pad-y: 0.5rem;

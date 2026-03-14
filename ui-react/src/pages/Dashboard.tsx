@@ -558,19 +558,12 @@ export default function Dashboard() {
         gs.cellHeight(newGridRowHeight);
     }, [currentDensity]);
 
-    // Poll for status updates if any source is in a transient state
+    // Poll for status updates continuously when page is visible
     useEffect(() => {
-        const hasTransient = sources.some((s) => {
-            const isRefreshing = s.status === "refreshing";
-            const hasError = hasSourceError(s, dataMap[s.id]);
-            const isWaiting =
-                !s.has_data && s.status !== "suspended" && !hasError;
-            return isRefreshing || isWaiting;
-        });
-
-        if (!hasTransient) return;
-
         const interval = setInterval(async () => {
+            // Skip API calls when page is hidden to save resources
+            if (document.hidden) return;
+
             try {
                 const updatedSources = await api.getSources();
 

@@ -4,67 +4,49 @@ flow:
     - id: fetch_articles
       use: http
       args:
-          url: "https://dev.to/api/articles?tag=opensource&per_page=1"
+          url: "https://dev.to/api/articles?tag=opensource&per_page=5"
           method: "GET"
       outputs:
           articles_payload: "http_response"
-    - id: parse_title
-      use: extract
-      args:
-          source: "{articles_payload}"
-          type: "jsonpath"
-          expr: "$[0].title"
-      outputs:
-          article_title: "$[0].title"
-    - id: parse_author
-      use: extract
-      args:
-          source: "{articles_payload}"
-          type: "jsonpath"
-          expr: "$[0].user.name"
-      outputs:
-          article_author: "$[0].user.name"
-    - id: parse_url
-      use: extract
-      args:
-          source: "{articles_payload}"
-          type: "jsonpath"
-          expr: "$[0].url"
-      outputs:
-          article_url: "$[0].url"
 templates:
     - id: "devto_oss_snapshot"
       type: "source_card"
       ui:
-          title: "DEV.to OSS Pulse"
+          title: "DEV.to OSS Latest"
           icon: "DEV"
       widgets:
           - type: "Container"
             spacing: "sm"
             items:
-                - type: "ColumnSet"
-                  columns:
-                      - type: "Column"
-                        width: "stretch"
-                        items:
-                            - type: "TextBlock"
-                              text: "{article_title}"
-                              size: "md"
-                              weight: "semibold"
-                              max_lines: 1
-                            - type: "TextBlock"
-                              text: "{article_author}"
-                              tone: "muted"
-                              size: "sm"
-                              max_lines: 1
-                      - type: "Column"
-                        width: "auto"
-                        align_y: "center"
-                        items:
-                            - type: "ActionSet"
-                              align_x: "end"
-                              actions:
-                                  - type: "Action.OpenUrl"
-                                    title: "Read"
-                                    url: "{article_url}"
+                - type: "List"
+                  data_source: "{articles_payload}"
+                  item_alias: "article"
+                  spacing: "sm"
+                  limit: 5
+                  render:
+                      - type: "ColumnSet"
+                        columns:
+                            - type: "Column"
+                              width: "stretch"
+                              items:
+                                  - type: "TextBlock"
+                                    text: "{article.title}"
+                                    size: "md"
+                                    weight: "semibold"
+                                    max_lines: 1
+                                  - type: "TextBlock"
+                                    text: "{article.user.name}"
+                                    tone: "muted"
                                     size: "sm"
+                                    max_lines: 1
+                            - type: "Column"
+                              width: "auto"
+                              align_y: "center"
+                              items:
+                                  - type: "ActionSet"
+                                    align_x: "end"
+                                    actions:
+                                        - type: "Action.OpenUrl"
+                                          title: "Read"
+                                          url: "{article.url}"
+                                          size: "md"

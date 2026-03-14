@@ -1,122 +1,207 @@
-name: "Twitch OAuth Session"
-description: "OAuth-based Twitch starter for entertainment and media monitoring."
+name: "Twitch Followed Streams"
+description: "Track followed streamers live status and viewer signals with Twitch OAuth."
 flow:
     - id: authorize
       use: oauth
       args:
           auth_url: "https://id.twitch.tv/oauth2/authorize"
           response_type: "token"
-          scopes: ["user:read:email"]
+          scopes: ["user:read:follows"]
           doc_url: "https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#implicit-grant-flow"
           client_id: "c43f3z8swkmw4osvippz14cj37wg7b"
           supports_pkce: false
       secrets:
           oauth_secrets: "oauth_secrets"
-    - id: fetch_session
+    - id: fetch_user_profile
       use: http
       args:
-          url: "https://id.twitch.tv/oauth2/validate"
+          url: "https://api.twitch.tv/helix/users"
           method: "GET"
           headers:
-              Authorization: "OAuth {oauth_secrets.access_token}"
+              Authorization: "Bearer {oauth_secrets.access_token}"
+              Client-Id: "c43f3z8swkmw4osvippz14cj37wg7b"
       outputs:
-          session_payload: "http_response"
-    - id: parse_login
-      use: extract
-      args:
-          source: "{session_payload}"
-          type: "jsonpath"
-      outputs:
-          login: "$.login"
-    - id: parse_client_id
-      use: extract
-      args:
-          source: "{session_payload}"
-          type: "jsonpath"
-      outputs:
-          client_id: "$.client_id"
+          user_profile_payload: "http_response"
     - id: parse_user_id
       use: extract
       args:
-          source: "{session_payload}"
+          source: "{user_profile_payload}"
           type: "jsonpath"
       outputs:
-          user_id: "$.user_id"
-    - id: parse_expires
+          user_id: "$.data[0].id"
+    - id: fetch_followed_channels
+      use: http
+      args:
+          url: "https://api.twitch.tv/helix/channels/followed?user_id={user_id}&first=1"
+          method: "GET"
+          headers:
+              Authorization: "Bearer {oauth_secrets.access_token}"
+              Client-Id: "c43f3z8swkmw4osvippz14cj37wg7b"
+      outputs:
+          followed_channels_payload: "http_response"
+    - id: parse_followed_total
       use: extract
       args:
-          source: "{session_payload}"
+          source: "{followed_channels_payload}"
           type: "jsonpath"
       outputs:
-          expires_in: "$.expires_in"
-    - id: parse_scopes
+          followed_total: "$.total"
+    - id: fetch_followed_live_streams
+      use: http
+      args:
+          url: "https://api.twitch.tv/helix/streams/followed?user_id={user_id}&first=20"
+          method: "GET"
+          headers:
+              Authorization: "Bearer {oauth_secrets.access_token}"
+              Client-Id: "c43f3z8swkmw4osvippz14cj37wg7b"
+      outputs:
+          followed_live_payload: "http_response"
+    - id: parse_live_streams
       use: extract
       args:
-          source: "{session_payload}"
+          source: "{followed_live_payload}"
           type: "jsonpath"
       outputs:
-          scopes: "$.scopes"
-    - id: summarize_session
+          live_streams: "$.data"
+    - id: summarize_followed_streams
       use: script
       args:
           code: |
-              expires_seconds = int(expires_in or 0)
-              scopes_count = len(scopes or [])
-              ttl_hours = round(expires_seconds / 3600, 1) if expires_seconds > 0 else 0
+              from datetime import datetime, timezone
 
-              ttl_percent = 0
-              if expires_seconds > 0:
-                  ttl_percent = min(100, (expires_seconds / 86400) * 100)
+              try:
+                  followed_total_count = int(followed_total or 0)
+              except Exception:
+                  followed_total_count = 0
 
-              risk_percent = max(0, 100 - ttl_percent)
+              try:
+                  live_items_raw = live_streams or []
+              except Exception:
+                  live_items_raw = []
+
+              live_count = len(live_items_raw)
+              offline_count = max(0, followed_total_count - live_count)
+              live_ratio = round((live_count / followed_total_count) * 100, 1) if followed_total_count > 0 else 0
+              follow_ratio = max(0, round(100 - live_ratio, 1))
+
+              total_viewers = 0
+              peak_viewers = 0
+              live_cards = []
+              now_utc = datetime.now(timezone.utc)
+
+              for stream in live_items_raw[:12]:
+                  viewers = int(stream.get("viewer_count") or 0)
+                  total_viewers += viewers
+                  peak_viewers = max(peak_viewers, viewers)
+
+                  started_at = stream.get("started_at")
+                  uptime = "Live"
+                  if started_at:
+                      try:
+                          started_dt = datetime.fromisoformat(str(started_at).replace("Z", "+00:00"))
+                          elapsed_minutes = max(0, int((now_utc - started_dt).total_seconds() // 60))
+                          hours = elapsed_minutes // 60
+                          minutes = elapsed_minutes % 60
+                          uptime = f"{hours}h {minutes}m" if hours > 0 else f"{minutes}m"
+                      except Exception:
+                          uptime = "Live"
+
+                  user_login = stream.get("user_login") or ""
+                  live_cards.append(
+                      {
+                          "user_name": stream.get("user_name") or "Unknown streamer",
+                          "title": stream.get("title") or "Untitled stream",
+                          "game_name": stream.get("game_name") or "Unknown category",
+                          "viewer_count": viewers,
+                          "uptime": uptime,
+                          "stream_url": (
+                              f"https://www.twitch.tv/{user_login}"
+                              if user_login
+                              else "https://www.twitch.tv/directory/following/live"
+                          ),
+                      }
+                  )
+
+              live_cards = sorted(live_cards, key=lambda item: item.get("viewer_count", 0), reverse=True)
+              top_live_cards = live_cards[:2]
+              avg_viewers = round(total_viewers / live_count, 1) if live_count > 0 else 0
+              summary_line = (
+                  "No followed channels live right now"
+                  if live_count == 0
+                  else f"{live_count} followed channels are live"
+              )
       outputs:
-          scopes_count: "scopes_count"
-          ttl_hours: "ttl_hours"
-          risk_percent: "risk_percent"
+          followed_total_count: "followed_total_count"
+          live_count: "live_count"
+          offline_count: "offline_count"
+          live_ratio: "live_ratio"
+          follow_ratio: "follow_ratio"
+          total_viewers: "total_viewers"
+          avg_viewers: "avg_viewers"
+          peak_viewers: "peak_viewers"
+          live_cards: "live_cards"
+          top_live_cards: "top_live_cards"
+          summary_line: "summary_line"
 templates:
     - id: "twitch_oauth_snapshot"
       type: "source_card"
       ui:
-          title: "Twitch OAuth Session"
+          title: "Twitch Followed Live"
           icon: "TV"
       widgets:
           - type: "Container"
             spacing: "sm"
             items:
-                - type: "ColumnSet"
-                  columns:
-                      - type: "Column"
-                        width: "stretch"
-                        items:
-                            - type: "TextBlock"
-                              text: "{login}"
-                              size: "lg"
-                              weight: "semibold"
-                              max_lines: 1
-                            - type: "TextBlock"
-                              text: "Entertainment / Media"
-                              tone: "muted"
-                              size: "sm"
-                      - type: "Column"
-                        width: "auto"
-                        align_y: "start"
-                        items:
-                            - type: "Badge"
-                              text: "{scopes_count} Scopes"
-                              tone: "info"
                 - type: "Progress"
-                  value: "{risk_percent}"
+                  value: "{live_ratio}"
+                  label: "Live {live_ratio}% ({live_count}/{followed_total_count})"
+                  tone: "success"
                   thresholds:
-                      warning: 50
-                      danger: 75
-                - type: "FactSet"
+                      warning: 25
+                      danger: 60
+                - type: "List"
+                  data_source: "{top_live_cards}"
+                  item_alias: "stream"
                   spacing: "sm"
-                  facts:
-                      - label: "Client"
-                        value: "{client_id}"
-                      - label: "User ID"
-                        value: "{user_id}"
-                      - label: "TTL"
-                        value: "{ttl_hours} h"
-                      - label: "Risk"
-                        value: "{fixed(risk_percent, 1)}%"
+                  limit: 2
+                  render:
+                      - type: "Container"
+                        spacing: "sm"
+                        items:
+                            - type: "ColumnSet"
+                              columns:
+                                  - type: "Column"
+                                    width: "stretch"
+                                    spacing: "sm"
+                                    items:
+                                        - type: "TextBlock"
+                                          text: "{stream.user_name}"
+                                          size: "md"
+                                          weight: "semibold"
+                                          maxLines: 1
+                                        - type: "TextBlock"
+                                          text: "{stream.game_name} · {stream.viewer_count} viewers · {stream.uptime}"
+                                          size: "sm"
+                                          tone: "muted"
+                                          maxLines: 1
+                                        - type: "TextBlock"
+                                          text: "{stream.title}"
+                                          size: "sm"
+                                          maxLines: 2
+                                  - type: "Column"
+                                    width: "auto"
+                                    align_y: "start"
+                                    items:
+                                        - type: "Badge"
+                                          text: "LIVE"
+                                          tone: "danger"
+                                          size: "sm"
+                            - type: "ActionSet"
+                              align_x: "start"
+                              spacing: "none"
+                              actions:
+                                  - type: "Action.OpenUrl"
+                                    title: "Watch"
+                                    url: "{stream.stream_url}"
+                                    size: "sm"
+                                    tone: "default"

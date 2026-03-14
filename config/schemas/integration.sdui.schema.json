@@ -152,7 +152,15 @@
             "const": "List"
           },
           "data_source": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {}
+              }
+            ]
           },
           "item_alias": {
             "type": "string"
@@ -1026,7 +1034,15 @@
           "const": "List"
         },
         "data_source": {
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {}
+            }
+          ]
         },
         "item_alias": {
           "type": "string"

@@ -1,5 +1,5 @@
-name: "GitHub Device Auth"
-description: "Classic OAuth device flow integration using GitHub as an example. Perfect for CLI or limited-input devices."
+name: "GitHub Device Metrics"
+description: "OAuth device flow + GitHub profile, activity, and API quota metrics in a compact dashboard card."
 flow:
     - id: authorize
       use: oauth
@@ -21,68 +21,231 @@ flow:
           method: "GET"
           headers:
               Authorization: "token {oauth_secrets.access_token}"
-              Accept: "application/vnd.github.v3+json"
+              Accept: "application/vnd.github+json"
+              X-GitHub-Api-Version: "2022-11-28"
       outputs:
           user_payload: "http_response"
-    - id: parse_login
+          user_headers: "headers"
+    - id: parse_user_fields
       use: extract
       args:
           source: "{user_payload}"
           type: "jsonpath"
-          expr: "$.login"
       outputs:
           login: "$.login"
-    - id: parse_name
-      use: extract
-      args:
-          source: "{user_payload}"
-          type: "jsonpath"
-          expr: "$.name"
-      outputs:
           name: "$.name"
-    - id: parse_followers
+          bio: "$.bio"
+          avatar_url: "$.avatar_url"
+          html_url: "$.html_url"
+          public_repos: "$.public_repos"
+          followers: "$.followers"
+          following: "$.following"
+          public_gists: "$.public_gists"
+    - id: parse_rate_limit
       use: extract
       args:
-          source: "{user_payload}"
-          type: "jsonpath"
-          expr: "$.followers"
+          source: "{user_headers}"
+          type: "key"
       outputs:
-          followers: "$.followers"
+          rate_limit_limit: "x-ratelimit-limit"
+          rate_limit_remaining: "x-ratelimit-remaining"
+          rate_limit_used: "x-ratelimit-used"
+    - id: fetch_orgs
+      use: http
+      args:
+          url: "https://api.github.com/users/{login}/orgs?per_page=100"
+          method: "GET"
+          headers:
+              Authorization: "token {oauth_secrets.access_token}"
+              Accept: "application/vnd.github+json"
+              X-GitHub-Api-Version: "2022-11-28"
+      outputs:
+          orgs_payload: "http_response"
+    - id: fetch_recent_repos
+      use: http
+      args:
+          url: "https://api.github.com/users/{login}/repos?sort=updated&per_page=5&type=owner"
+          method: "GET"
+          headers:
+              Authorization: "token {oauth_secrets.access_token}"
+              Accept: "application/vnd.github+json"
+              X-GitHub-Api-Version: "2022-11-28"
+      outputs:
+          recent_repos_payload: "http_response"
+    - id: fetch_pr_count
+      use: http
+      args:
+          url: "https://api.github.com/search/issues?q=author:{login}+is:pr&per_page=1"
+          method: "GET"
+          headers:
+              Authorization: "token {oauth_secrets.access_token}"
+              Accept: "application/vnd.github+json"
+              X-GitHub-Api-Version: "2022-11-28"
+      outputs:
+          pr_search_payload: "http_response"
+    - id: parse_pr_count
+      use: extract
+      args:
+          source: "{pr_search_payload}"
+          type: "jsonpath"
+      outputs:
+          pull_requests: "$.total_count"
+    - id: fetch_issue_count
+      use: http
+      args:
+          url: "https://api.github.com/search/issues?q=author:{login}+is:issue&per_page=1"
+          method: "GET"
+          headers:
+              Authorization: "token {oauth_secrets.access_token}"
+              Accept: "application/vnd.github+json"
+              X-GitHub-Api-Version: "2022-11-28"
+      outputs:
+          issue_search_payload: "http_response"
+    - id: parse_issue_count
+      use: extract
+      args:
+          source: "{issue_search_payload}"
+          type: "jsonpath"
+      outputs:
+          issues: "$.total_count"
 templates:
-    - id: "github_device_snapshot"
+    - id: "github_device_metrics"
       type: "source_card"
       ui:
-          title: "GitHub Device Session"
+          title: "GitHub Metrics"
           icon: "GitHub"
       widgets:
           - type: "Container"
-            spacing: "sm"
+            spacing: "md"
             items:
                 - type: "ColumnSet"
+                  spacing: "lg"
                   columns:
                       - type: "Column"
                         width: "stretch"
+                        spacing: "md"
                         items:
-                            - type: "TextBlock"
-                              text: "{name}"
-                              size: "lg"
-                              weight: "semibold"
-                              max_lines: 1
-                            - type: "TextBlock"
-                              text: "@{login}"
-                              tone: "muted"
-                              size: "sm"
+                            - type: "ColumnSet"
+                              columns:
+                                  - type: "Column"
+                                    width: "auto"
+                                    align_y: "start"
+                                    items:
+                                        - type: "Image"
+                                          url: "{avatar_url}"
+                                          altText: "{login}"
+                                          size: "lg"
+                                  - type: "Column"
+                                    width: "stretch"
+                                    spacing: "sm"
+                                    items:
+                                        - type: "TextBlock"
+                                          text: "{name || login}"
+                                          size: "lg"
+                                          weight: "bold"
+                                          maxLines: 1
+                                        - type: "TextBlock"
+                                          text: "@{login}"
+                                          tone: "muted"
+                                          size: "sm"
+                                        - type: "TextBlock"
+                                          text: "{bio || 'No bio provided.'}"
+                                          size: "sm"
+                                          tone: "muted"
+                                          maxLines: 2
+                                  - type: "Column"
+                                    width: "auto"
+                                    align_y: "start"
+                                    items:
+                                        - type: "Badge"
+                                          text: "OAuth Device"
+                                          tone: "info"
+                                          size: "sm"
+                            - type: "FactSet"
+                              spacing: "sm"
+                              facts:
+                                  - label: "Public Repos"
+                                    value: "{public_repos}"
+                                  - label: "Followers"
+                                    value: "{followers}"
+                                  - label: "Following"
+                                    value: "{following}"
+                                  - label: "Public Gists"
+                                    value: "{public_gists}"
+                                  - label: "Organizations"
+                                    value: "{len(orgs_payload)}"
+                                  - label: "Pull Requests"
+                                    value: "{pull_requests}"
+                                  - label: "Issues"
+                                    value: "{issues}"
+                            - type: "Progress"
+                              value: "{clamp((number(rate_limit_used, 0) * 100) / max(number(rate_limit_limit, 1), 1), 0, 100)}"
+                              label: "REST API Used {rate_limit_used}/{rate_limit_limit}"
+                              size: "md"
+                              thresholds:
+                                  warning: 70
+                                  danger: 90
+                            - type: "ActionSet"
+                              align_x: "start"
+                              spacing: "sm"
+                              actions:
+                                  - type: "Action.OpenUrl"
+                                    title: "Open Profile"
+                                    url: "{html_url}"
+                                    size: "sm"
+                                    tone: "info"
+                                  - type: "Action.Copy"
+                                    title: "Copy Username"
+                                    text: "{login}"
+                                    size: "sm"
+                                    tone: "muted"
                       - type: "Column"
-                        width: "auto"
-                        align_y: "start"
+                        width: "stretch"
+                        spacing: "sm"
                         items:
-                            - type: "Badge"
-                              text: "Device Flow"
-                              tone: "info"
-                - type: "FactSet"
-                  spacing: "sm"
-                  facts:
-                      - label: "Followers"
-                        value: "{followers}"
-                      - label: "Client ID"
-                        value: "{client_id}"
+                            - type: "TextBlock"
+                              text: "Recently Updated Repositories"
+                              size: "sm"
+                              weight: "semibold"
+                            - type: "List"
+                              data_source: "{recent_repos_payload}"
+                              item_alias: "repo"
+                              spacing: "sm"
+                              limit: 5
+                              render:
+                                  - type: "Container"
+                                    spacing: "sm"
+                                    items:
+                                        - type: "ColumnSet"
+                                          columns:
+                                              - type: "Column"
+                                                width: "stretch"
+                                                spacing: "sm"
+                                                items:
+                                                    - type: "TextBlock"
+                                                      text: "{repo.name}"
+                                                      size: "md"
+                                                      weight: "semibold"
+                                                      maxLines: 1
+                                                    - type: "TextBlock"
+                                                      text: "{repo.language || 'Unspecified'} · ★ {repo.stargazers_count} · Forks {repo.forks_count}"
+                                                      size: "sm"
+                                                      tone: "muted"
+                                                      maxLines: 1
+                                              - type: "Column"
+                                                width: "auto"
+                                                align_y: "center"
+                                                items:
+                                                    - type: "Badge"
+                                                      text: "{repo.private ? 'Private' : 'Public'}"
+                                                      tone: "{repo.private ? 'warning' : 'success'}"
+                                                      size: "sm"
+                                        - type: "ActionSet"
+                                          align_x: "start"
+                                          spacing: "sm"
+                                          actions:
+                                              - type: "Action.OpenUrl"
+                                                title: "Open Repo"
+                                                url: "{repo.html_url}"
+                                                size: "sm"
+                                                tone: "default"

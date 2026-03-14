@@ -617,6 +617,21 @@ pub async fn push_scraper_task(
                 }});
             }}
 
+            // Expose a helper so injected script can emit DOM-scraped payload directly.
+            const emitScrapedData = (data) => {{
+                try {{
+                    window.__TAURI_INTERNALS__.invoke('handle_scraped_data', {{
+                        sourceId: '{}',
+                        taskId: '{}',
+                        secretKey: '{}',
+                        data: data
+                    }});
+                }} catch (err) {{
+                    console.error('Failed to emit scraped DOM data:', err);
+                }}
+            }};
+            safeOverride(window, '__GLANCIER_EMIT_SCRAPED_DATA', emitScrapedData);
+
             // User Injected Script
             try {{
                 {}
@@ -634,6 +649,9 @@ pub async fn push_scraper_task(
         intercept_api,
         source_id.as_str(),
         task_id.as_str(),
+        source_id.as_str(),
+        task_id.as_str(),
+        secret_key.as_str(),
         source_id.as_str(),
         task_id.as_str(),
         secret_key.as_str(),

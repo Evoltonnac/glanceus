@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: **v1.0 Milestone Shipped** — 2026-03-13
-last_updated: "2026-03-14T05:57:39.000Z"
-last_activity: "2026-03-14 - Completed quick task 006: SDUI schema 去重重构（$defs 单一真源 + Widget 分类分流 + widget_defs 兼容视图）"
+last_updated: "2026-03-14T16:55:11.058Z"
+last_activity: "2026-03-15 - Archived completed todo: integration-preset-choices"
 progress:
   total_phases: 7
   completed_phases: 6
@@ -51,7 +51,6 @@ Last activity: 2026-03-14 - Completed quick task 006: SDUI schema 去重重构�
 
 ## Pending Todos
 - [ ] [2026-03-10] global-state-chat-sidebar (Area: architecture, ui)
-- [ ] [2026-03-09] project-structure-reorganization (Area: planning)
 - [ ] [2026-03-08] topnav-global-search (Area: ui)
 - [ ] [2026-03-06] dashboard-sidebar-hover-add-widget (Area: ui)
 - [ ] [2026-03-06] dashboard-multi-view-tabs (Area: ui)
@@ -61,5 +60,5 @@ Last activity: 2026-03-14 - Completed quick task 006: SDUI schema 去重重构�
 - [ ] [2026-03-07] bento-card-custom-colors (Area: ui)
 - [ ] [2026-03-07] security-static-analysis (Area: security)
 - [ ] [2026-03-07] frontend-duplicate-requests-bug (Area: ui)
-- [ ] [2026-03-07] integration-preset-choices (Area: ui, integration)
 - [ ] [2026-03-07] click-to-copy-interaction (Area: ui)
+- [ ] [2026-03-13] density-toggle-optimization (Area: general)

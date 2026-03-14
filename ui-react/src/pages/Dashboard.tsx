@@ -16,14 +16,20 @@ import type {
     ViewComponent,
     StoredView,
 } from "../types/config";
-import {
-    Card,
-    CardContent,
-} from "../components/ui/card";
+import { Card, CardContent } from "../components/ui/card";
 import { Badge, badgeVariants } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { cn } from "../lib/utils";
-import { useSources, useViews, invalidateSources, invalidateViews, optimisticRemoveSource, optimisticUpdateSourceStatus, mutate, useSettings } from "../hooks/useSWR";
+import {
+    useSources,
+    useViews,
+    invalidateSources,
+    invalidateViews,
+    optimisticRemoveSource,
+    optimisticUpdateSourceStatus,
+    mutate,
+    useSettings,
+} from "../hooks/useSWR";
 
 import {
     Dialog,
@@ -86,7 +92,10 @@ function warnDashboardCompatibilityOnce(key: string, message: string): void {
     console.warn(message);
 }
 
-function toSafeViewProps(itemId: string, rawProps: unknown): Record<string, any> {
+function toSafeViewProps(
+    itemId: string,
+    rawProps: unknown,
+): Record<string, any> {
     if (rawProps && typeof rawProps === "object" && !Array.isArray(rawProps)) {
         return rawProps as Record<string, any>;
     }
@@ -99,7 +108,10 @@ function toSafeViewProps(itemId: string, rawProps: unknown): Record<string, any>
     return {};
 }
 
-function normalizeTemplateType(itemId: string, rawType: unknown): ViewComponent["type"] {
+function normalizeTemplateType(
+    itemId: string,
+    rawType: unknown,
+): ViewComponent["type"] {
     if (typeof rawType !== "string" || rawType.trim() === "") {
         warnDashboardCompatibilityOnce(
             `missing-type:${itemId}`,
@@ -147,10 +159,7 @@ class WidgetFallbackBoundary extends Component<
     }
 
     componentDidUpdate(prevProps: WidgetFallbackBoundaryProps): void {
-        if (
-            this.state.hasError &&
-            prevProps.resetKey !== this.props.resetKey
-        ) {
+        if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
             this.setState({ hasError: false });
         }
     }
@@ -269,10 +278,7 @@ function formatRefreshInterval(minutes: number | null | undefined): string {
     return `${minutes}m`;
 }
 
-function getFreshnessText(
-    updatedAt: number,
-    nowSeconds: number,
-): string {
+function getFreshnessText(updatedAt: number, nowSeconds: number): string {
     const deltaSeconds = Math.max(0, Math.floor(nowSeconds - updatedAt));
     if (deltaSeconds < 60) {
         return "刚刚";
@@ -295,15 +301,19 @@ function getFreshnessStyles(
     }
     const deltaSeconds = Math.max(0, Math.floor(nowSeconds - updatedAt));
     if (deltaSeconds < 300) {
-        // 5 mins - Fresh (bright green gradient, higher transparency)
-        return "bg-gradient-to-r from-green-500/40 to-emerald-500/20 text-green-700 dark:text-green-300";
+        // < 5 mins - Fresh (bright green, very light)
+        return "bg-gradient-to-r from-green-500/15 to-emerald-500/0 text-green-700 dark:text-green-300";
     }
     if (deltaSeconds < 3600) {
-        // 1 hour - Recent (yellow/amber gradient, higher transparency)
-        return "bg-gradient-to-r from-amber-400/40 to-yellow-400/20 text-amber-700 dark:text-amber-300";
+        // 5 mins - 1 hour (yellow/amber, very light)
+        return "bg-gradient-to-r from-amber-400/15 to-yellow-400/0 text-amber-700 dark:text-amber-300";
     }
-    // Stale (gray gradient, higher transparency)
-    return "bg-gradient-to-r from-muted/50 to-muted/20 text-muted-foreground/60";
+    if (deltaSeconds < 86400) {
+        // 1 hour - 1 day (orange, very light)
+        return "bg-gradient-to-r from-orange-400/10 to-yellow-300/0 text-orange-700 dark:text-orange-300";
+    }
+    // > 1 day (gray, very light)
+    return "bg-gradient-to-r from-muted/40 to-muted/0 text-muted-foreground/60";
 }
 
 export default function Dashboard() {
@@ -325,13 +335,20 @@ export default function Dashboard() {
     } = useStore();
 
     // Use SWR for data fetching - handles dedup, caching, and StrictMode automatically
-    const { sources: swrSources, dataMap: swrDataMap, isLoading: swrLoading } = useSources();
+    const {
+        sources: swrSources,
+        dataMap: swrDataMap,
+        isLoading: swrLoading,
+    } = useSources();
     const { views: swrViews } = useViews();
 
     // Use SWR data, fallback to store data during initial load
-    const sources: SourceSummary[] = swrSources.length > 0 ? swrSources : storeSources;
-    const dataMap = Object.keys(swrDataMap).length > 0 ? swrDataMap : storeDataMap;
-    const viewConfig: StoredView | null = swrViews.length > 0 ? swrViews[0] : storeViewConfig;
+    const sources: SourceSummary[] =
+        swrSources.length > 0 ? swrSources : storeSources;
+    const dataMap =
+        Object.keys(swrDataMap).length > 0 ? swrDataMap : storeDataMap;
+    const viewConfig: StoredView | null =
+        swrViews.length > 0 ? swrViews[0] : storeViewConfig;
     const isDataLoading = swrLoading && storeSources.length === 0;
 
     // Density settings
@@ -341,12 +358,24 @@ export default function Dashboard() {
     const currentDensity = settings?.density || "normal";
 
     // Get grid gap and row height from CSS variable
-    const gridGap = typeof window !== "undefined"
-        ? parseInt(getComputedStyle(document.documentElement).getPropertyValue("--qb-grid-gap") || "8", 10)
-        : 8;
-    const gridRowHeight = typeof window !== "undefined"
-        ? parseInt(getComputedStyle(document.documentElement).getPropertyValue("--qb-grid-row-height") || "56", 10)
-        : 56;
+    const gridGap =
+        typeof window !== "undefined"
+            ? parseInt(
+                  getComputedStyle(document.documentElement).getPropertyValue(
+                      "--qb-grid-gap",
+                  ) || "8",
+                  10,
+              )
+            : 8;
+    const gridRowHeight =
+        typeof window !== "undefined"
+            ? parseInt(
+                  getComputedStyle(document.documentElement).getPropertyValue(
+                      "--qb-grid-row-height",
+                  ) || "56",
+                  10,
+              )
+            : 56;
 
     // Apply density to document
     useEffect(() => {
@@ -461,9 +490,7 @@ export default function Dashboard() {
 
         api.updateView(updatedView.id, updatedView)
             .then(() => invalidateViews())
-            .catch((e) =>
-                console.error(e),
-            );
+            .catch((e) => console.error(e));
     };
 
     const viewConfigRef = useRef(viewConfig);
@@ -508,9 +535,7 @@ export default function Dashboard() {
         setViewConfig(updatedView);
         api.updateView(updatedView.id, updatedView)
             .then(() => invalidateViews())
-            .catch((e) =>
-                console.error(e),
-            );
+            .catch((e) => console.error(e));
     }, [setViewConfig, invalidateViews]);
 
     useEffect(() => {
@@ -525,11 +550,7 @@ export default function Dashboard() {
             return;
         }
 
-        if (
-            gs &&
-            gridRef.current &&
-            gs.el !== gridRef.current
-        ) {
+        if (gs && gridRef.current && gs.el !== gridRef.current) {
             gs.destroy(false);
             gsInstanceRef.current = null;
         }
@@ -595,12 +616,16 @@ export default function Dashboard() {
 
         // Get fresh values from CSS after density attribute change
         const newGridGap = parseInt(
-            getComputedStyle(document.documentElement).getPropertyValue("--qb-grid-gap") || "8",
-            10
+            getComputedStyle(document.documentElement).getPropertyValue(
+                "--qb-grid-gap",
+            ) || "8",
+            10,
         );
         const newGridRowHeight = parseInt(
-            getComputedStyle(document.documentElement).getPropertyValue("--qb-grid-row-height") || "56",
-            10
+            getComputedStyle(document.documentElement).getPropertyValue(
+                "--qb-grid-row-height",
+            ) || "56",
+            10,
         );
 
         gs.margin(newGridGap);
@@ -627,14 +652,14 @@ export default function Dashboard() {
 
                 const sourcesToFetch = updatedSources.filter(needsUpdate);
                 const sourcesNeedingNoFetch = updatedSources.filter(
-                    (s) => !needsUpdate(s)
+                    (s) => !needsUpdate(s),
                 );
 
                 // 只获取需要更新的数据源详情
                 const dataPromises = sourcesToFetch.map((s) =>
                     api
                         .getSourceData(s.id)
-                        .then((data) => ({ id: s.id, data }))
+                        .then((data) => ({ id: s.id, data })),
                 );
                 const results = await Promise.all(dataPromises);
 
@@ -659,7 +684,7 @@ export default function Dashboard() {
                         sources: updatedSources,
                         dataMap: newDataMap,
                     },
-                    false
+                    false,
                 );
             } catch (error) {
                 console.error("Dashboard polling failed:", error);
@@ -693,40 +718,46 @@ export default function Dashboard() {
         return () => window.removeEventListener("app:refresh_data", onRefresh);
     }, [sources, setSources, setSkippedScrapers]);
 
-    const handleRefreshSource = useCallback(async (sourceId: string) => {
-        const currentActiveScraper = useStore.getState().activeScraper;
-        if (currentActiveScraper === sourceId) {
-            console.log(
-                `[Scraper] Refresh: cancelling active task for ${sourceId}`,
-            );
-            try {
-                await invoke("cancel_scraper_task");
-            } catch (e) {
-                console.error("Failed to cancel on source refresh:", e);
+    const handleRefreshSource = useCallback(
+        async (sourceId: string) => {
+            const currentActiveScraper = useStore.getState().activeScraper;
+            if (currentActiveScraper === sourceId) {
+                console.log(
+                    `[Scraper] Refresh: cancelling active task for ${sourceId}`,
+                );
+                try {
+                    await invoke("cancel_scraper_task");
+                } catch (e) {
+                    console.error("Failed to cancel on source refresh:", e);
+                }
+                useStore.getState().setActiveScraper(null);
             }
-            useStore.getState().setActiveScraper(null);
-        }
 
-        // Optimistically update status to refreshing for immediate UI feedback
-        optimisticUpdateSourceStatus(sourceId, "refreshing");
+            // Optimistically update status to refreshing for immediate UI feedback
+            optimisticUpdateSourceStatus(sourceId, "refreshing");
 
-        const nextSkipped = new Set(useStore.getState().skippedScrapers);
-        nextSkipped.delete(sourceId);
-        setSkippedScrapers(nextSkipped);
+            const nextSkipped = new Set(useStore.getState().skippedScrapers);
+            nextSkipped.delete(sourceId);
+            setSkippedScrapers(nextSkipped);
 
-        try {
-            await api.refreshSource(sourceId);
-        } catch (error) {
-            console.error(`刷新数据源 ${sourceId} 失败:`, error);
-            // Rollback by re-fetching
-            invalidateSources();
-        }
-    }, [setSkippedScrapers]);
+            try {
+                await api.refreshSource(sourceId);
+            } catch (error) {
+                console.error(`刷新数据源 ${sourceId} 失败:`, error);
+                // Rollback by re-fetching
+                invalidateSources();
+            }
+        },
+        [setSkippedScrapers],
+    );
 
     const handleUpdateSourceRefreshInterval = useCallback(
         async (sourceId: string, intervalMinutes: number | null) => {
             try {
-                await api.updateSourceRefreshInterval(sourceId, intervalMinutes);
+                await api.updateSourceRefreshInterval(
+                    sourceId,
+                    intervalMinutes,
+                );
                 await invalidateSources();
             } catch (error) {
                 console.error(`更新 ${sourceId} 自动刷新间隔失败:`, error);
@@ -768,7 +799,8 @@ export default function Dashboard() {
 
             const nowMs = Date.now();
             for (const source of sources) {
-                const intervalMinutes = source.effective_refresh_interval_minutes;
+                const intervalMinutes =
+                    source.effective_refresh_interval_minutes;
                 if (
                     typeof intervalMinutes !== "number" ||
                     !Number.isFinite(intervalMinutes) ||
@@ -799,7 +831,8 @@ export default function Dashboard() {
                 if (autoRefreshInFlightRef.current.has(source.id)) {
                     continue;
                 }
-                const lastTriggeredAt = lastAutoRefreshTriggerRef.current[source.id] || 0;
+                const lastTriggeredAt =
+                    lastAutoRefreshTriggerRef.current[source.id] || 0;
                 if (nowMs - lastTriggeredAt < 30_000) {
                     continue;
                 }
@@ -824,8 +857,10 @@ export default function Dashboard() {
         return (
             <TooltipProvider>
                 <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
-                    <EmptyState 
-                        icon={<Play className="h-8 w-8 animate-spin text-muted-foreground" />}
+                    <EmptyState
+                        icon={
+                            <Play className="h-8 w-8 animate-spin text-muted-foreground" />
+                        }
                         title="加载中..."
                         description="正在获取配置和数据"
                     />
@@ -964,14 +999,21 @@ export default function Dashboard() {
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => navigate("/integrations")}
+                                        onClick={() =>
+                                            navigate("/integrations")
+                                        }
                                         className="flex-1 h-8 bg-transparent border-border/50 text-muted-foreground hover:bg-foreground hover:text-background hover:border-foreground transition-all duration-200"
                                     >
                                         <Plus className="h-3.5 w-3.5 mr-1.5" />
                                         新建
                                     </Button>
                                 </TooltipTrigger>
-                                <TooltipContent side="bottom" className="text-xs">添加数据源</TooltipContent>
+                                <TooltipContent
+                                    side="bottom"
+                                    className="text-xs"
+                                >
+                                    添加数据源
+                                </TooltipContent>
                             </Tooltip>
                             <Tooltip>
                                 <TooltipTrigger asChild>
@@ -985,7 +1027,10 @@ export default function Dashboard() {
                                         运行
                                     </Button>
                                 </TooltipTrigger>
-                                <TooltipContent side="bottom" className="text-xs">
+                                <TooltipContent
+                                    side="bottom"
+                                    className="text-xs"
+                                >
                                     重新获取所有数据源
                                 </TooltipContent>
                             </Tooltip>
@@ -1005,7 +1050,10 @@ export default function Dashboard() {
                                         <Play className="h-4 w-4" />
                                     </Button>
                                 </TooltipTrigger>
-                                <TooltipContent side="right" className="text-xs">
+                                <TooltipContent
+                                    side="right"
+                                    className="text-xs"
+                                >
                                     运行 (获取数据源)
                                 </TooltipContent>
                             </Tooltip>
@@ -1101,15 +1149,18 @@ export default function Dashboard() {
                                     const statusConfig =
                                         getStatusConfig(source);
                                     const currentSourceInterval =
-                                        typeof source.refresh_interval_minutes === "number"
+                                        typeof source.refresh_interval_minutes ===
+                                        "number"
                                             ? source.refresh_interval_minutes
                                             : null;
                                     const inheritedInterval =
-                                        typeof source.integration_refresh_interval_minutes === "number"
+                                        typeof source.integration_refresh_interval_minutes ===
+                                        "number"
                                             ? source.integration_refresh_interval_minutes
                                             : source.global_refresh_interval_minutes;
                                     const inheritedSourceLabel =
-                                        typeof source.integration_refresh_interval_minutes === "number"
+                                        typeof source.integration_refresh_interval_minutes ===
+                                        "number"
                                             ? "integration"
                                             : "global";
                                     const lastUpdated =
@@ -1129,11 +1180,14 @@ export default function Dashboard() {
                                                 {lastUpdated && (
                                                     <div
                                                         className={cn(
-                                                            "absolute -top-px -left-px px-1.5 py-0.5 rounded-tl-md rounded-br-md text-[9px] font-medium leading-none tabular-nums",
+                                                            "absolute -top-px -left-px px-1.5 py-0.5 rounded-tl-xl rounded-br-xl text-[9px] font-medium leading-none tabular-nums",
                                                             freshnessStyle,
                                                         )}
                                                     >
-                                                        {getFreshnessText(lastUpdated, nowSeconds)}
+                                                        {getFreshnessText(
+                                                            lastUpdated,
+                                                            nowSeconds,
+                                                        )}
                                                     </div>
                                                 )}
                                                 <div className="flex items-start justify-between gap-2">
@@ -1150,7 +1204,9 @@ export default function Dashboard() {
                                                                     </span>
                                                                 </TooltipTrigger>
                                                                 <TooltipContent side="top">
-                                                                    {source.name}
+                                                                    {
+                                                                        source.name
+                                                                    }
                                                                 </TooltipContent>
                                                             </Tooltip>
                                                         </div>
@@ -1280,11 +1336,13 @@ export default function Dashboard() {
                                                                     </DropdownMenuSubTrigger>
                                                                     <DropdownMenuSubContent>
                                                                         <DropdownMenuLabel>
-                                                                            source 级间隔
+                                                                            source
+                                                                            级间隔
                                                                         </DropdownMenuLabel>
                                                                         <DropdownMenuRadioGroup
                                                                             value={
-                                                                                currentSourceInterval === null
+                                                                                currentSourceInterval ===
+                                                                                null
                                                                                     ? "inherit"
                                                                                     : String(
                                                                                           currentSourceInterval,
@@ -1307,12 +1365,16 @@ export default function Dashboard() {
                                                                             }}
                                                                         >
                                                                             <DropdownMenuRadioItem value="inherit">
-                                                                                跟随默认 (
+                                                                                跟随默认
+                                                                                (
                                                                                 {formatRefreshInterval(
                                                                                     inheritedInterval,
                                                                                 )}{" "}
                                                                                 ·{" "}
-                                                                                {inheritedSourceLabel}
+                                                                                {
+                                                                                    inheritedSourceLabel
+                                                                                }
+
                                                                                 )
                                                                             </DropdownMenuRadioItem>
                                                                             {REFRESH_INTERVAL_OPTIONS.map(
@@ -1370,7 +1432,8 @@ export default function Dashboard() {
                                     <DialogHeader>
                                         <DialogTitle>确认删除</DialogTitle>
                                         <DialogDescription>
-                                            确定要删除此数据源吗？该 source_id 的本地数据、密钥和绑定视图组件将被一并清理，此操作不可撤销。
+                                            确定要删除此数据源吗？该 source_id
+                                            的本地数据、密钥和绑定视图组件将被一并清理，此操作不可撤销。
                                         </DialogDescription>
                                     </DialogHeader>
                                     <DialogFooter>
@@ -1432,7 +1495,9 @@ export default function Dashboard() {
 
                     {!viewConfig || viewConfig.items.length === 0 ? (
                         <EmptyState
-                            icon={<Database className="h-8 w-8 text-muted-foreground" />}
+                            icon={
+                                <Database className="h-8 w-8 text-muted-foreground" />
+                            }
                             title="当前视图还没有任何组件"
                             description="添加组件以监控您的数据源。"
                             actionLabel="添加第一个组件"
@@ -1450,8 +1515,8 @@ export default function Dashboard() {
                                     : null;
                                 const sourceSummary = item.source_id
                                     ? sources.find(
-                                      (s) => s.id === item.source_id,
-                                  )
+                                          (s) => s.id === item.source_id,
+                                      )
                                     : undefined;
                                 const safeProps = toSafeViewProps(
                                     item.id,
@@ -1464,7 +1529,8 @@ export default function Dashboard() {
                                 const normalizedLabel =
                                     typeof safeProps.label === "string"
                                         ? safeProps.label
-                                        : (safeProps.ui?.title || item.template_id);
+                                        : safeProps.ui?.title ||
+                                          item.template_id;
                                 const resetKey = [
                                     item.id,
                                     item.source_id || "",

@@ -2,7 +2,7 @@ import { z } from "zod";
 import {
     SpacingSchema,
     ToneSchema,
-    spacingClassMap,
+    microSpacingClassMap,
     toneTextClassMap,
 } from "../shared/commonProps";
 
@@ -27,7 +27,7 @@ export type FactSetProps = z.infer<typeof FactSetSchema>;
 
 export function FactSet({ facts, spacing = "md" }: FactSetProps) {
     return (
-        <div className={`flex flex-col ${spacingClassMap[spacing]}`}>
+        <div className={`flex flex-col ${microSpacingClassMap[spacing]}`}>
             {facts.map(
                 (
                     fact: {

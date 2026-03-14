@@ -4,7 +4,7 @@ import {
     AlignSchema,
     SpacingSchema,
     justifyClassMap,
-    spacingClassMap,
+    layoutSpacingClassMap,
 } from "../shared/commonProps";
 
 /**
@@ -48,7 +48,7 @@ export function Column({
 
     return (
         <div
-            className={`flex flex-col ${widthClass} ${spacingClassMap[spacing]} ${justifyClassMap[align_y]}`}
+            className={`flex flex-col ${widthClass} ${layoutSpacingClassMap[spacing]} ${justifyClassMap[align_y]}`}
             style={style}
         >
             {children}

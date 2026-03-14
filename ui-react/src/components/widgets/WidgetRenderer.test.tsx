@@ -295,8 +295,39 @@ describe("WidgetRenderer", () => {
         expect(textBlock).toHaveClass("text-right");
 
         const container = textBlock.parentElement;
-        expect(container).toHaveClass("qb-gap-1");
+        expect(container).toHaveClass("qb-gap-2");
         expect(container).toHaveClass("justify-center");
+    });
+
+    it("uses larger layout spacing than micro spacing for the same token", () => {
+        render(
+            <WidgetRenderer
+                widget={
+                    {
+                        type: "Container",
+                        spacing: "lg",
+                        items: [
+                            {
+                                type: "FactSet",
+                                spacing: "lg",
+                                facts: [
+                                    {
+                                        label: "CPU",
+                                        value: "68%",
+                                    },
+                                ],
+                            },
+                        ],
+                    } as any
+                }
+                data={{}}
+            />,
+        );
+
+        const factSet = screen.getByText("CPU:").closest("div.flex.flex-col");
+        expect(factSet).not.toBeNull();
+        expect(factSet).toHaveClass("qb-gap-3");
+        expect(factSet?.parentElement).toHaveClass("qb-gap-4");
     });
 
     it("resolves list layout params from templates", () => {
@@ -332,7 +363,13 @@ describe("WidgetRenderer", () => {
         const listGrid = screen.getByText("Item A").closest("div.grid");
         expect(listGrid).not.toBeNull();
         expect(listGrid).toHaveClass("lg:grid-cols-3");
-        expect(listGrid).toHaveClass("qb-gap-3");
+        expect(listGrid).toHaveClass("qb-gap-4");
+
+        const listItem = screen.getByText("Item A").closest("div.rounded-md");
+        expect(listItem).not.toBeNull();
+        expect(listItem).toHaveClass("border");
+        expect(listItem).toHaveClass("border-border/40");
+        expect(listItem).toHaveClass("bg-surface/20");
     });
 
     it("shows validation fallback when templated enum values are invalid", () => {

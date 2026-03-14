@@ -4,7 +4,7 @@ import {
     AlignSchema,
     SpacingSchema,
     justifyClassMap,
-    spacingClassMap,
+    layoutSpacingClassMap,
 } from "../shared/commonProps";
 
 /**
@@ -34,7 +34,7 @@ export function Container({
 }: ContainerComponentProps) {
     return (
         <div
-            className={`flex flex-col w-full ${spacingClassMap[spacing]} ${justifyClassMap[align_y]}`}
+            className={`flex flex-col w-full ${layoutSpacingClassMap[spacing]} ${justifyClassMap[align_y]}`}
         >
             {children}
         </div>

@@ -19,7 +19,14 @@ export type Tone = z.infer<typeof ToneSchema>;
 export const AlignSchema = z.enum(["start", "center", "end"]);
 export type Align = z.infer<typeof AlignSchema>;
 
-export const spacingClassMap: Record<Spacing, string> = {
+export const layoutSpacingClassMap: Record<Spacing, string> = {
+    none: "gap-0",
+    sm: "qb-gap-2",
+    md: "qb-gap-3",
+    lg: "qb-gap-4",
+};
+
+export const microSpacingClassMap: Record<Spacing, string> = {
     none: "gap-0",
     sm: "qb-gap-1",
     md: "qb-gap-2",

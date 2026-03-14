@@ -4,7 +4,7 @@ import {
     AlignSchema,
     SpacingSchema,
     justifyClassMap,
-    spacingClassMap,
+    layoutSpacingClassMap,
 } from "../shared/commonProps";
 
 /**
@@ -35,7 +35,7 @@ export function ColumnSet({
 }: ColumnSetComponentProps) {
     return (
         <div
-            className={`flex flex-row w-full ${spacingClassMap[spacing]} ${justifyClassMap[align_x]}`}
+            className={`flex flex-row w-full ${layoutSpacingClassMap[spacing]} ${justifyClassMap[align_x]}`}
         >
             {children}
         </div>

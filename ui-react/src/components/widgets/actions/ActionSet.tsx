@@ -4,7 +4,7 @@ import {
     AlignSchema,
     SpacingSchema,
     justifyClassMap,
-    spacingClassMap,
+    microSpacingClassMap,
 } from "../shared/commonProps";
 
 /**
@@ -32,7 +32,7 @@ export function ActionSet({
 }: ActionSetComponentProps) {
     return (
         <div
-            className={`flex flex-row items-center ${justifyClassMap[align_x]} ${spacingClassMap[spacing]}`}
+            className={`flex flex-row items-center ${justifyClassMap[align_x]} ${microSpacingClassMap[spacing]}`}
         >
             {children}
         </div>

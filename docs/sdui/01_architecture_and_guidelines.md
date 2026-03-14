@@ -110,6 +110,23 @@ templates:
 
 组件职责见 [02_component_map_and_categories.md](./02_component_map_and_categories.md)。
 
+### 5.1 Widgets 视觉基线（Spacing 与 List Item）
+
+为保证布局层级清晰，Widgets 间距采用两级语义：
+
+- **Layout spacing**（`Container` / `ColumnSet` / `Column` / `List`）：相对更大，用于结构分组。
+- **Micro spacing**（`FactSet` / `ActionSet`）：相对更紧凑，用于元组件内部信息编排。
+
+同一 `spacing` token 下，要求 **Layout >= Micro**。当前实现映射：
+
+- Layout：`sm -> qb-gap-2`，`md -> qb-gap-3`，`lg -> qb-gap-4`
+- Micro：`sm -> qb-gap-1`，`md -> qb-gap-2`，`lg -> qb-gap-3`
+
+`List` 默认每个 item 增加轻量分组边框（细边框 + 轻背景 + 圆角），用于提升扫描效率：
+
+- 推荐基线：`rounded-md border border-border/40 bg-surface/20`
+- 原则：视觉分组要明确，但不应压过内容本身。
+
 ## 6. Schema-First 约束
 
 1. 先定义 Schema，再推导组件 Props。

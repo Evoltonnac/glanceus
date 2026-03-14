@@ -204,7 +204,10 @@ function ListWidgetRenderer({ widget, data }: ListWidgetRendererProps) {
                         const itemData = { ...data, [widget.item_alias]: item };
 
                         return (
-                            <div key={index}>
+                            <div
+                                key={index}
+                                className="rounded-md border border-border/40 bg-surface/20 px-2 py-1.5"
+                            >
                                 {widget.render.map(
                                     (
                                         renderWidget: Widget,

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ReactNode } from "react";
-import { SpacingSchema, spacingClassMap } from "../shared/commonProps";
+import { SpacingSchema, layoutSpacingClassMap } from "../shared/commonProps";
 
 /**
  * List Schema
@@ -41,7 +41,7 @@ export function List({
     spacing = "md",
     children,
 }: ListComponentProps) {
-    const spacingClass = spacingClassMap[spacing];
+    const spacingClass = layoutSpacingClassMap[spacing];
 
     if (layout === "grid") {
         const gridColsMap: Record<number, string> = {

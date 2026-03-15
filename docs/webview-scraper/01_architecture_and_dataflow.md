@@ -6,25 +6,25 @@ For platforms with heavy CSR, complex cookie/session behavior, or no public API,
 pure HTTP is often insufficient. Glancier reuses Tauri WebView capabilities on desktop
 to run low-overhead background capture.
 
-## 2. End-to-End Data Flow (Python -> React -> Rust -> JS)
+## 2. End-to-End Data Flow (Python -> FastAPI Internal API -> Rust -> JS)
 
-1. Python reaches a `webview` step and detects missing capture data.
-2. Python sets `NeedsInteraction(type="webview_scrape")` and suspends.
-3. React `FlowHandler` takes over and sends Tauri IPC (`push_scraper_task`).
-4. Rust creates hidden `scraper_worker` and injects interception logic.
+1. Python reaches a `webview` step, detects missing capture data, and persists a durable scraper task.
+2. Source state enters `suspended` with `interaction.type=webview_scrape` for observability/manual fallback.
+3. Tauri runtime daemon continuously polls backend internal `claim/heartbeat` endpoints.
+4. When a task is claimed, Rust creates hidden `scraper_worker` and injects interception logic.
 5. When `intercept_api` is hit, JS sends captured response data back to Rust.
-6. Rust emits `scraper_result` to React.
-7. React submits capture result through backend interaction API.
-8. Python resumes Flow; downstream `extract` continues processing.
+6. Rust reports `complete` or `fail` directly to backend internal APIs.
+7. Backend writes secret payload and resumes `fetch_source` without requiring Dashboard polling/listeners.
+8. React observes lifecycle logs/status changes and keeps manual foreground actions available when needed.
 
 ## 3. Key Implementation Points
 
 - Single worker instance: only one `scraper_worker` at a time to avoid state contamination.
 - Resource interception: block non-essential static assets to reduce network/load overhead.
-- Event bridging: frontend only relays events; scraping business logic stays out of view components.
+- Event bridging: frontend is observer/manual fallback, not automatic trigger owner.
 
 ## 4. Interface Boundary with Flow
 
-- Flow owns step input/output and resume semantics.
-- Scraper owns browser-state execution and network interception.
+- Flow owns step input/output, durable task creation, and resume semantics.
+- Rust scraper runtime owns task claiming, browser-state execution, and completion callbacks.
 - Flow step definitions: [../flow/02_step_reference.md](../flow/02_step_reference.md)

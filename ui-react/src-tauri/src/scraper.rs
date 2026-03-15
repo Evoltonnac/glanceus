@@ -1,6 +1,10 @@
-use serde::Serialize;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::io::{Read, Write};
+use std::net::TcpStream;
 use std::sync::Mutex;
+use std::thread;
+use std::time::Duration;
 use tauri::Emitter;
 use tauri::{AppHandle, Manager, Window};
 
@@ -13,6 +17,8 @@ const MAX_ERROR_LOGS_PER_SOURCE: usize = 80;
 const MAX_ERROR_LOG_QUERY: usize = 200;
 const WINDOW_MAIN: &str = "main";
 const WINDOW_SCRAPER_WORKER: &str = "scraper_worker";
+const SCRAPER_DAEMON_INTERVAL: Duration = Duration::from_secs(2);
+const SCRAPER_DAEMON_LEASE_SECONDS: u64 = 20;
 
 fn ensure_invoker_window(
     window: &Window,
@@ -188,7 +194,11 @@ fn push_error_log(state: &ScraperState, log: &ScraperLifecycleLog) {
 
 fn emit_kill_log_and_result(app: &AppHandle, source_id: String, task_id: String, reason: String) {
     let state = app.state::<ScraperState>();
-    let (_, active_task_id) = get_active_task(app);
+    let active = get_active_task_record(app);
+    let active_task_id = active
+        .as_ref()
+        .map(|task| task.task_id.clone())
+        .unwrap_or_else(|| "unknown".to_string());
     if active_task_id != task_id {
         return;
     }
@@ -209,6 +219,18 @@ fn emit_kill_log_and_result(app: &AppHandle, source_id: String, task_id: String,
 
     if let Some(win) = app.get_webview_window("scraper_worker") {
         let _ = win.close();
+    }
+
+    if let Some(active_task) = active.as_ref() {
+        if active_task.backend_managed {
+            let _ = fail_scraper_task(
+                app,
+                &source_id,
+                &task_id,
+                active_task.attempt,
+                &reason,
+            );
+        }
     }
     clear_active_task(app);
 
@@ -316,11 +338,14 @@ impl Drop for AppNapGuard {
 pub struct ActiveScraperTask {
     pub source_id: String,
     pub task_id: String,
+    pub attempt: Option<u32>,
+    pub backend_managed: bool,
 }
 
 pub struct ScraperState {
     pub handled_results: Mutex<HashSet<String>>,
     pub active_task: Mutex<Option<ActiveScraperTask>>,
+    pub daemon_worker_id: String,
     log_control: Mutex<LogControlState>,
     error_logs_by_source: Mutex<HashMap<String, VecDeque<ScraperLifecycleLog>>>,
     #[cfg(target_os = "macos")]
@@ -332,12 +357,197 @@ impl Default for ScraperState {
         ScraperState {
             handled_results: Mutex::new(HashSet::new()),
             active_task: Mutex::new(None),
+            daemon_worker_id: format!("glancier-daemon-{}", std::process::id()),
             log_control: Mutex::new(LogControlState::default()),
             error_logs_by_source: Mutex::new(HashMap::new()),
             #[cfg(target_os = "macos")]
             app_nap_guard: Mutex::new(None),
         }
     }
+}
+
+#[derive(Debug, Deserialize, Clone)]
+struct InternalClaimedTask {
+    task_id: String,
+    source_id: String,
+    url: String,
+    script: Option<String>,
+    intercept_api: Option<String>,
+    secret_key: Option<String>,
+    attempt: u32,
+}
+
+#[derive(Debug, Deserialize)]
+struct InternalClaimResponse {
+    task: Option<InternalClaimedTask>,
+}
+
+#[derive(Debug, Serialize)]
+struct InternalClaimRequest<'a> {
+    worker_id: &'a str,
+    lease_seconds: u64,
+}
+
+#[derive(Debug, Serialize)]
+struct InternalHeartbeatRequest<'a> {
+    worker_id: &'a str,
+    source_id: &'a str,
+    task_id: &'a str,
+    attempt: Option<u32>,
+    lease_seconds: u64,
+}
+
+#[derive(Debug, Serialize)]
+struct InternalCompleteRequest<'a> {
+    worker_id: &'a str,
+    source_id: &'a str,
+    task_id: &'a str,
+    attempt: Option<u32>,
+    data: &'a serde_json::Value,
+}
+
+#[derive(Debug, Serialize)]
+struct InternalFailRequest<'a> {
+    worker_id: &'a str,
+    source_id: &'a str,
+    task_id: &'a str,
+    attempt: Option<u32>,
+    error: &'a str,
+}
+
+#[derive(Debug, Deserialize)]
+struct InternalBooleanResponse {
+    accepted: Option<bool>,
+    ok: Option<bool>,
+    reason: Option<String>,
+}
+
+fn backend_post_json<TReq: Serialize, TResp: DeserializeOwned>(
+    app: &AppHandle,
+    path: &str,
+    payload: &TReq,
+) -> Result<TResp, String> {
+    let port = crate::get_api_target_port(app);
+    let body = serde_json::to_string(payload).map_err(|e| e.to_string())?;
+    let mut stream = TcpStream::connect(("127.0.0.1", port))
+        .map_err(|e| format!("failed to connect backend api {port}: {e}"))?;
+    let request = format!(
+        "POST {path} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        body.len(),
+        body
+    );
+    stream
+        .write_all(request.as_bytes())
+        .map_err(|e| format!("failed to write backend request: {e}"))?;
+    stream
+        .flush()
+        .map_err(|e| format!("failed to flush backend request: {e}"))?;
+
+    let mut response = String::new();
+    stream
+        .read_to_string(&mut response)
+        .map_err(|e| format!("failed to read backend response: {e}"))?;
+    let split_at = response
+        .find("\r\n\r\n")
+        .ok_or_else(|| "invalid backend response framing".to_string())?;
+    let (head, body) = response.split_at(split_at);
+    let body = &body[4..];
+    let status_line = head.lines().next().unwrap_or_default();
+    let status_code = status_line
+        .split_whitespace()
+        .nth(1)
+        .and_then(|raw| raw.parse::<u16>().ok())
+        .unwrap_or(500);
+    if !(200..300).contains(&status_code) {
+        return Err(format!(
+            "backend request {} failed with status {}: {}",
+            path, status_code, body
+        ));
+    }
+    serde_json::from_str(body)
+        .map_err(|e| format!("failed to parse backend response {}: {}", path, e))
+}
+
+fn claim_scraper_task(app: &AppHandle) -> Result<Option<InternalClaimedTask>, String> {
+    let state = app.state::<ScraperState>();
+    let response: InternalClaimResponse = backend_post_json(
+        app,
+        "/api/internal/scraper/claim",
+        &InternalClaimRequest {
+            worker_id: &state.daemon_worker_id,
+            lease_seconds: SCRAPER_DAEMON_LEASE_SECONDS,
+        },
+    )?;
+    Ok(response.task)
+}
+
+fn heartbeat_scraper_task(app: &AppHandle, active: &ActiveScraperTask) -> Result<(), String> {
+    let state = app.state::<ScraperState>();
+    let response: InternalBooleanResponse = backend_post_json(
+        app,
+        "/api/internal/scraper/heartbeat",
+        &InternalHeartbeatRequest {
+            worker_id: &state.daemon_worker_id,
+            source_id: &active.source_id,
+            task_id: &active.task_id,
+            attempt: active.attempt,
+            lease_seconds: SCRAPER_DAEMON_LEASE_SECONDS,
+        },
+    )?;
+    if response.ok == Some(false) {
+        return Err(response.reason.unwrap_or_else(|| "heartbeat rejected".to_string()));
+    }
+    Ok(())
+}
+
+fn complete_scraper_task(
+    app: &AppHandle,
+    source_id: &str,
+    task_id: &str,
+    attempt: Option<u32>,
+    data: &serde_json::Value,
+) -> Result<(), String> {
+    let state = app.state::<ScraperState>();
+    let response: InternalBooleanResponse = backend_post_json(
+        app,
+        "/api/internal/scraper/complete",
+        &InternalCompleteRequest {
+            worker_id: &state.daemon_worker_id,
+            source_id,
+            task_id,
+            attempt,
+            data,
+        },
+    )?;
+    if response.accepted == Some(false) {
+        return Err(response.reason.unwrap_or_else(|| "complete rejected".to_string()));
+    }
+    Ok(())
+}
+
+fn fail_scraper_task(
+    app: &AppHandle,
+    source_id: &str,
+    task_id: &str,
+    attempt: Option<u32>,
+    error: &str,
+) -> Result<(), String> {
+    let state = app.state::<ScraperState>();
+    let response: InternalBooleanResponse = backend_post_json(
+        app,
+        "/api/internal/scraper/fail",
+        &InternalFailRequest {
+            worker_id: &state.daemon_worker_id,
+            source_id,
+            task_id,
+            attempt,
+            error,
+        },
+    )?;
+    if response.accepted == Some(false) {
+        return Err(response.reason.unwrap_or_else(|| "fail rejected".to_string()));
+    }
+    Ok(())
 }
 
 fn now_ms() -> u128 {
@@ -351,11 +561,22 @@ fn make_task_id(source_id: &str) -> String {
     format!("{}-{}", source_id, now_ms())
 }
 
-fn set_active_task(app: &AppHandle, source_id: String, task_id: String) {
+fn set_active_task(
+    app: &AppHandle,
+    source_id: String,
+    task_id: String,
+    attempt: Option<u32>,
+    backend_managed: bool,
+) {
     let state = app.state::<ScraperState>();
     let mut active = state.active_task.lock().unwrap();
     let previous_task_id = active.as_ref().map(|task| task.task_id.clone());
-    *active = Some(ActiveScraperTask { source_id, task_id });
+    *active = Some(ActiveScraperTask {
+        source_id,
+        task_id,
+        attempt,
+        backend_managed,
+    });
     drop(active);
     if let Some(task_id) = previous_task_id {
         let mut control = state.log_control.lock().unwrap();
@@ -382,6 +603,12 @@ fn get_active_task(app: &AppHandle) -> (String, String) {
         return (task.source_id.clone(), task.task_id.clone());
     }
     ("unknown".to_string(), "unknown".to_string())
+}
+
+fn get_active_task_record(app: &AppHandle) -> Option<ActiveScraperTask> {
+    let state = app.state::<ScraperState>();
+    let active = state.active_task.lock().unwrap();
+    active.clone()
 }
 
 async fn close_existing_scraper_window(
@@ -469,7 +696,7 @@ pub async fn push_scraper_task(
     ensure_invoker_window(&window, &[WINDOW_MAIN], "push_scraper_task")?;
     let foreground = foreground.unwrap_or(false);
     let task_id = make_task_id(&source_id);
-    set_active_task(&app, source_id.clone(), task_id.clone());
+    set_active_task(&app, source_id.clone(), task_id.clone(), None, false);
 
     // Log: task_start
     emit_lifecycle_log(
@@ -812,6 +1039,294 @@ pub async fn push_scraper_task(
     Ok(())
 }
 
+async fn start_claimed_scraper_task(
+    app: &AppHandle,
+    claimed: &InternalClaimedTask,
+) -> Result<(), String> {
+    let source_id = claimed.source_id.clone();
+    let task_id = claimed.task_id.clone();
+    let url = claimed.url.clone();
+    let inject_script = claimed.script.clone().unwrap_or_default();
+    let intercept_api = claimed.intercept_api.clone().unwrap_or_default();
+    let secret_key = claimed
+        .secret_key
+        .clone()
+        .unwrap_or_else(|| "webview_data".to_string());
+
+    set_active_task(
+        app,
+        source_id.clone(),
+        task_id.clone(),
+        Some(claimed.attempt),
+        true,
+    );
+
+    emit_lifecycle_log(
+        app,
+        ScraperLifecycleLog::new(
+            source_id.clone(),
+            task_id.clone(),
+            "task_claimed",
+            "info",
+            "Claimed backend scraper task".to_string(),
+        )
+        .with_details(serde_json::json!({
+            "task_id": task_id,
+            "url": url,
+            "attempt": claimed.attempt,
+            "has_script": !inject_script.is_empty(),
+            "has_intercept": !intercept_api.is_empty()
+        })),
+    );
+
+    {
+        let state = app.state::<ScraperState>();
+        let mut handled = state.handled_results.lock().unwrap();
+        handled.remove(&task_id);
+    }
+
+    let final_script = format!(
+        r#"
+        (function() {{
+            function safeOverride(obj, prop, value) {{
+                try {{
+                    Object.defineProperty(obj, prop, {{
+                        value: value,
+                        writable: true,
+                        configurable: true
+                    }});
+                    return true;
+                }} catch(e1) {{
+                    try {{
+                        obj[prop] = value;
+                        return obj[prop] === value;
+                    }} catch(e2) {{
+                        console.warn('[Scraper] Cannot override ' + prop + ':', e2.message);
+                        return false;
+                    }}
+                }}
+            }}
+
+            const blockExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.woff', '.woff2', '.ttf'];
+
+            const originalFetch = window.fetch;
+            const patchedFetch = async function(...args) {{
+                const reqUrl = (typeof args[0] === 'string' ? args[0] : args[0]?.url) || '';
+                if (blockExtensions.some(ext => reqUrl.toLowerCase().includes(ext))) {{
+                    return new Response('', {{ status: 200, statusText: 'Blocked' }});
+                }}
+                if (reqUrl.includes('{}')) {{
+                    try {{
+                        const response = await originalFetch.apply(this, args);
+                        if (response.status === 401 || response.status === 403) {{
+                            window.__TAURI_INTERNALS__.invoke('handle_scraper_auth', {{ sourceId: '{}', taskId: '{}', targetUrl: reqUrl }});
+                        }} else {{
+                            const cloneRes = response.clone();
+                            cloneRes.json().then(data => {{
+                                window.__TAURI_INTERNALS__.invoke('handle_scraped_data', {{
+                                    sourceId: '{}',
+                                    taskId: '{}',
+                                    secretKey: '{}',
+                                    data: data
+                                }});
+                            }}).catch(e => {{
+                                console.error('Failed to capture JSON:', e);
+                            }});
+                        }}
+                        return response;
+                    }} catch(e) {{
+                        throw e;
+                    }}
+                }}
+                return originalFetch.apply(this, args);
+            }};
+            safeOverride(window, 'fetch', patchedFetch);
+
+            const originalXhrOpen = XMLHttpRequest.prototype.open;
+            const patchedXhrOpen = function(method, xUrl, ...rest) {{
+                this._url = xUrl;
+                return originalXhrOpen.call(this, method, xUrl, ...rest);
+            }};
+            safeOverride(XMLHttpRequest.prototype, 'open', patchedXhrOpen);
+
+            const originalXhrSend = XMLHttpRequest.prototype.send;
+            const patchedXhrSend = function(body) {{
+                this.addEventListener('load', function() {{
+                    if (this._url && this._url.includes('{}')) {{
+                         if (this.status === 401 || this.status === 403) {{
+                             window.__TAURI_INTERNALS__.invoke('handle_scraper_auth', {{ sourceId: '{}', taskId: '{}', targetUrl: this._url }});
+                         }} else {{
+                             try {{
+                                 const data = JSON.parse(this.responseText);
+                                 window.__TAURI_INTERNALS__.invoke('handle_scraped_data', {{
+                                     sourceId: '{}',
+                                     taskId: '{}',
+                                     secretKey: '{}',
+                                     data: data
+                                 }});
+                             }} catch(e) {{}}
+                         }}
+                    }}
+                }});
+                this.addEventListener('error', function() {{}});
+                return originalXhrSend.call(this, body);
+            }};
+            safeOverride(XMLHttpRequest.prototype, 'send', patchedXhrSend);
+
+            const observer = new MutationObserver(mutations => {{
+                for (const mutation of mutations) {{
+                    for (const node of mutation.addedNodes) {{
+                        if (node.tagName === 'IMG') {{
+                            try {{ node.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='; }} catch(e) {{}}
+                        }} else if (node.querySelectorAll) {{
+                            const imgs = node.querySelectorAll('img');
+                            imgs.forEach(img => {{ try {{ img.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='; }} catch(e) {{}} }});
+                        }}
+                    }}
+                }}
+            }});
+
+            if (document.documentElement) {{
+                observer.observe(document.documentElement, {{ childList: true, subtree: true }});
+            }} else {{
+                document.addEventListener('DOMContentLoaded', () => {{
+                    observer.observe(document.documentElement, {{ childList: true, subtree: true }});
+                }});
+            }}
+
+            const emitScrapedData = (data) => {{
+                try {{
+                    window.__TAURI_INTERNALS__.invoke('handle_scraped_data', {{
+                        sourceId: '{}',
+                        taskId: '{}',
+                        secretKey: '{}',
+                        data: data
+                    }});
+                }} catch (err) {{
+                    console.error('Failed to emit scraped DOM data:', err);
+                }}
+            }};
+            safeOverride(window, '__GLANCIER_EMIT_SCRAPED_DATA', emitScrapedData);
+
+            try {{
+                {}
+            }} catch(e) {{
+                console.error('Inject script error:', e);
+            }}
+        }})();
+        "#,
+        intercept_api,
+        source_id.as_str(),
+        task_id.as_str(),
+        source_id.as_str(),
+        task_id.as_str(),
+        secret_key.as_str(),
+        intercept_api,
+        source_id.as_str(),
+        task_id.as_str(),
+        source_id.as_str(),
+        task_id.as_str(),
+        secret_key.as_str(),
+        source_id.as_str(),
+        task_id.as_str(),
+        secret_key.as_str(),
+        inject_script
+    );
+
+    close_existing_scraper_window(app, &source_id, &task_id)
+        .await
+        .map_err(|e| {
+            clear_active_task(app);
+            let _ = fail_scraper_task(app, &source_id, &task_id, Some(claimed.attempt), &e);
+            e
+        })?;
+
+    let builder = tauri::WebviewWindowBuilder::new(
+        app,
+        "scraper_worker",
+        tauri::WebviewUrl::External(url.parse::<tauri::Url>().map_err(|e| e.to_string())?),
+    )
+    .title("Background Worker")
+    .initialization_script(&final_script)
+    .visible(true)
+    .decorations(false)
+    .inner_size(1.0, 1.0)
+    .position(0.0, 0.0)
+    .skip_taskbar(true);
+
+    #[cfg(target_os = "macos")]
+    {
+        let state = app.state::<ScraperState>();
+        let mut guard = state.app_nap_guard.lock().unwrap();
+        *guard = Some(AppNapGuard::new("Background webview scraper running"));
+    }
+
+    let _webview = builder.build().map_err(|e| {
+        clear_active_task(app);
+        let message = format!("Failed to create window: {}", e);
+        let _ = fail_scraper_task(app, &source_id, &task_id, Some(claimed.attempt), &message);
+        message
+    })?;
+
+    emit_lifecycle_log(
+        app,
+        ScraperLifecycleLog::new(
+            source_id,
+            task_id,
+            "window_ready",
+            "info",
+            "Daemon background window ready".to_string(),
+        ),
+    );
+    Ok(())
+}
+
+pub fn start_scraper_daemon(app: &AppHandle) {
+    let app_handle = app.clone();
+    thread::spawn(move || loop {
+        if let Some(active) = get_active_task_record(&app_handle) {
+            if active.backend_managed {
+                if let Err(err) = heartbeat_scraper_task(&app_handle, &active) {
+                    emit_lifecycle_log(
+                        &app_handle,
+                        ScraperLifecycleLog::new(
+                            active.source_id.clone(),
+                            active.task_id.clone(),
+                            "heartbeat_error",
+                            "warn",
+                            format!("Heartbeat failed: {}", err),
+                        ),
+                    );
+                }
+            }
+            thread::sleep(SCRAPER_DAEMON_INTERVAL);
+            continue;
+        }
+
+        match claim_scraper_task(&app_handle) {
+            Ok(Some(task)) => {
+                let app_for_task = app_handle.clone();
+                tauri::async_runtime::spawn(async move {
+                    if let Err(err) = start_claimed_scraper_task(&app_for_task, &task).await {
+                        let _ = fail_scraper_task(
+                            &app_for_task,
+                            &task.source_id,
+                            &task.task_id,
+                            Some(task.attempt),
+                            &err,
+                        );
+                    }
+                });
+            }
+            Ok(None) => {}
+            Err(err) => {
+                log::debug!("scraper daemon claim skipped: {}", err);
+            }
+        }
+        thread::sleep(SCRAPER_DAEMON_INTERVAL);
+    });
+}
+
 #[tauri::command]
 pub async fn handle_scraped_data(
     window: Window,
@@ -885,6 +1400,29 @@ pub async fn handle_scraped_data(
         ),
     );
 
+    if let Some(active) = get_active_task_record(&app) {
+        if active.task_id == resolved_task_id && active.source_id == source_id && active.backend_managed {
+            if let Err(err) = complete_scraper_task(
+                &app,
+                &source_id,
+                &resolved_task_id,
+                active.attempt,
+                &data,
+            ) {
+                emit_lifecycle_log(
+                    &app,
+                    ScraperLifecycleLog::new(
+                        source_id.clone(),
+                        resolved_task_id.clone(),
+                        "backend_complete_error",
+                        "error",
+                        format!("Failed to callback complete endpoint: {}", err),
+                    ),
+                );
+            }
+        }
+    }
+
     app.emit(
         "scraper_result",
         serde_json::json!({
@@ -944,6 +1482,29 @@ pub async fn handle_scraper_auth(
             "target_url": target_url
         })),
     );
+
+    if let Some(active) = get_active_task_record(&app) {
+        if active.task_id == resolved_task_id && active.source_id == source_id && active.backend_managed {
+            if let Err(err) = fail_scraper_task(
+                &app,
+                &source_id,
+                &resolved_task_id,
+                active.attempt,
+                "Authentication required while scraping",
+            ) {
+                emit_lifecycle_log(
+                    &app,
+                    ScraperLifecycleLog::new(
+                        source_id.clone(),
+                        resolved_task_id.clone(),
+                        "backend_fail_error",
+                        "error",
+                        format!("Failed to callback fail endpoint: {}", err),
+                    ),
+                );
+            }
+        }
+    }
 
     app.emit(
         "scraper_auth_required",
@@ -1005,13 +1566,14 @@ pub async fn show_scraper_window(window: Window, app: AppHandle) -> Result<(), S
 pub async fn cancel_scraper_task(window: Window, app: AppHandle) -> Result<(), String> {
     ensure_invoker_window(&window, &[WINDOW_MAIN], "cancel_scraper_task")?;
     let (source_id, task_id) = get_active_task(&app);
+    let active = get_active_task_record(&app);
     println!("[Scraper Debug] cancel_scraper_task called");
 
     emit_lifecycle_log(
         &app,
         ScraperLifecycleLog::new(
-            source_id,
-            task_id,
+            source_id.clone(),
+            task_id.clone(),
             "task_cancelled",
             "warn",
             "Scraper task cancelled by user".to_string(),
@@ -1020,6 +1582,20 @@ pub async fn cancel_scraper_task(window: Window, app: AppHandle) -> Result<(), S
 
     if let Some(win) = app.get_webview_window("scraper_worker") {
         let _ = win.close();
+    }
+    if let Some(active_task) = active {
+        if active_task.backend_managed
+            && active_task.task_id == task_id
+            && active_task.source_id == source_id
+        {
+            let _ = fail_scraper_task(
+                &app,
+                &source_id,
+                &task_id,
+                active_task.attempt,
+                "Scraper task cancelled by user",
+            );
+        }
     }
     clear_active_task(&app);
 

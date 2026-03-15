@@ -566,7 +566,7 @@ fn spawn_backend_process(
     Ok(child)
 }
 
-fn get_api_target_port(app: &tauri::AppHandle) -> u16 {
+pub(crate) fn get_api_target_port(app: &tauri::AppHandle) -> u16 {
     let Some(state) = app.try_state::<RuntimeState>() else {
         return DEBUG_API_PORT;
     };
@@ -969,6 +969,8 @@ pub fn run() {
             {
                 set_web_mode_port(&app.handle(), None);
             }
+
+            scraper::start_scraper_daemon(&app.handle());
 
             Ok(())
         })

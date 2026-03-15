@@ -1,13 +1,15 @@
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { SourceSummary } from "../types/config";
 import { useStore } from "../store";
-import { mockInvoke } from "../test/mocks/tauri";
+import { mockInvoke, mockListen, mockUnlisten } from "../test/mocks/tauri";
+import type { SourceSummary } from "../types/config";
 
 const { apiMock } = vi.hoisted(() => ({
     apiMock: {
-        getSettings: vi.fn(),
+        getSources: vi.fn(),
+        interact: vi.fn(),
+        refreshSource: vi.fn(),
     },
 }));
 
@@ -45,48 +47,50 @@ function buildWebviewSource(id: string, name: string): SourceSummary {
     };
 }
 
-describe("useScraper foreground behavior", () => {
+describe("useScraper observer mode", () => {
     const initialState = useStore.getState();
 
     beforeEach(() => {
         useStore.setState(initialState, true);
         mockInvoke.mockReset();
-        apiMock.getSettings.mockReset();
-        apiMock.getSettings.mockImplementation(
-            () => new Promise(() => undefined),
-        );
-    });
-    afterEach(() => {
-        vi.useRealTimers();
+        mockListen.mockReset();
+        mockUnlisten.mockReset();
+        mockListen.mockResolvedValue(mockUnlisten);
+
+        apiMock.getSources.mockReset();
+        apiMock.interact.mockReset();
+        apiMock.refreshSource.mockReset();
+        apiMock.getSources.mockResolvedValue([]);
+        apiMock.interact.mockResolvedValue(undefined);
+        apiMock.refreshSource.mockResolvedValue(undefined);
     });
 
-    it("does not preempt active background scraper when manually opening foreground task", () => {
-        const active = buildWebviewSource("active-bg", "Active BG");
-        const manual = buildWebviewSource("manual-fg", "Manual FG");
+    it("manual foreground action delegates to backend refresh and never pushes task from frontend", () => {
+        const source = buildWebviewSource("manual-fg", "Manual FG");
         useStore.setState({
-            sources: [active, manual],
-            activeScraper: active.id,
+            sources: [source],
+            activeScraper: null,
             skippedScrapers: new Set(),
         });
 
         const { result } = renderHook(() => useScraper());
-        const added = result.current.handlePushToQueue(manual, { foreground: true });
+        let started = false;
+        act(() => {
+            started = result.current.handlePushToQueue(source, { foreground: true });
+        });
 
-        expect(added).toBe(false);
-        expect(useStore.getState().activeScraper).toBe(active.id);
-        expect(
-            mockInvoke.mock.calls.some(([cmd]) => cmd === "cancel_scraper_task"),
-        ).toBe(false);
+        expect(started).toBe(true);
+        expect(apiMock.refreshSource).toHaveBeenCalledWith(source.id);
         expect(
             mockInvoke.mock.calls.some(([cmd]) => cmd === "push_scraper_task"),
         ).toBe(false);
     });
 
-    it("showing scraper window detaches current active task from background queue", async () => {
-        const active = buildWebviewSource("active-bg", "Active BG");
+    it("show_scraper_window keeps active task state for status banner", async () => {
+        const source = buildWebviewSource("active-bg", "Active BG");
         useStore.setState({
-            sources: [active],
-            activeScraper: active.id,
+            sources: [source],
+            activeScraper: source.id,
             skippedScrapers: new Set(),
         });
         mockInvoke.mockResolvedValue(undefined);
@@ -97,96 +101,110 @@ describe("useScraper foreground behavior", () => {
         });
 
         expect(mockInvoke).toHaveBeenCalledWith("show_scraper_window");
-        expect(useStore.getState().activeScraper).toBeNull();
-        expect(useStore.getState().skippedScrapers.has(active.id)).toBe(true);
+        expect(useStore.getState().activeScraper).toBe(source.id);
     });
 
-    it("detached foreground task is not cancelled by queue timeout", async () => {
-        vi.useFakeTimers();
-        const active = buildWebviewSource("active-bg", "Active BG");
+    it("lifecycle logs drive active scraper status updates", async () => {
+        const source = buildWebviewSource("source-1", "Source 1");
         useStore.setState({
-            sources: [active],
-            activeScraper: active.id,
-            skippedScrapers: new Set(),
-        });
-        mockInvoke.mockResolvedValue(undefined);
-
-        const { result } = renderHook(() => useScraper());
-        await act(async () => {
-            await result.current.handleShowScraperWindow();
-        });
-
-        const queueIds = result.current.webviewQueue.map((s) => s.id);
-        expect(queueIds).not.toContain(active.id);
-        expect(useStore.getState().activeScraper).toBeNull();
-
-        await act(async () => {
-            vi.advanceTimersByTime(11_000);
-            await Promise.resolve();
-        });
-
-        expect(
-            mockInvoke.mock.calls.some(([cmd]) => cmd === "cancel_scraper_task"),
-        ).toBe(false);
-    });
-
-    it("detached foreground task does not trigger next background queue task immediately", async () => {
-        const active = buildWebviewSource("active-bg", "Active BG");
-        const queued = buildWebviewSource("queued-bg", "Queued BG");
-        useStore.setState({
-            sources: [active, queued],
-            activeScraper: active.id,
-            skippedScrapers: new Set(),
-        });
-        mockInvoke.mockResolvedValue(undefined);
-
-        const { result } = renderHook(() => useScraper());
-        await act(async () => {
-            await result.current.handleShowScraperWindow();
-            await Promise.resolve();
-        });
-
-        expect(useStore.getState().activeScraper).toBeNull();
-        expect(useStore.getState().skippedScrapers.has(active.id)).toBe(true);
-        expect(
-            mockInvoke.mock.calls.some(
-                ([cmd, payload]) =>
-                    cmd === "push_scraper_task" &&
-                    (payload as { sourceId?: string })?.sourceId === queued.id,
-            ),
-        ).toBe(false);
-    });
-
-    it("manual foreground task is not added to background queue", async () => {
-        const manual = buildWebviewSource("manual-fg", "Manual FG");
-        if (manual.interaction?.data) {
-            manual.interaction.data.manual_only = true;
-        }
-        useStore.setState({
-            sources: [manual],
+            sources: [source],
             activeScraper: null,
             skippedScrapers: new Set(),
         });
-        mockInvoke.mockResolvedValue(undefined);
 
-        const { result } = renderHook(() => useScraper());
-        let started = false;
-        act(() => {
-            started = result.current.handlePushToQueue(manual, { foreground: true });
+        let lifecycleListener:
+            | ((event: { payload: any }) => void | Promise<void>)
+            | undefined;
+        mockListen.mockImplementation((eventName: string, callback: any) => {
+            if (eventName === "scraper_lifecycle_log") {
+                lifecycleListener = callback;
+            }
+            return Promise.resolve(mockUnlisten);
         });
 
-        expect(started).toBe(true);
-        expect(useStore.getState().activeScraper).toBeNull();
-        expect(useStore.getState().skippedScrapers.has(manual.id)).toBe(true);
-        expect(mockInvoke).toHaveBeenCalledWith(
-            "push_scraper_task",
-            expect.objectContaining({
-                sourceId: manual.id,
-                foreground: true,
-            }),
-        );
+        renderHook(() => useScraper());
+        await act(async () => {
+            await Promise.resolve();
+        });
 
-        const queueIds = result.current.webviewQueue.map((s) => s.id);
-        expect(queueIds).not.toContain(manual.id);
+        expect(lifecycleListener).toBeDefined();
+
+        act(() => {
+            lifecycleListener?.({
+                payload: {
+                    source_id: source.id,
+                    task_id: "task-1",
+                    stage: "task_claimed",
+                    level: "info",
+                    message: "Claimed backend scraper task",
+                    timestamp: 1,
+                },
+            });
+        });
+        expect(useStore.getState().activeScraper).toBe(source.id);
+
+        act(() => {
+            lifecycleListener?.({
+                payload: {
+                    source_id: source.id,
+                    task_id: "task-1",
+                    stage: "task_complete",
+                    level: "info",
+                    message: "Scraper completed",
+                    timestamp: 2,
+                },
+            });
+        });
+        expect(useStore.getState().activeScraper).toBeNull();
+    });
+
+    it("scraper_result error clears active state and marks source skipped", async () => {
+        const source = buildWebviewSource("source-err", "Source Err");
+        useStore.setState({
+            sources: [source],
+            activeScraper: source.id,
+            skippedScrapers: new Set(),
+        });
+
+        let resultListener:
+            | ((event: { payload: any }) => void | Promise<void>)
+            | undefined;
+        mockListen.mockImplementation((eventName: string, callback: any) => {
+            if (eventName === "scraper_result") {
+                resultListener = callback;
+            }
+            return Promise.resolve(mockUnlisten);
+        });
+        mockInvoke.mockImplementation((command: string) => {
+            if (command === "get_scraper_error_logs") {
+                return Promise.resolve([]);
+            }
+            return Promise.resolve(undefined);
+        });
+
+        renderHook(() => useScraper());
+        await act(async () => {
+            await Promise.resolve();
+        });
+
+        expect(resultListener).toBeDefined();
+
+        await act(async () => {
+            await resultListener?.({
+                payload: {
+                    sourceId: source.id,
+                    taskId: "task-err-1",
+                    data: null,
+                    error: "boom",
+                    secretKey: "webview_data",
+                },
+            });
+        });
+
+        expect(useStore.getState().activeScraper).toBeNull();
+        expect(useStore.getState().skippedScrapers.has(source.id)).toBe(true);
+        expect(mockInvoke).toHaveBeenCalledWith("get_scraper_error_logs", {
+            sourceId: source.id,
+        });
     });
 });

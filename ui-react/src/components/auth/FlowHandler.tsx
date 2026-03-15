@@ -511,7 +511,7 @@ export function FlowHandler({
                                     <p className="font-semibold text-foreground mb-1">
                                         需要手动介入
                                     </p>
-                                    <p>点击下方按钮将浏览器窗口启动在前台。</p>
+                                    <p>点击下方按钮请求后台重试，并在可用时前台显示浏览器窗口。</p>
                                     <p className="mt-1">
                                         你可以在窗口中登录或通过验证码，完成后数据将自动采集并继续。
                                     </p>

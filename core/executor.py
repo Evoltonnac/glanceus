@@ -55,16 +55,50 @@ class Executor:
         secrets_controller,
         settings_manager=None,
         max_concurrent_fetches: int | None = None,
+        scraper_task_store=None,
     ):
         self._data_controller = data_controller
         self._secrets = secrets_controller
         self._settings_manager = settings_manager
+        self._scraper_tasks = scraper_task_store
         # source_id -> SourceState
         self._states: Dict[str, SourceState] = {}
         resolved_max_concurrency = self._resolve_max_concurrent_fetches(max_concurrent_fetches)
         self._fetch_semaphore = asyncio.Semaphore(resolved_max_concurrency)
         self._inflight_source_ids: set[str] = set()
         self._inflight_lock = asyncio.Lock()
+
+    def upsert_scraper_task(
+        self,
+        *,
+        source: SourceConfig,
+        step: StepConfig,
+        args: dict[str, Any],
+        secret_key: str,
+    ) -> dict[str, Any] | None:
+        """
+        Persist a backend-owned scraper task when webview data is missing.
+        """
+        if self._scraper_tasks is None:
+            return None
+        url = args.get("url")
+        if not isinstance(url, str) or not url:
+            return None
+        script = args.get("script")
+        intercept_api = args.get("intercept_api")
+        try:
+            task = self._scraper_tasks.upsert_pending_task(
+                source_id=source.id,
+                step_id=step.id,
+                url=url,
+                script=script if isinstance(script, str) else "",
+                intercept_api=intercept_api if isinstance(intercept_api, str) else "",
+                secret_key=secret_key,
+            )
+        except Exception as exc:
+            logger.warning("[%s] Failed to persist scraper task: %s", source.id, exc)
+            return None
+        return task
 
     def _resolve_max_concurrent_fetches(self, configured: int | None) -> int:
         if isinstance(configured, int) and configured > 0:

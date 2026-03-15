@@ -65,6 +65,14 @@ async def execute_browser_step(
         
         if not url:
             raise ValueError(f"Step {step.id} has use=webview but no 'url' argument provided.")
+
+        task = executor.upsert_scraper_task(
+            source=source,
+            step=step,
+            args=args,
+            secret_key=secret_key,
+        )
+        task_id = task.get("task_id") if isinstance(task, dict) else None
         
         raise RequiredSecretMissing(
             source_id=source.id,
@@ -72,6 +80,7 @@ async def execute_browser_step(
             fields=[],
             message=f"System background scraping required for {source.id}",
             data={
+                "task_id": task_id,
                 "url": url,
                 "script": script,
                 "intercept_api": intercept_api,

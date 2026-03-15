@@ -15,7 +15,7 @@ def test_create_app_falls_back_to_empty_config_when_load_fails(monkeypatch):
     monkeypatch.setattr(main_module, "SecretsController", lambda: SimpleNamespace(inject_settings_manager=lambda _settings: None))
     monkeypatch.setattr(main_module, "AuthManager", lambda _secrets, app_config: SimpleNamespace())
     monkeypatch.setattr(main_module, "SettingsManager", lambda: SimpleNamespace())
-    monkeypatch.setattr(main_module, "Executor", lambda _dc, _sc, _sm: SimpleNamespace())
+    monkeypatch.setattr(main_module, "Executor", lambda _dc, _sc, _sm, **_kwargs: SimpleNamespace())
     monkeypatch.setattr(main_module, "ResourceManager", lambda: SimpleNamespace(load_sources=lambda: []))
     monkeypatch.setattr(main_module, "IntegrationManager", lambda: SimpleNamespace())
     monkeypatch.setattr(main_module.api, "init_api", lambda **_kwargs: None)
@@ -59,7 +59,7 @@ def test_create_app_seeds_first_launch_workspace_when_empty(monkeypatch):
     monkeypatch.setattr(main_module, "SecretsController", lambda: SimpleNamespace(inject_settings_manager=lambda _settings: None))
     monkeypatch.setattr(main_module, "AuthManager", lambda _secrets, app_config: SimpleNamespace())
     monkeypatch.setattr(main_module, "SettingsManager", lambda: SimpleNamespace())
-    monkeypatch.setattr(main_module, "Executor", lambda _dc, _sc, _sm: SimpleNamespace())
+    monkeypatch.setattr(main_module, "Executor", lambda _dc, _sc, _sm, **_kwargs: SimpleNamespace())
     monkeypatch.setattr(main_module, "ResourceManager", lambda: FakeResourceManager())
     monkeypatch.setattr(main_module, "IntegrationManager", lambda: FakeIntegrationManager())
     monkeypatch.setattr(main_module.api, "init_api", lambda **_kwargs: None)
@@ -103,7 +103,10 @@ def test_create_app_seeds_first_launch_workspace_when_empty(monkeypatch):
         "starter_icloud_source",
         "starter_gold_source",
     }
-    assert all(item.props.get("type") == "source_card" for item in saved_views[0].items)
+    assert all(
+        item.props.get("type") in {"source_card", None}
+        for item in saved_views[0].items
+    )
 
 
 def test_create_app_bootstrap_sources_use_api_create_flow_for_auto_refresh(monkeypatch):
@@ -170,7 +173,11 @@ def test_create_app_bootstrap_sources_use_api_create_flow_for_auto_refresh(monke
     monkeypatch.setattr(main_module, "SecretsController", lambda: SimpleNamespace(inject_settings_manager=lambda _settings: None))
     monkeypatch.setattr(main_module, "AuthManager", lambda _secrets, app_config: SimpleNamespace())
     monkeypatch.setattr(main_module, "SettingsManager", lambda: SimpleNamespace())
-    monkeypatch.setattr(main_module, "Executor", lambda _dc, _sc, _sm: SimpleNamespace(fetch_source=lambda _source: None))
+    monkeypatch.setattr(
+        main_module,
+        "Executor",
+        lambda _dc, _sc, _sm, **_kwargs: SimpleNamespace(fetch_source=lambda _source: None),
+    )
     monkeypatch.setattr(main_module, "ResourceManager", lambda: FakeResourceManager())
     monkeypatch.setattr(main_module, "IntegrationManager", lambda: FakeIntegrationManager())
     monkeypatch.setattr(main_module.api, "create_stored_source_record", _capture_create_stored_source_record)

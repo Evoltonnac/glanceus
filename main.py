@@ -26,6 +26,7 @@ from core.resource_manager import ResourceManager
 from core.integration_manager import IntegrationManager
 from core.settings_manager import SettingsManager
 from core.refresh_scheduler import RefreshScheduler
+from core.scraper_task_store import ScraperTaskStore
 from core import api
 
 
@@ -181,7 +182,13 @@ def create_app() -> FastAPI:
     settings_manager = SettingsManager()
 
     # Executor.
-    executor = Executor(data_controller, secrets_controller, settings_manager)
+    scraper_task_store = ScraperTaskStore()
+    executor = Executor(
+        data_controller,
+        secrets_controller,
+        settings_manager,
+        scraper_task_store=scraper_task_store,
+    )
 
     # Inject SettingsManager into SecretsController for adaptive encryption/decryption.
     secrets_controller.inject_settings_manager(settings_manager)
@@ -210,6 +217,7 @@ def create_app() -> FastAPI:
         resource_manager=resource_manager,
         integration_manager=integration_manager,
         settings_manager=settings_manager,
+        scraper_task_store=scraper_task_store,
     )
 
     # Register API routes.

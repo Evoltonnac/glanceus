@@ -33,3 +33,15 @@ This roadmap manages the delivery path for Glancier. Completed milestones are ar
 ## Next Milestone
 
 *Coming soon — run `/gsd:new-milestone` to start planning*
+
+### Phase 1: Backend-driven webview scraper reliability for minimized hidden and occluded window states (Completed: 2026-03-15)
+
+**Goal:** Make WebView scraping complete reliably when the client is minimized, hidden, or visually occluded/invisible to the user, without requiring Dashboard polling to be active.
+**Requirements**: Backend-owned task orchestration, Rust daemon claim/complete path, frontend observer/manual fallback.
+**Depends on:** None
+**Plans:** 3/3 plans executed
+
+Plans:
+- [x] 01-01-PLAN.md — Backend durable scraper task pipeline
+- [x] 01-02-PLAN.md — Rust daemon claim loop and direct callback
+- [x] 01-03-PLAN.md — Frontend role refactor, reliability validation, and docs

@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
-status: **v1.0 Milestone Shipped** — 2026-03-13
-last_updated: "2026-03-14T16:55:11.058Z"
-last_activity: "2026-03-14 - Completed quick task 008: Translate Chinese-written docs/comments to English and optimize redundant content"
+status: **Phase 01 Completed** — 2026-03-15
+last_updated: "2026-03-15T06:25:53Z"
+last_activity: "2026-03-15 - Completed Phase 01 backend-driven webview scraper reliability and closed UAT matrix"
 progress:
-  total_phases: 7
-  completed_phases: 6
-  total_plans: 32
-  completed_plans: 30
+  total_phases: 8
+  completed_phases: 8
+  total_plans: 33
+  completed_plans: 33
 ---
 
 # Project State
@@ -18,8 +18,8 @@ progress:
 See: .planning/PROJECT.md (Updated for v1.0)
 
 ## Current Position
-Status: **v1.0 Milestone Shipped** — 2026-03-13
-All 7 phases (09-15) completed. Milestone archived.
+Status: **Phase 01 Completed** — 2026-03-15
+Post-v1.0 reliability phase completed. Manual UAT matrix confirmed for hidden, minimized, occluded, and non-Dashboard route scenarios.
 
 ## Performance Metrics (v1.0)
 - Completed Phases: 09, 10, 11, 12, 13, 14, 15
@@ -29,12 +29,16 @@ All 7 phases (09-15) completed. Milestone archived.
 ## Session Continuity
 
 Last session: 2026-03-14T02:34:26.000Z
-Last activity: 2026-03-14 - Completed quick task 008: Translate Chinese-written docs/comments to English and optimize redundant content
+Last activity: 2026-03-15 - Completed Phase 01 backend-driven webview scraper reliability and closed UAT matrix
 - 2026-03-11: Executed Phase 15 plans 01/02/04/05 (Authlib refactor, device flow backend, client credentials + refresh hardening, integration tests).
 - 2026-03-11: Implemented Phase 15-03 frontend work and created plan summaries (`15-01` ~ `15-05`), with `15-03` remaining `checkpoint_pending`.
 - Pending checkpoint: manually verify device flow modal and callback fragment handling before closing milestone v1.0.
 
 ## Accumulated Context
+
+### Roadmap Evolution
+- 2026-03-15: Phase 1 added - Backend-driven webview scraper reliability for minimized, hidden, and occluded window states.
+- 2026-03-15: Phase 1 completed - all 3 plans executed and manual UAT matrix passed.
 
 ### Pending Todos
 

@@ -7,12 +7,12 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
 from pydantic import BaseModel
 from core.models import StoredSource, StoredView, ViewItem
 from core.integration_manager import IntegrationManager
-from core.source_state import SourceStatus, InteractionType
+from core.source_state import SourceStatus, InteractionType, InteractionRequest
 from core.refresh_policy import (
     DEFAULT_GLOBAL_REFRESH_INTERVAL_MINUTES,
     REFRESH_INTERVAL_OPTIONS_MINUTES,
@@ -32,6 +32,35 @@ class IntegrationPresetPayload(BaseModel):
     filename_hint: str
     content_template: str
 
+
+class ScraperTaskClaimRequest(BaseModel):
+    worker_id: str
+    lease_seconds: int = 20
+
+
+class ScraperTaskHeartbeatRequest(BaseModel):
+    worker_id: str
+    source_id: str
+    task_id: str
+    attempt: int | None = None
+    lease_seconds: int = 20
+
+
+class ScraperTaskCompleteRequest(BaseModel):
+    worker_id: str
+    source_id: str
+    task_id: str
+    attempt: int | None = None
+    data: Any
+
+
+class ScraperTaskFailRequest(BaseModel):
+    worker_id: str
+    source_id: str
+    task_id: str
+    attempt: int | None = None
+    error: str
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api")
@@ -46,11 +75,22 @@ _secrets = None
 _resource_manager = None
 _integration_manager = None
 _settings_manager = None
+_scraper_task_store = None
 
 
-def init_api(executor, data_controller, config, auth_manager, secrets_controller, resource_manager, integration_manager, settings_manager=None):
+def init_api(
+    executor,
+    data_controller,
+    config,
+    auth_manager,
+    secrets_controller,
+    resource_manager,
+    integration_manager,
+    settings_manager=None,
+    scraper_task_store=None,
+):
     """Inject global dependencies (called by main.py)."""
-    global _executor, _data_controller, _config, _auth_manager, _secrets, _resource_manager, _integration_manager, _settings_manager
+    global _executor, _data_controller, _config, _auth_manager, _secrets, _resource_manager, _integration_manager, _settings_manager, _scraper_task_store
     _executor = executor
     _data_controller = data_controller
     _config = config
@@ -59,11 +99,39 @@ def init_api(executor, data_controller, config, auth_manager, secrets_controller
     _resource_manager = resource_manager
     _integration_manager = integration_manager
     _settings_manager = settings_manager
+    _scraper_task_store = scraper_task_store
 
 
 def get_runtime_config():
     """Expose current runtime config snapshot (used by background services)."""
     return _config
+
+
+def _require_local_request(request: Request) -> None:
+    client_host = request.client.host if request.client else ""
+    if client_host in {"127.0.0.1", "::1", "localhost", "testclient"}:
+        return
+    raise HTTPException(403, "Internal scraper endpoint is localhost-only")
+
+
+def _build_webview_interaction_from_task(task: dict[str, Any], message: str) -> InteractionRequest:
+    return InteractionRequest(
+        type=InteractionType.WEBVIEW_SCRAPE,
+        step_id=task.get("step_id") or "webview",
+        source_id=task.get("source_id"),
+        title="Manual Action Required",
+        message=message,
+        fields=[],
+        data={
+            "task_id": task.get("task_id"),
+            "url": task.get("url"),
+            "script": task.get("script"),
+            "intercept_api": task.get("intercept_api"),
+            "secret_key": task.get("secret_key"),
+            "force_foreground": True,
+            "manual_only": True,
+        },
+    )
 
 
 def _apply_runtime_log_level(debug_enabled: bool) -> None:
@@ -547,6 +615,153 @@ async def refresh_all(background_tasks: BackgroundTasks) -> dict:
         "message": f"已触发刷新 {len(source_ids)} 个数据源",
         "source_ids": source_ids,
         "skipped_source_ids": skipped_sources,
+    }
+
+
+def _serialize_scraper_task(task: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "task_id": task.get("task_id"),
+        "source_id": task.get("source_id"),
+        "step_id": task.get("step_id"),
+        "url": task.get("url"),
+        "script": task.get("script"),
+        "intercept_api": task.get("intercept_api"),
+        "secret_key": task.get("secret_key"),
+        "status": task.get("status"),
+        "attempt": task.get("attempt_count"),
+        "lease_expires_at": task.get("lease_expires_at"),
+    }
+
+
+@router.post("/internal/scraper/claim")
+async def internal_claim_scraper_task(
+    payload: ScraperTaskClaimRequest,
+    request: Request,
+) -> dict[str, Any]:
+    _require_local_request(request)
+    if _scraper_task_store is None:
+        raise HTTPException(503, "Scraper task store unavailable")
+    task = _scraper_task_store.claim_next_task(
+        worker_id=payload.worker_id,
+        lease_seconds=payload.lease_seconds,
+    )
+    if task is None:
+        return {"task": None}
+    return {"task": _serialize_scraper_task(task)}
+
+
+@router.post("/internal/scraper/heartbeat")
+async def internal_heartbeat_scraper_task(
+    payload: ScraperTaskHeartbeatRequest,
+    request: Request,
+) -> dict[str, Any]:
+    _require_local_request(request)
+    if _scraper_task_store is None:
+        raise HTTPException(503, "Scraper task store unavailable")
+    task = _scraper_task_store.get_task(payload.task_id)
+    if task is None:
+        raise HTTPException(404, "Scraper task not found")
+    if task.get("source_id") != payload.source_id:
+        raise HTTPException(409, "Scraper task/source mismatch")
+    updated = _scraper_task_store.heartbeat_task(
+        task_id=payload.task_id,
+        worker_id=payload.worker_id,
+        lease_seconds=payload.lease_seconds,
+    )
+    if updated is None:
+        return {"ok": False, "reason": "lease_owned_by_other_worker"}
+    return {"ok": True, "task": _serialize_scraper_task(updated)}
+
+
+@router.post("/internal/scraper/complete")
+async def internal_complete_scraper_task(
+    payload: ScraperTaskCompleteRequest,
+    background_tasks: BackgroundTasks,
+    request: Request,
+) -> dict[str, Any]:
+    _require_local_request(request)
+    if _scraper_task_store is None:
+        raise HTTPException(503, "Scraper task store unavailable")
+    task = _scraper_task_store.get_task(payload.task_id)
+    if task is None:
+        raise HTTPException(404, "Scraper task not found")
+    if task.get("source_id") != payload.source_id:
+        raise HTTPException(409, "Scraper task/source mismatch")
+
+    updated, changed = _scraper_task_store.complete_task(
+        task_id=payload.task_id,
+        worker_id=payload.worker_id,
+        attempt=payload.attempt,
+    )
+    if updated is None:
+        return {"accepted": False, "reason": "lease_owned_by_other_worker"}
+    if not changed:
+        return {"accepted": True, "idempotent": True, "task": _serialize_scraper_task(updated)}
+
+    secret_key = str(updated.get("secret_key") or "webview_data")
+    _secrets.set_secret(payload.source_id, secret_key, payload.data)
+    _executor._update_state(
+        payload.source_id,
+        SourceStatus.REFRESHING,
+        "Scraper completed; resuming flow...",
+    )
+
+    stored = _get_stored_source(payload.source_id)
+    source = _resolve_stored_source(stored) if stored else None
+    if source is not None:
+        background_tasks.add_task(_executor.fetch_source, source)
+    else:
+        logger.warning(
+            "[%s] Scraper task completed but source resolve failed; skip resume",
+            payload.source_id,
+        )
+
+    return {
+        "accepted": True,
+        "idempotent": False,
+        "task": _serialize_scraper_task(updated),
+    }
+
+
+@router.post("/internal/scraper/fail")
+async def internal_fail_scraper_task(
+    payload: ScraperTaskFailRequest,
+    request: Request,
+) -> dict[str, Any]:
+    _require_local_request(request)
+    if _scraper_task_store is None:
+        raise HTTPException(503, "Scraper task store unavailable")
+    task = _scraper_task_store.get_task(payload.task_id)
+    if task is None:
+        raise HTTPException(404, "Scraper task not found")
+    if task.get("source_id") != payload.source_id:
+        raise HTTPException(409, "Scraper task/source mismatch")
+
+    updated, changed = _scraper_task_store.fail_task(
+        task_id=payload.task_id,
+        worker_id=payload.worker_id,
+        error=payload.error,
+        attempt=payload.attempt,
+    )
+    if updated is None:
+        return {"accepted": False, "reason": "lease_owned_by_other_worker"}
+    if not changed:
+        return {"accepted": True, "idempotent": True, "task": _serialize_scraper_task(updated)}
+
+    interaction = _build_webview_interaction_from_task(
+        updated,
+        message=f"Web scraper failed: {payload.error}. Resume in foreground mode.",
+    )
+    _executor._update_state(
+        payload.source_id,
+        SourceStatus.SUSPENDED,
+        payload.error,
+        interaction=interaction,
+    )
+    return {
+        "accepted": True,
+        "idempotent": False,
+        "task": _serialize_scraper_task(updated),
     }
 
 

@@ -1,25 +1,18 @@
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useStore } from "../store";
 import { api } from "../api/client";
-import type { SourceSummary } from "../types/config";
 import { isTauri } from "../lib/utils";
+import { useStore } from "../store";
+import type { SourceSummary } from "../types/config";
 
-const DEFAULT_SCRAPER_TIMEOUT_SECONDS = 10;
-const MIN_SCRAPER_TIMEOUT_SECONDS = 1;
-const MAX_SCRAPER_TIMEOUT_SECONDS = 300;
 const SCRAPER_LOG_LIMIT = 300;
-
-function normalizeScraperTimeoutSeconds(value: number | undefined): number {
-    if (typeof value !== "number" || !Number.isFinite(value)) {
-        return DEFAULT_SCRAPER_TIMEOUT_SECONDS;
-    }
-    return Math.min(
-        MAX_SCRAPER_TIMEOUT_SECONDS,
-        Math.max(MIN_SCRAPER_TIMEOUT_SECONDS, Math.floor(value)),
-    );
-}
+const ACTIVE_STAGES = new Set(["task_claimed", "task_start", "window_ready"]);
+const TERMINAL_STAGES = new Set([
+    "task_complete",
+    "task_cancelled",
+    "task_killed_log_burst",
+]);
 
 export interface ScraperLifecycleLog {
     source_id: string;
@@ -53,7 +46,6 @@ function mergeScraperLogs(
     const merged = [...current, ...incoming];
     const seen = new Set<string>();
     const deduped: ScraperLifecycleLog[] = [];
-
     for (const log of merged) {
         const key = scraperLogKey(log);
         if (seen.has(key)) {
@@ -64,165 +56,71 @@ function mergeScraperLogs(
     }
 
     deduped.sort((a, b) => a.timestamp - b.timestamp);
-    if (deduped.length > SCRAPER_LOG_LIMIT) {
-        return deduped.slice(-SCRAPER_LOG_LIMIT);
-    }
-    return deduped;
+    return deduped.length > SCRAPER_LOG_LIMIT
+        ? deduped.slice(-SCRAPER_LOG_LIMIT)
+        : deduped;
 }
 
 export function useScraper() {
     const scraperEnabled = isTauri();
     const sources = useStore((state) => state.sources);
     const setSources = useStore((state) => state.setSources);
-    const setDataMap = useStore((state) => state.setDataMap);
     const activeScraper = useStore((state) => state.activeScraper);
     const setActiveScraper = useStore((state) => state.setActiveScraper);
     const skippedScrapers = useStore((state) => state.skippedScrapers);
     const addSkippedScraper = useStore((state) => state.addSkippedScraper);
     const setSkippedScrapers = useStore((state) => state.setSkippedScrapers);
     const showToast = useStore((state) => state.showToast);
-    const [queueNonce, setQueueNonce] = useState(0);
     const [scraperLogs, setScraperLogs] = useState<ScraperLifecycleLog[]>([]);
 
     const activeScraperRef = useRef<string | null>(null);
     const activeTaskIdRef = useRef<string | null>(null);
-    const manualQueuedRef = useRef<Set<string>>(new Set());
-    const foregroundOverridesRef = useRef<Set<string>>(new Set());
-    const detachedForegroundTasksRef = useRef<Set<string>>(new Set());
-    const timeoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    // Track when scraper was intentionally started by user action
-    // This prevents the cleanup effect from incorrectly canceling scrapers that were just started
-    const intentionallyStartedRef = useRef<Set<string>>(new Set());
-    const [scraperTimeoutMs, setScraperTimeoutMs] = useState(
-        DEFAULT_SCRAPER_TIMEOUT_SECONDS * 1000,
-    );
-
-    const syncErrorLogsFromMemory = useCallback(async (sourceId?: string | null) => {
-        if (!scraperEnabled) {
-            return;
-        }
-
-        try {
-            const logs = await invoke<ScraperLifecycleLog[]>(
-                "get_scraper_error_logs",
-                { sourceId: sourceId ?? null },
-            );
-            if (!Array.isArray(logs) || logs.length === 0) {
-                return;
-            }
-            const errorLogs = logs.filter((log) => log.level === "error");
-            if (errorLogs.length === 0) {
-                return;
-            }
-            setScraperLogs((prev) => mergeScraperLogs(prev, errorLogs));
-        } catch (error) {
-            console.error("Failed to sync scraper error logs from Rust memory:", error);
-        }
-    }, [scraperEnabled]);
 
     useEffect(() => {
         activeScraperRef.current = activeScraper;
     }, [activeScraper]);
 
-    const bumpQueueNonce = useCallback(() => {
-        setQueueNonce((prev) => prev + 1);
-    }, []);
+    const syncErrorLogsFromMemory = useCallback(
+        async (sourceId?: string | null) => {
+            if (!scraperEnabled) {
+                return;
+            }
 
-    // Dynamic Polling for refreshing sources
-    useEffect(() => {
-        if (!scraperEnabled) {
-            setScraperTimeoutMs(DEFAULT_SCRAPER_TIMEOUT_SECONDS * 1000);
-            return;
-        }
-
-        let cancelled = false;
-        void api
-            .getSettings()
-            .then((settings) => {
-                if (cancelled) {
+            try {
+                const logs = await invoke<ScraperLifecycleLog[]>(
+                    "get_scraper_error_logs",
+                    { sourceId: sourceId ?? null },
+                );
+                if (!Array.isArray(logs) || logs.length === 0) {
                     return;
                 }
-                const timeoutSeconds = normalizeScraperTimeoutSeconds(
-                    settings.scraper_timeout_seconds,
-                );
-                setScraperTimeoutMs(timeoutSeconds * 1000);
-            })
-            .catch((error) => {
-                console.warn(
-                    "Failed to load scraper timeout settings, fallback to default:",
+                const errorLogs = logs.filter((log) => log.level === "error");
+                if (errorLogs.length === 0) {
+                    return;
+                }
+                setScraperLogs((prev) => mergeScraperLogs(prev, errorLogs));
+            } catch (error) {
+                console.error(
+                    "Failed to sync scraper error logs from Rust memory:",
                     error,
                 );
-                if (!cancelled) {
-                    setScraperTimeoutMs(DEFAULT_SCRAPER_TIMEOUT_SECONDS * 1000);
-                }
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [scraperEnabled]);
-
-    // Compute the current queue of webview scrapers
-    const webviewQueue = sources.filter(
-        (source) => {
-            if (!scraperEnabled) {
-                return false;
             }
-            const isWebviewInteraction =
-                source.status === "suspended" &&
-                source.interaction?.type === "webview_scrape";
-            if (!isWebviewInteraction || skippedScrapers.has(source.id)) {
-                return false;
-            }
-
-            const manualOnly = Boolean(source.interaction?.data?.manual_only);
-            if (!manualOnly) {
-                return true;
-            }
-            return manualQueuedRef.current.has(source.id);
         },
+        [scraperEnabled],
     );
 
-    const startScraperTask = useCallback((
-        source: SourceSummary,
-        forceForeground: boolean,
-    ) => {
-        if (!scraperEnabled) {
+    const webviewQueue = sources.filter(
+        (source) =>
+            scraperEnabled &&
+            source.status === "suspended" &&
+            source.interaction?.type === "webview_scrape" &&
+            !skippedScrapers.has(source.id),
+    );
+
+    const handleSkipScraper = useCallback(async () => {
+        if (!scraperEnabled || !activeScraper) {
             return;
         }
-        const { url, script, intercept_api, secret_key } =
-            source.interaction?.data || {};
-
-        detachedForegroundTasksRef.current.delete(source.id);
-        setActiveScraper(source.id);
-        activeTaskIdRef.current = null;
-        manualQueuedRef.current.delete(source.id);
-
-        invoke("push_scraper_task", {
-            sourceId: source.id,
-            url: url,
-            injectScript: script,
-            interceptApi: intercept_api,
-            secretKey: secret_key,
-            foreground: forceForeground,
-        }).catch((err) => {
-            console.error("Failed to push scraper task to Tauri:", err);
-            void syncErrorLogsFromMemory(source.id);
-            manualQueuedRef.current.delete(source.id);
-            foregroundOverridesRef.current.delete(source.id);
-            intentionallyStartedRef.current.delete(source.id);
-            detachedForegroundTasksRef.current.delete(source.id);
-            activeTaskIdRef.current = null;
-            addSkippedScraper(source.id);
-            setActiveScraper(null);
-            bumpQueueNonce();
-        });
-    }, [addSkippedScraper, bumpQueueNonce, scraperEnabled, setActiveScraper, syncErrorLogsFromMemory]);
-
-    // Actions
-    const handleSkipScraper = useCallback(async () => {
-        if (!scraperEnabled) return;
-        if (!activeScraper) return;
 
         try {
             await invoke("cancel_scraper_task");
@@ -231,18 +129,22 @@ export function useScraper() {
             console.error("Failed to cancel scraper task:", error);
         }
 
-        manualQueuedRef.current.delete(activeScraper);
-        foregroundOverridesRef.current.delete(activeScraper);
-        intentionallyStartedRef.current.delete(activeScraper);
-        detachedForegroundTasksRef.current.delete(activeScraper);
-        activeTaskIdRef.current = null;
         addSkippedScraper(activeScraper);
+        activeTaskIdRef.current = null;
         setActiveScraper(null);
-        bumpQueueNonce();
-    }, [activeScraper, addSkippedScraper, scraperEnabled, setActiveScraper, bumpQueueNonce, syncErrorLogsFromMemory]);
+    }, [
+        activeScraper,
+        addSkippedScraper,
+        scraperEnabled,
+        setActiveScraper,
+        syncErrorLogsFromMemory,
+    ]);
 
     const handleClearScraperQueue = useCallback(async () => {
-        if (!scraperEnabled) return;
+        if (!scraperEnabled) {
+            return;
+        }
+
         if (activeScraper) {
             try {
                 await invoke("cancel_scraper_task");
@@ -252,283 +154,112 @@ export function useScraper() {
         }
 
         const newSkipped = new Set(skippedScrapers);
-        if (activeScraper) newSkipped.add(activeScraper);
-        webviewQueue.forEach((s) => newSkipped.add(s.id));
+        if (activeScraper) {
+            newSkipped.add(activeScraper);
+        }
+        webviewQueue.forEach((source) => newSkipped.add(source.id));
         setSkippedScrapers(newSkipped);
-        setActiveScraper(null);
         activeTaskIdRef.current = null;
-        manualQueuedRef.current.clear();
-        foregroundOverridesRef.current.clear();
-        intentionallyStartedRef.current.clear();
-        detachedForegroundTasksRef.current.clear();
+        setActiveScraper(null);
+
         // Keep recent error logs for troubleshooting; drop noisy non-error logs.
         setScraperLogs((prev) =>
-            prev.filter((log) => log.level === "error").slice(-SCRAPER_LOG_LIMIT)
+            prev.filter((log) => log.level === "error").slice(-SCRAPER_LOG_LIMIT),
         );
-        bumpQueueNonce();
-    }, [activeScraper, skippedScrapers, webviewQueue, scraperEnabled, setSkippedScrapers, setActiveScraper, bumpQueueNonce]);
+    }, [
+        activeScraper,
+        scraperEnabled,
+        setActiveScraper,
+        setSkippedScrapers,
+        skippedScrapers,
+        webviewQueue,
+    ]);
 
-    const handlePushToQueue = useCallback((
-        source: SourceSummary,
-        options?: { foreground?: boolean },
-    ): boolean => {
-        if (!scraperEnabled) {
-            showToast("Web 抓取仅在 Tauri 客户端环境生效。", "error");
-            return false;
-        }
-        const forceForeground =
-            Boolean(options?.foreground) ||
-            Boolean(source.interaction?.data?.force_foreground);
-        const currentActive = useStore.getState().activeScraper;
-        const alreadyInQueue = webviewQueue.some((s) => s.id === source.id);
-
-        const detachForegroundFromQueue = (sourceId: string) => {
-            manualQueuedRef.current.delete(sourceId);
-            foregroundOverridesRef.current.delete(sourceId);
-            intentionallyStartedRef.current.delete(sourceId);
-            activeTaskIdRef.current = null;
-            detachedForegroundTasksRef.current.add(sourceId);
-            addSkippedScraper(sourceId);
-            setActiveScraper(null);
-            bumpQueueNonce();
-        };
-
-        if (forceForeground) {
-            if (currentActive === source.id) {
-                void (async () => {
-                    try {
-                        await invoke("show_scraper_window");
-                    } catch (error) {
-                        console.error("Failed to show scraper window:", error);
-                    }
-                    detachForegroundFromQueue(source.id);
-                })();
-                return true;
-            }
-            if (currentActive && currentActive !== source.id) {
-                const activeSourceName =
-                    sources.find((s) => s.id === currentActive)?.name || currentActive;
-                showToast(
-                    `后台任务 "${activeSourceName}" 正在运行，当前前台任务不会加入队列，请稍后再试。`,
-                    "info",
-                );
+    const handlePushToQueue = useCallback(
+        (source: SourceSummary, options?: { foreground?: boolean }): boolean => {
+            if (!scraperEnabled) {
+                showToast("Web 抓取仅在 Tauri 客户端环境生效。", "error");
                 return false;
             }
 
-            const next = new Set(skippedScrapers);
-            next.delete(source.id);
-            setSkippedScrapers(next);
-            manualQueuedRef.current.delete(source.id);
-            foregroundOverridesRef.current.delete(source.id);
-            intentionallyStartedRef.current.add(source.id);
-            startScraperTask(source, true);
-            // Foreground mode is detached from background queue.
-            detachForegroundFromQueue(source.id);
+            const nextSkipped = new Set(useStore.getState().skippedScrapers);
+            nextSkipped.delete(source.id);
+            setSkippedScrapers(nextSkipped);
+
+            const forceForeground =
+                Boolean(options?.foreground) ||
+                Boolean(source.interaction?.data?.force_foreground);
+
+            if (forceForeground) {
+                const currentActive = useStore.getState().activeScraper;
+                if (currentActive === source.id) {
+                    void invoke("show_scraper_window").catch((error) => {
+                        console.error("Failed to show scraper window:", error);
+                    });
+                    return true;
+                }
+                showToast(
+                    "已请求后台重试抓取，任务启动后可在悬浮条中打开浏览器窗口。",
+                    "info",
+                );
+            }
+
+            void api.refreshSource(source.id).catch((error) => {
+                console.error(`Failed to request scraper retry for ${source.id}:`, error);
+                showToast("请求重试失败，请稍后再试。", "error");
+            });
             return true;
-        }
-
-        if (source.interaction?.data?.manual_only) {
-            manualQueuedRef.current.add(source.id);
-        }
-
-        const next = new Set(skippedScrapers);
-        next.delete(source.id);
-        setSkippedScrapers(next);
-
-        if (currentActive === source.id) {
-            showToast(`"${source.name}" 的抓取任务已在运行中。`, "info");
-            return false;
-        }
-
-        if (alreadyInQueue) {
-            showToast(`"${source.name}" 已在抓取队列中，请勿重复添加。`, "info");
-            return false;
-        }
-
-        console.log(`手动将 ${source.name} (${source.id}) 加入抓取队列`);
-        bumpQueueNonce();
-        return true;
-    }, [activeScraper, webviewQueue, skippedScrapers, scraperEnabled, setSkippedScrapers, bumpQueueNonce, showToast, sources, startScraperTask, addSkippedScraper, setActiveScraper]);
+        },
+        [scraperEnabled, setSkippedScrapers, showToast],
+    );
 
     const handleShowScraperWindow = useCallback(async () => {
-        if (!scraperEnabled) return;
-        const currentActive = useStore.getState().activeScraper;
-        if (!currentActive) {
+        if (!scraperEnabled) {
             return;
         }
-
         try {
             await invoke("show_scraper_window");
         } catch (error) {
             console.error("Failed to show scraper window:", error);
-            return;
         }
-        // Foreground mode is detached from background queue.
-        manualQueuedRef.current.delete(currentActive);
-        foregroundOverridesRef.current.delete(currentActive);
-        intentionallyStartedRef.current.delete(currentActive);
-        activeTaskIdRef.current = null;
-        detachedForegroundTasksRef.current.add(currentActive);
-        addSkippedScraper(currentActive);
-        setActiveScraper(null);
-        bumpQueueNonce();
-    }, [addSkippedScraper, scraperEnabled, setActiveScraper, bumpQueueNonce]);
+    }, [scraperEnabled]);
 
-    // 1. Dynamic Polling for refreshing sources
-    useEffect(() => {
-        const refreshingSources = sources.filter(
-            (s) => s.status === "refreshing",
-        );
-        if (refreshingSources.length === 0) return;
-
-        const interval = setInterval(async () => {
-            try {
-                const updatedSources = await api.getSources();
-                const finishedIds = refreshingSources
-                    .filter((oldS) => {
-                        const newS = updatedSources.find(
-                            (s) => s.id === oldS.id,
-                        );
-                        return newS && newS.status !== "refreshing";
-                    })
-                    .map((s) => s.id);
-
-                if (finishedIds.length > 0) {
-                    setSources(updatedSources);
-                    const dataPromises = finishedIds.map(async (id) => {
-                        const data = await api.getSourceData(id);
-                        setDataMap((prev) => ({ ...prev, [id]: data }));
-                    });
-                    await Promise.all(dataPromises);
-                    // Refresh completed - trigger queue check for background scrapers
-                    bumpQueueNonce();
-                } else {
-                    setSources(updatedSources);
-                }
-            } catch (error) {
-                console.error("Polling failed:", error);
-            }
-        }, 2000);
-
-        return () => clearInterval(interval);
-    }, [sources, setSources, setDataMap, bumpQueueNonce]);
-
-    // 2. Cleanup zombie active scraper
-    // Only clean up if the source was deleted (no longer exists in sources list)
-    // Don't cancel based on status check - status changes are async and may not
-    // reflect the actual scraper state when task is just started
+    // Frontend observer mode: keep status/log visibility,
+    // while Rust daemon owns automatic claim + execution.
     useEffect(() => {
         if (!scraperEnabled) {
             return;
         }
-        if (activeScraper) {
-            // Skip cleanup if scraper was intentionally started by a user action.
-            // This prevents false positives where the source exists but cleanup effect runs
-            // before the sources array is fully updated or due to render timing
-            if (intentionallyStartedRef.current.has(activeScraper)) {
-                intentionallyStartedRef.current.delete(activeScraper);
-                return;
-            }
 
-            const activeSource = sources.find((s) => s.id === activeScraper);
-            // Only cancel if source no longer exists (was deleted)
-            if (!activeSource) {
-                console.log("Cleaning up zombie active scraper: source no longer exists", activeScraper);
-                activeTaskIdRef.current = null;
-                setActiveScraper(null);
-                invoke("cancel_scraper_task").catch(console.error);
-            }
-        }
-    }, [sources, activeScraper, scraperEnabled, setActiveScraper]);
-
-    // 3. Monitor for background scraper tasks
-    useEffect(() => {
-        if (!scraperEnabled) return;
-        if (activeScraper) return;
-        if (detachedForegroundTasksRef.current.size > 0) return;
-
-        const nextSource = webviewQueue.length > 0 ? webviewQueue[0] : null;
-
-        if (nextSource) {
-            const forceForeground =
-                foregroundOverridesRef.current.has(nextSource.id) ||
-                Boolean(nextSource.interaction?.data?.force_foreground);
-
-            startScraperTask(nextSource, forceForeground);
-        }
-    }, [webviewQueue, activeScraper, queueNonce, scraperEnabled, startScraperTask]);
-
-    // 4. Enforce per-task timeout and skip expired task to continue queue.
-    useEffect(() => {
-        if (!scraperEnabled || !activeScraper) {
-            if (timeoutTimerRef.current) {
-                clearTimeout(timeoutTimerRef.current);
-                timeoutTimerRef.current = null;
-            }
-            return;
-        }
-
-        const timeoutSourceId = activeScraper;
-        timeoutTimerRef.current = setTimeout(() => {
-            const currentActive = useStore.getState().activeScraper;
-            if (!currentActive || currentActive !== timeoutSourceId) {
-                return;
-            }
-
-            console.warn(
-                `[Scraper] ${currentActive} timed out after ${Math.floor(scraperTimeoutMs / 1000)}s, skipping task.`,
-            );
-
-            void (async () => {
-                try {
-                    await invoke("cancel_scraper_task");
-                    await syncErrorLogsFromMemory(currentActive);
-                } catch (error) {
-                    console.error(
-                        "Failed to cancel timed-out scraper task:",
-                        error,
-                    );
-                }
-
-                manualQueuedRef.current.delete(currentActive);
-                foregroundOverridesRef.current.delete(currentActive);
-                intentionallyStartedRef.current.delete(currentActive);
-                activeTaskIdRef.current = null;
-                useStore.getState().addSkippedScraper(currentActive);
-                useStore.getState().setActiveScraper(null);
-                bumpQueueNonce();
-            })();
-        }, scraperTimeoutMs);
-
-        return () => {
-            if (timeoutTimerRef.current) {
-                clearTimeout(timeoutTimerRef.current);
-                timeoutTimerRef.current = null;
-            }
-        };
-    }, [activeScraper, bumpQueueNonce, scraperEnabled, scraperTimeoutMs, syncErrorLogsFromMemory]);
-
-    // 5. Global listeners from Tauri
-    useEffect(() => {
-        if (!scraperEnabled) {
-            return;
-        }
         let unlistenScraperResult: (() => void) | undefined;
         let unlistenAuthRequired: (() => void) | undefined;
         let unlistenLifecycleLog: (() => void) | undefined;
 
         const setupListeners = async () => {
-            // Listen for lifecycle logs
             unlistenLifecycleLog = await listen<ScraperLifecycleLog>(
                 "scraper_lifecycle_log",
                 (event) => {
                     const log = event.payload;
                     setScraperLogs((prev) => mergeScraperLogs(prev, [log]));
-                    if (
-                        log.stage === "task_start" &&
-                        activeScraperRef.current === log.source_id
-                    ) {
-                        activeTaskIdRef.current = log.task_id;
+
+                    if (ACTIVE_STAGES.has(log.stage)) {
+                        if (log.task_id) {
+                            activeTaskIdRef.current = log.task_id;
+                        }
+                        if (log.source_id && activeScraperRef.current !== log.source_id) {
+                            useStore.getState().setActiveScraper(log.source_id);
+                        }
+                    }
+
+                    if (TERMINAL_STAGES.has(log.stage)) {
+                        const currentTaskId = activeTaskIdRef.current;
+                        if (log.task_id && currentTaskId && log.task_id !== currentTaskId) {
+                            return;
+                        }
+                        activeTaskIdRef.current = null;
+                        if (activeScraperRef.current) {
+                            useStore.getState().setActiveScraper(null);
+                        }
                     }
 
                     if (
@@ -537,7 +268,7 @@ export function useScraper() {
                     ) {
                         void syncErrorLogsFromMemory(log.source_id);
                     }
-                }
+                },
             );
 
             unlistenScraperResult = await listen<{
@@ -548,15 +279,6 @@ export function useScraper() {
                 secretKey: string;
             }>("scraper_result", async (event) => {
                 const { sourceId, taskId, data, error, secretKey } = event.payload;
-                const isDetachedForegroundTask =
-                    detachedForegroundTasksRef.current.has(sourceId);
-                const isActiveTask = activeScraperRef.current === sourceId;
-                if (!isDetachedForegroundTask && !isActiveTask) {
-                    console.warn(
-                        `[Scraper] Discarding stale result for ${sourceId} (active=${activeScraperRef.current ?? "none"})`,
-                    );
-                    return;
-                }
 
                 if (
                     taskId &&
@@ -568,91 +290,95 @@ export function useScraper() {
                     );
                     return;
                 }
-                if (taskId && !activeTaskIdRef.current) {
+                if (taskId) {
                     activeTaskIdRef.current = taskId;
                 }
 
-                // Clear active scraper state (but don't add to skipped on success -
-                // the source completed successfully and should be re-queued if needed)
                 useStore.getState().setActiveScraper(null);
                 activeTaskIdRef.current = null;
-                manualQueuedRef.current.delete(sourceId);
-                foregroundOverridesRef.current.delete(sourceId);
-                intentionallyStartedRef.current.delete(sourceId);
-                detachedForegroundTasksRef.current.delete(sourceId);
-                bumpQueueNonce();
 
                 if (error) {
-                    // Only add to skipped on error, not on success
                     console.error(`Scraper error for ${sourceId}:`, error);
                     useStore.getState().addSkippedScraper(sourceId);
                     void syncErrorLogsFromMemory(sourceId);
                     return;
                 }
+
                 try {
+                    const refreshedSources = await api.getSources();
+                    setSources(refreshedSources);
+                    const latest = refreshedSources.find((source) => source.id === sourceId);
+                    if (latest && latest.status !== "suspended") {
+                        return;
+                    }
+                    // Fallback for legacy/manual paths that haven't resumed from backend yet.
                     await api.interact(sourceId, { [secretKey]: data });
-                    // Optimistically mark as refreshing
-                    const currentSources = useStore.getState().sources;
-                    useStore.getState().setSources(
-                        currentSources.map(s => s.id === sourceId ? { ...s, status: "refreshing" } : s)
-                    );
+                    const fallbackSources = await api.getSources();
+                    setSources(fallbackSources);
                 } catch (err) {
                     console.error(`Failed to post scraped data for ${sourceId}:`, err);
                 }
             });
 
-            unlistenAuthRequired = await listen<{ sourceId: string; taskId?: string; targetUrl: string }>(
-                "scraper_auth_required",
-                (event) => {
-                    console.log(`Manual auth required for source ${event.payload.sourceId}`);
-                    const sourceId = event.payload.sourceId;
-                    useStore.getState().addSkippedScraper(sourceId);
-                    useStore.getState().setActiveScraper(null);
-                    activeTaskIdRef.current = null;
-                    foregroundOverridesRef.current.add(sourceId);
-                    manualQueuedRef.current.delete(sourceId);
-                    intentionallyStartedRef.current.delete(sourceId);
-                    detachedForegroundTasksRef.current.delete(sourceId);
-                    bumpQueueNonce();
+            unlistenAuthRequired = await listen<{
+                sourceId: string;
+                taskId?: string;
+                targetUrl: string;
+            }>("scraper_auth_required", (event) => {
+                console.log(
+                    `Manual auth required for source ${event.payload.sourceId}`,
+                );
+                const { sourceId, taskId, targetUrl } = event.payload;
+                if (taskId) {
+                    activeTaskIdRef.current = taskId;
+                }
+                useStore.getState().setActiveScraper(sourceId);
 
-                    const currentSources = useStore.getState().sources;
-                    useStore.getState().setSources(
-                        currentSources.map((source) => {
-                            if (source.id !== sourceId) {
-                                return source;
-                            }
-                            return {
-                                ...source,
-                                status: "suspended",
-                                message: "Web scraper blocked by login wall/captcha. Resume in foreground mode.",
-                                interaction: {
-                                    type: "webview_scrape",
-                                    step_id: source.interaction?.step_id || "webview",
-                                    message: "Web scraper blocked. Resume in foreground mode.",
-                                    fields: source.interaction?.fields || [],
-                                    warning_message: source.interaction?.warning_message,
-                                    data: {
-                                        ...(source.interaction?.data || {}),
-                                        force_foreground: true,
-                                        manual_only: true,
-                                        blocked_target_url: event.payload.targetUrl,
-                                    },
+                const currentSources = useStore.getState().sources;
+                useStore.getState().setSources(
+                    currentSources.map((source) => {
+                        if (source.id !== sourceId) {
+                            return source;
+                        }
+                        return {
+                            ...source,
+                            status: "suspended",
+                            message:
+                                "Web scraper blocked by login wall/captcha. Resume in foreground mode.",
+                            interaction: {
+                                type: "webview_scrape",
+                                step_id: source.interaction?.step_id || "webview",
+                                message:
+                                    "Web scraper blocked. Resume in foreground mode.",
+                                fields: source.interaction?.fields || [],
+                                warning_message: source.interaction?.warning_message,
+                                data: {
+                                    ...(source.interaction?.data || {}),
+                                    force_foreground: true,
+                                    manual_only: true,
+                                    blocked_target_url: targetUrl,
                                 },
-                            };
-                        }),
-                    );
-                },
-            );
+                            },
+                        };
+                    }),
+                );
+            });
         };
 
         setupListeners();
 
         return () => {
-            if (unlistenScraperResult) unlistenScraperResult();
-            if (unlistenAuthRequired) unlistenAuthRequired();
-            if (unlistenLifecycleLog) unlistenLifecycleLog();
+            if (unlistenScraperResult) {
+                unlistenScraperResult();
+            }
+            if (unlistenAuthRequired) {
+                unlistenAuthRequired();
+            }
+            if (unlistenLifecycleLog) {
+                unlistenLifecycleLog();
+            }
         };
-    }, [bumpQueueNonce, scraperEnabled, syncErrorLogsFromMemory]);
+    }, [scraperEnabled, setSources, syncErrorLogsFromMemory]);
 
     return {
         activeScraper,

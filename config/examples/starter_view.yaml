@@ -2,38 +2,38 @@ id: "starter_pack_overview"
 name: "Starter Pack Overview"
 layout_columns: 12
 items:
-  - id: "widget-starter-devto"
+  - id: "widget-starter-devto-daily-briefing"
     x: 0
     y: 0
-    w: 4
-    h: 3
-    source_id: "starter_devto_source"
+    w: 5
+    h: 6
+    source_id: "starter_devto_daily_briefing_source"
     template_id: "devto_oss_snapshot"
-  - id: "widget-starter-openrouter"
-    x: 4
+  - id: "widget-starter-gold-spot-pulse"
+    x: 9
     y: 0
-    w: 4
-    h: 3
-    source_id: "starter_openrouter_source"
-    template_id: "openrouter_keys_snapshot"
-  - id: "widget-starter-twitch"
-    x: 8
-    y: 0
-    w: 4
-    h: 3
-    source_id: "starter_twitch_source"
-    template_id: "twitch_oauth_snapshot"
-  - id: "widget-starter-icloud"
-    x: 0
-    y: 3
-    w: 6
-    h: 3
-    source_id: "starter_icloud_source"
-    template_id: "icloud_privacy_snapshot"
-  - id: "widget-starter-gold"
-    x: 6
-    y: 3
-    w: 6
-    h: 3
-    source_id: "starter_gold_source"
+    w: 3
+    h: 5
+    source_id: "starter_gold_spot_pulse_source"
     template_id: "gold_market_snapshot"
+  - id: "widget-starter-dribbble-design-picks"
+    x: 5
+    y: 0
+    w: 4
+    h: 6
+    source_id: "starter_dribbble_design_picks_source"
+    template_id: "dribbble_home_cards"
+  - id: "widget-starter-github-profile-pulse"
+    x: 0
+    y: 6
+    w: 7
+    h: 7
+    source_id: "starter_github_profile_pulse_source"
+    template_id: "github_device_metrics"
+  - id: "widget-starter-twitch-live-radar"
+    x: 9
+    y: 5
+    w: 3
+    h: 5
+    source_id: "starter_twitch_live_radar_source"
+    template_id: "twitch_oauth_snapshot"

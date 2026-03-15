@@ -1,0 +1,53 @@
+name: "Open Source Daily Briefing"
+description: "Surface fresh open-source engineering reads from DEV.to for a quick daily scan."
+flow:
+    - id: fetch_articles
+      use: http
+      args:
+          url: "https://dev.to/api/articles?tag=opensource&per_page=5"
+          method: "GET"
+      outputs:
+          articles_payload: "http_response"
+templates:
+    - id: "devto_oss_snapshot"
+      type: "source_card"
+      ui:
+          title: "Open Source Daily Briefing"
+          icon: "DEV"
+      widgets:
+          - type: "Container"
+            spacing: "sm"
+            items:
+                - type: "List"
+                  data_source: "{articles_payload}"
+                  item_alias: "article"
+                  spacing: "sm"
+                  limit: 5
+                  render:
+                      - type: "ColumnSet"
+                        columns:
+                            - type: "Column"
+                              width: "stretch"
+                              spacing: "sm"
+                              items:
+                                  - type: "TextBlock"
+                                    text: "{article.title}"
+                                    size: "md"
+                                    weight: "semibold"
+                                    max_lines: 1
+                                  - type: "TextBlock"
+                                    text: "{article.user.name}"
+                                    tone: "muted"
+                                    size: "sm"
+                                    max_lines: 1
+                            - type: "Column"
+                              width: "auto"
+                              align_y: "center"
+                              items:
+                                  - type: "ActionSet"
+                                    align_x: "end"
+                                    actions:
+                                        - type: "Action.OpenUrl"
+                                          title: "Read Article"
+                                          url: "{article.url}"
+                                          size: "md"

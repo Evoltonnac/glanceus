@@ -354,11 +354,35 @@ def _resume_source_after_oauth(source_id: str, background_tasks: BackgroundTasks
         return
 
     state = _executor.get_source_state(source_id)
-    if not state or state.status != SourceStatus.SUSPENDED:
-        return
+    runtime_status = getattr(state, "status", None) if state else None
+    runtime_interaction_type = (
+        getattr(getattr(state, "interaction", None), "type", None)
+        if state
+        else None
+    )
+    runtime_waiting_oauth = (
+        runtime_status == SourceStatus.SUSPENDED
+        and runtime_interaction_type in {InteractionType.OAUTH_START, InteractionType.OAUTH_DEVICE_FLOW}
+    )
 
-    interaction_type = state.interaction.type if state.interaction else None
-    if interaction_type not in {InteractionType.OAUTH_START, InteractionType.OAUTH_DEVICE_FLOW}:
+    # Runtime state can be reset after backend restart, while persisted state still
+    # indicates OAuth interaction is pending. In that case, fallback to persisted state.
+    persisted_waiting_oauth = False
+    if not runtime_waiting_oauth and _data_controller is not None and hasattr(_data_controller, "get_latest"):
+        latest = _data_controller.get_latest(source_id)
+        if isinstance(latest, dict):
+            persisted_status = str(latest.get("status") or "").strip().lower()
+            persisted_interaction = latest.get("interaction")
+            persisted_interaction_type = ""
+            if isinstance(persisted_interaction, dict):
+                persisted_interaction_type = str(persisted_interaction.get("type") or "").strip().lower()
+            persisted_waiting_oauth = (
+                persisted_status == SourceStatus.SUSPENDED.value
+                and persisted_interaction_type
+                in {InteractionType.OAUTH_START.value, InteractionType.OAUTH_DEVICE_FLOW.value}
+            )
+
+    if not runtime_waiting_oauth and not persisted_waiting_oauth:
         return
 
     stored = _get_stored_source(source_id)

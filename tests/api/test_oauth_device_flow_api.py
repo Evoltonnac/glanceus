@@ -138,3 +138,41 @@ def test_oauth_device_poll_pending_does_not_trigger_source_resume():
     assert response.json() == {"status": "pending", "retry_after": 5}
     executor._update_state.assert_not_called()
     executor.fetch_source.assert_not_called()
+
+
+def test_oauth_device_poll_authorized_resumes_from_persisted_suspended_state():
+    source = make_stored_source("oauth-device-source", integration_id="oauth-integration")
+    integration = make_integration_config("oauth-integration", "oauth")
+    handler = _MockDeviceOAuthHandler(poll_result={"status": "authorized"})
+    runtime = make_api_runtime(
+        sources=[source],
+        integrations={"oauth-integration": integration},
+        oauth_handlers={"oauth-device-source": handler},
+    )
+
+    # Simulate backend restart: runtime state lost (active/default), while persisted
+    # state still indicates suspended OAuth device flow.
+    runtime_state = SourceState(source_id="oauth-device-source", status=SourceStatus.ACTIVE)
+    executor = SimpleNamespace(
+        get_source_state=lambda _source_id: runtime_state,
+        _update_state=MagicMock(),
+        fetch_source=MagicMock(),
+    )
+    runtime["executor"] = executor
+    runtime["data_controller"] = SimpleNamespace(
+        get_latest=lambda _source_id: {
+            "source_id": "oauth-device-source",
+            "status": "suspended",
+            "interaction": {"type": "oauth_device_flow"},
+        },
+    )
+    client = _build_client(runtime)
+
+    response = client.get("/api/oauth/device/poll/oauth-device-source")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "authorized"}
+    executor._update_state.assert_called_once()
+    executor.fetch_source.assert_called_once()
+    resumed_source = executor.fetch_source.call_args.args[0]
+    assert resumed_source.id == "oauth-device-source"

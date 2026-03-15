@@ -29,6 +29,10 @@ interface FlowHandlerProps {
 const OAUTH_PENDING_SOURCE_ID_KEY = "oauth_pending_source_id";
 const AUTH_STATUS_POLL_INTERVAL_MS = 2000;
 
+interface RuntimePortInfo {
+    web_mode_port?: number | null;
+}
+
 export function FlowHandler({
     source,
     isOpen,
@@ -74,6 +78,26 @@ export function FlowHandler({
         resetFlowState();
         onClose();
     }, [onClose, resetFlowState]);
+
+    const resolveOAuthRedirectUri = useCallback(async (): Promise<string> => {
+        const fallback = `${window.location.origin}/oauth/callback`;
+        if (!inTauri) {
+            return fallback;
+        }
+
+        try {
+            const { invoke } = await import("@tauri-apps/api/core");
+            const info = await invoke<RuntimePortInfo>("get_runtime_port_info");
+            const webModePort = Number(info?.web_mode_port);
+            if (Number.isFinite(webModePort) && webModePort > 0) {
+                return `http://localhost:${webModePort}/oauth/callback`;
+            }
+        } catch (error) {
+            console.debug("[FlowHandler] Failed to resolve Tauri web mode port:", error);
+        }
+
+        return fallback;
+    }, [inTauri]);
 
     useEffect(() => {
         setFormData({});
@@ -316,7 +340,7 @@ export function FlowHandler({
 
             // 3. Get Authorize URL
             // Source ID will be passed via state parameter by the backend
-            const redirectUri = window.location.origin + "/oauth/callback";
+            const redirectUri = await resolveOAuthRedirectUri();
             const res = await api.getAuthorizeUrl(source.id, redirectUri);
 
             if (res.flow === "device") {
@@ -362,7 +386,7 @@ export function FlowHandler({
             setLoading(false);
             channel.close();
         }
-    }, [formData, handleClose, inTauri, onInteractSuccess, source, sourceId]);
+    }, [formData, handleClose, inTauri, onInteractSuccess, resolveOAuthRedirectUri, source, sourceId]);
 
     const renderContent = () => {
         if (!source || !interaction) {

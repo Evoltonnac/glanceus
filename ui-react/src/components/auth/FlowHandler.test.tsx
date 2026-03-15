@@ -17,6 +17,7 @@ vi.mock("../../api/client", () => ({
 }));
 
 import { render } from "../../test/render";
+import { mockInvoke } from "../../test/mocks/tauri";
 import type { SourceSummary } from "../../types/config";
 import { FlowHandler } from "./FlowHandler";
 
@@ -91,6 +92,7 @@ describe("FlowHandler", () => {
 
     afterEach(() => {
         vi.useRealTimers();
+        delete (globalThis as any).isTauri;
     });
 
     it("does not throw when source interaction appears after null render", () => {
@@ -313,6 +315,46 @@ describe("FlowHandler", () => {
         expect(apiMock.pollDeviceToken).toHaveBeenCalledTimes(1);
         expect(onInteractSuccess).toHaveBeenCalledTimes(1);
         expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("uses Tauri web mode port for OAuth redirect URI in production runtime", async () => {
+        (globalThis as any).isTauri = true;
+        mockInvoke.mockImplementation((command: string) => {
+            if (command === "get_runtime_port_info") {
+                return Promise.resolve({
+                    api_target_port: 18640,
+                    web_mode_port: 18641,
+                });
+            }
+            return Promise.resolve(undefined);
+        });
+
+        render(
+            <FlowHandler
+                source={buildSource({
+                    type: "oauth_start",
+                    message: "OAuth required",
+                    fields: [],
+                    data: {
+                        oauth_flow: "code",
+                    },
+                })}
+                isOpen={true}
+                onClose={vi.fn()}
+                onInteractSuccess={vi.fn()}
+            />,
+        );
+
+        fireEvent.click(screen.getByText("Connect Test Source"));
+        await act(async () => {
+            await Promise.resolve();
+        });
+
+        expect(apiMock.getAuthorizeUrl).toHaveBeenCalledWith(
+            "source-1",
+            "http://localhost:18641/oauth/callback",
+        );
+        delete (globalThis as any).isTauri;
     });
 
     it("throttles verify action to avoid repeated polling", async () => {

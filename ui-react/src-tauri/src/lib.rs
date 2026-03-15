@@ -6,7 +6,7 @@ use std::fs;
 #[cfg(not(debug_assertions))]
 use std::io::{BufRead, BufReader, Read, Write};
 #[cfg(not(debug_assertions))]
-use std::net::{TcpListener, TcpStream};
+use std::net::{Shutdown, TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 #[cfg(not(debug_assertions))]
@@ -43,6 +43,12 @@ const RELEASE_API_PREFERRED_PORT: u16 = 18640;
 const WEB_MODE_HOST: &str = "127.0.0.1";
 #[cfg(not(debug_assertions))]
 const RELEASE_WEB_PREFERRED_PORT: u16 = 18641;
+#[cfg(not(debug_assertions))]
+const WEB_MODE_PROXY_TIMEOUT: Duration = Duration::from_secs(60);
+#[cfg(not(debug_assertions))]
+const MAX_WEB_MODE_REQUEST_HEADER_BYTES: usize = 64 * 1024;
+#[cfg(not(debug_assertions))]
+const MAX_WEB_MODE_REQUEST_BODY_BYTES: usize = 8 * 1024 * 1024;
 #[cfg(not(debug_assertions))]
 const BACKEND_BINARY_BASENAME: &str = "glancier-server";
 const DEVTOOLS_GUARD_INTERVAL: Duration = Duration::from_millis(80);
@@ -611,19 +617,226 @@ fn init_log_plugin(
 }
 
 #[cfg(not(debug_assertions))]
-fn parse_http_request(stream: &mut TcpStream) -> Option<(String, String)> {
-    let mut buffer = [0_u8; 4096];
-    let n = stream.read(&mut buffer).ok()?;
-    if n == 0 {
-        return None;
+struct ParsedHttpRequest {
+    method: String,
+    raw_path: String,
+    version: String,
+    headers: Vec<(String, String)>,
+    body: Vec<u8>,
+}
+
+#[cfg(not(debug_assertions))]
+fn find_header_terminator(buffer: &[u8]) -> Option<usize> {
+    buffer
+        .windows(4)
+        .position(|window| window == b"\r\n\r\n")
+        .map(|index| index + 4)
+}
+
+#[cfg(not(debug_assertions))]
+fn parse_content_length(headers: &[(String, String)]) -> Result<usize, String> {
+    let mut content_length: Option<usize> = None;
+
+    for (name, value) in headers {
+        if !name.eq_ignore_ascii_case("content-length") {
+            continue;
+        }
+        let parsed = value
+            .parse::<usize>()
+            .map_err(|_| format!("invalid content-length: '{value}'"))?;
+        if let Some(existing) = content_length {
+            if existing != parsed {
+                return Err("conflicting content-length headers".to_string());
+            }
+        }
+        content_length = Some(parsed);
     }
 
-    let request = String::from_utf8_lossy(&buffer[..n]);
-    let request_line = request.lines().next()?;
+    Ok(content_length.unwrap_or(0))
+}
+
+#[cfg(not(debug_assertions))]
+fn parse_http_request(stream: &mut TcpStream) -> Result<ParsedHttpRequest, String> {
+    let mut buffer: Vec<u8> = Vec::with_capacity(4096);
+    let mut read_chunk = [0_u8; 4096];
+
+    let header_end = loop {
+        let n = stream
+            .read(&mut read_chunk)
+            .map_err(|e| format!("failed to read request: {e}"))?;
+        if n == 0 {
+            return Err("empty request".to_string());
+        }
+        buffer.extend_from_slice(&read_chunk[..n]);
+        if let Some(end) = find_header_terminator(&buffer) {
+            break end;
+        }
+        if buffer.len() > MAX_WEB_MODE_REQUEST_HEADER_BYTES {
+            return Err("request headers exceed limit".to_string());
+        }
+    };
+
+    let request_header = String::from_utf8_lossy(&buffer[..header_end]);
+    let mut header_lines = request_header.split("\r\n");
+    let request_line = header_lines
+        .next()
+        .ok_or_else(|| "missing request line".to_string())?;
     let mut parts = request_line.split_whitespace();
-    let method = parts.next()?.to_string();
-    let path = parts.next()?.to_string();
-    Some((method, path))
+    let method = parts
+        .next()
+        .ok_or_else(|| "missing method".to_string())?
+        .to_string();
+    let raw_path = parts
+        .next()
+        .ok_or_else(|| "missing path".to_string())?
+        .to_string();
+    let version = parts.next().unwrap_or("HTTP/1.1").to_string();
+    if parts.next().is_some() {
+        return Err("invalid request line".to_string());
+    }
+
+    let mut headers: Vec<(String, String)> = Vec::new();
+    for line in header_lines {
+        if line.is_empty() {
+            continue;
+        }
+        let (name, value) = line
+            .split_once(':')
+            .ok_or_else(|| format!("invalid header line: '{line}'"))?;
+        let name = name.trim();
+        let value = value.trim();
+        if name.is_empty() {
+            return Err("header name must not be empty".to_string());
+        }
+        if name.eq_ignore_ascii_case("transfer-encoding")
+            && !value.is_empty()
+            && !value.eq_ignore_ascii_case("identity")
+        {
+            return Err("transfer-encoding request is not supported".to_string());
+        }
+        headers.push((name.to_string(), value.to_string()));
+    }
+
+    let content_length = parse_content_length(&headers)?;
+    if content_length > MAX_WEB_MODE_REQUEST_BODY_BYTES {
+        return Err("request body exceeds limit".to_string());
+    }
+
+    let mut body: Vec<u8> = Vec::with_capacity(content_length);
+    if buffer.len() > header_end {
+        let already_read = (buffer.len() - header_end).min(content_length);
+        body.extend_from_slice(&buffer[header_end..(header_end + already_read)]);
+    }
+
+    while body.len() < content_length {
+        let n = stream
+            .read(&mut read_chunk)
+            .map_err(|e| format!("failed to read request body: {e}"))?;
+        if n == 0 {
+            return Err("request body truncated".to_string());
+        }
+        let remaining = content_length - body.len();
+        let copy_len = n.min(remaining);
+        body.extend_from_slice(&read_chunk[..copy_len]);
+    }
+
+    Ok(ParsedHttpRequest {
+        method,
+        raw_path,
+        version,
+        headers,
+        body,
+    })
+}
+
+#[cfg(not(debug_assertions))]
+fn is_hop_by_hop_header(name: &str) -> bool {
+    name.eq_ignore_ascii_case("connection")
+        || name.eq_ignore_ascii_case("proxy-connection")
+        || name.eq_ignore_ascii_case("keep-alive")
+        || name.eq_ignore_ascii_case("proxy-authenticate")
+        || name.eq_ignore_ascii_case("proxy-authorization")
+        || name.eq_ignore_ascii_case("te")
+        || name.eq_ignore_ascii_case("trailer")
+        || name.eq_ignore_ascii_case("transfer-encoding")
+        || name.eq_ignore_ascii_case("upgrade")
+}
+
+#[cfg(not(debug_assertions))]
+fn proxy_api_request(
+    client_stream: &mut TcpStream,
+    app: &tauri::AppHandle,
+    request: ParsedHttpRequest,
+) {
+    let api_port = get_api_target_port(app);
+    let mut backend_stream = match TcpStream::connect((WEB_MODE_HOST, api_port)) {
+        Ok(stream) => stream,
+        Err(err) => {
+            log::warn!("web mode proxy connect failed (port={api_port}): {err}");
+            write_http_response(
+                client_stream,
+                "502 Bad Gateway",
+                "text/plain; charset=utf-8",
+                b"Bad Gateway",
+                false,
+            );
+            return;
+        }
+    };
+
+    let _ = backend_stream.set_read_timeout(Some(WEB_MODE_PROXY_TIMEOUT));
+    let _ = backend_stream.set_write_timeout(Some(WEB_MODE_PROXY_TIMEOUT));
+
+    let mut outbound_request: Vec<u8> = Vec::new();
+    outbound_request.extend_from_slice(
+        format!(
+            "{} {} {}\r\n",
+            request.method, request.raw_path, request.version
+        )
+        .as_bytes(),
+    );
+
+    let mut has_content_length = false;
+    for (name, value) in &request.headers {
+        if name.eq_ignore_ascii_case("host") || is_hop_by_hop_header(name) {
+            continue;
+        }
+        if name.eq_ignore_ascii_case("content-length") {
+            has_content_length = true;
+        }
+        outbound_request.extend_from_slice(name.as_bytes());
+        outbound_request.extend_from_slice(b": ");
+        outbound_request.extend_from_slice(value.as_bytes());
+        outbound_request.extend_from_slice(b"\r\n");
+    }
+
+    outbound_request.extend_from_slice(format!("Host: {WEB_MODE_HOST}:{api_port}\r\n").as_bytes());
+    outbound_request.extend_from_slice(b"Connection: close\r\n");
+    if !request.body.is_empty() && !has_content_length {
+        outbound_request
+            .extend_from_slice(format!("Content-Length: {}\r\n", request.body.len()).as_bytes());
+    }
+    outbound_request.extend_from_slice(b"\r\n");
+    outbound_request.extend_from_slice(&request.body);
+
+    if let Err(err) = backend_stream.write_all(&outbound_request) {
+        log::warn!("web mode proxy write failed: {err}");
+        write_http_response(
+            client_stream,
+            "502 Bad Gateway",
+            "text/plain; charset=utf-8",
+            b"Bad Gateway",
+            false,
+        );
+        return;
+    }
+    let _ = backend_stream.flush();
+    let _ = backend_stream.shutdown(Shutdown::Write);
+
+    if let Err(err) = std::io::copy(&mut backend_stream, client_stream) {
+        log::warn!("web mode proxy read failed: {err}");
+    }
+    let _ = client_stream.flush();
 }
 
 #[cfg(not(debug_assertions))]
@@ -673,12 +886,29 @@ fn resolve_web_asset(app: &tauri::AppHandle, request_path: &str) -> Option<tauri
 
 #[cfg(not(debug_assertions))]
 fn handle_web_mode_client(mut stream: TcpStream, app: &tauri::AppHandle) {
-    let Some((method, raw_path)) = parse_http_request(&mut stream) else {
-        return;
+    let request = match parse_http_request(&mut stream) {
+        Ok(request) => request,
+        Err(err) => {
+            log::warn!("web mode parse request failed: {err}");
+            write_http_response(
+                &mut stream,
+                "400 Bad Request",
+                "text/plain; charset=utf-8",
+                b"Bad Request",
+                false,
+            );
+            return;
+        }
     };
 
-    let head_only = method.eq_ignore_ascii_case("HEAD");
-    if !method.eq_ignore_ascii_case("GET") && !head_only {
+    let request_path = request.raw_path.split('?').next().unwrap_or("/");
+    if request_path.starts_with("/api") {
+        proxy_api_request(&mut stream, app, request);
+        return;
+    }
+
+    let head_only = request.method.eq_ignore_ascii_case("HEAD");
+    if !request.method.eq_ignore_ascii_case("GET") && !head_only {
         let body = b"Method Not Allowed";
         write_http_response(
             &mut stream,
@@ -690,7 +920,6 @@ fn handle_web_mode_client(mut stream: TcpStream, app: &tauri::AppHandle) {
         return;
     }
 
-    let request_path = raw_path.split('?').next().unwrap_or("/");
     if request_path.contains("..") {
         let body = b"Forbidden";
         write_http_response(

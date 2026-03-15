@@ -8,6 +8,7 @@ use std::io::{BufRead, BufReader, Read, Write};
 #[cfg(not(debug_assertions))]
 use std::net::{Shutdown, TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
+#[cfg(not(debug_assertions))]
 use std::process::Command;
 #[cfg(not(debug_assertions))]
 use std::process::{Child, Stdio};
@@ -168,39 +169,7 @@ fn open_external_url(window: tauri::Window, url: String) -> Result<(), String> {
     if !(url.starts_with("http://") || url.starts_with("https://")) {
         return Err("Only http(s) URLs are allowed".to_string());
     }
-
-    #[cfg(target_os = "macos")]
-    let mut cmd = {
-        let mut c = Command::new("/usr/bin/open");
-        c.arg(&url);
-        c
-    };
-
-    #[cfg(target_os = "windows")]
-    let mut cmd = {
-        let mut c = Command::new("cmd");
-        c.args(["/C", "start", "", &url]);
-        c
-    };
-
-    #[cfg(all(unix, not(target_os = "macos")))]
-    let mut cmd = {
-        let mut c = Command::new("xdg-open");
-        c.arg(&url);
-        c
-    };
-
-    cmd.status()
-        .map_err(|e| format!("Failed to open URL '{url}': {e}"))
-        .and_then(|status| {
-            if status.success() {
-                Ok(())
-            } else {
-                Err(format!(
-                    "URL opener exited with status {status} for '{url}'"
-                ))
-            }
-        })
+    open_with_system_default(&url).map_err(|e| format!("Failed to open URL '{url}': {e}"))
 }
 
 #[tauri::command]
@@ -224,49 +193,15 @@ fn resolve_log_dir(app: &tauri::AppHandle) -> PathBuf {
         .unwrap_or_else(|_| env::temp_dir().join("glancier-logs"))
 }
 
-#[cfg(target_os = "windows")]
 fn open_path_in_file_manager(path: &Path) -> Result<(), String> {
-    let mut cmd = Command::new("explorer");
-    cmd.arg(path)
-        .spawn()
-        .map_err(|e| format!("Failed to open folder '{}': {e}", path.display()))?;
-    Ok(())
+    let target = path.to_string_lossy();
+    open_with_system_default(target.as_ref())
+        .map_err(|e| format!("Failed to open folder '{}': {e}", path.display()))
 }
 
-#[cfg(target_os = "macos")]
-fn open_path_in_file_manager(path: &Path) -> Result<(), String> {
-    let mut cmd = Command::new("/usr/bin/open");
-    cmd.arg(path);
-    cmd.status()
-        .map_err(|e| format!("Failed to open folder '{}': {e}", path.display()))
-        .and_then(|status| {
-            if status.success() {
-                Ok(())
-            } else {
-                Err(format!(
-                    "File manager exited with status {status} for '{}'",
-                    path.display()
-                ))
-            }
-        })
-}
-
-#[cfg(all(unix, not(target_os = "macos")))]
-fn open_path_in_file_manager(path: &Path) -> Result<(), String> {
-    let mut cmd = Command::new("xdg-open");
-    cmd.arg(path);
-    cmd.status()
-        .map_err(|e| format!("Failed to open folder '{}': {e}", path.display()))
-        .and_then(|status| {
-            if status.success() {
-                Ok(())
-            } else {
-                Err(format!(
-                    "File manager exited with status {status} for '{}'",
-                    path.display()
-                ))
-            }
-        })
+fn open_with_system_default(target: &str) -> Result<(), String> {
+    #[allow(deprecated)]
+    tauri_plugin_shell::open::open(None, target, None).map_err(|e| e.to_string())
 }
 
 fn mark_quitting(app: &tauri::AppHandle) {

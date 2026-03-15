@@ -79,6 +79,18 @@ These remain valid, but are secondary to `make` entrypoints:
 3. Desktop bundle:
    `ui-react/dist/` + sidecar archive -> `ui-react/src-tauri/target/release/bundle/`
 
+## CI Release Contract
+
+The GitHub Actions release job is defined in `.github/workflows/ci.yml` as `release-tauri`.
+
+- Trigger policy: manual run only (`workflow_dispatch`).
+- Matrix policy:
+  - `macos-15` -> `aarch64-apple-darwin` -> `--bundles dmg`
+  - `macos-15-intel` -> `x86_64-apple-darwin` -> `--bundles dmg`
+  - `windows-latest` -> `x86_64-pc-windows-msvc` -> `--bundles nsis`
+- Prebuild policy: run `bash scripts/build.sh --prepare-only` with `SKIP_TAURI_BUILD=1` before `tauri-action`, so sidecar archives are staged under `ui-react/src-tauri/binaries/`.
+- Updater policy: `createUpdaterArtifacts` is `false` and updater plugin wiring is disabled; release artifacts are installer bundles only (no updater package channel).
+
 ## Script and npm Command Audit (2026-03-09)
 
 - Checked: `scripts/*.sh` shell syntax (`bash -n`) passed.

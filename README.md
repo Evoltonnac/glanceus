@@ -67,6 +67,16 @@ npm --prefix ui-react install
 | `make test-impacted` | Changed-file driven gate |
 | `make gen-schemas` | Generate schema artifacts |
 
+### Desktop release CI (GitHub Actions)
+
+- Workflow: `.github/workflows/ci.yml` -> `release-tauri` (manual `workflow_dispatch` only).
+- Matrix targets:
+  - macOS Apple Silicon: `macos-15` / `aarch64-apple-darwin` / `.dmg`
+  - macOS Intel: `macos-15-intel` / `x86_64-apple-darwin` / `.dmg`
+  - Windows x64: `windows-latest` / `x86_64-pc-windows-msvc` / `.exe` (NSIS)
+- Prebuild stage runs `bash scripts/build.sh --prepare-only` to stage sidecar archives before Tauri bundling.
+- In-app updater artifacts are intentionally disabled in the current release pipeline (`createUpdaterArtifacts: false`).
+
 ### AI workflow in this project (GSD + TDD)
 
 - **Planning/execution**: Use the GSD workflow (`gsd-*`) for scoped tasks, state tracking, and atomic delivery.

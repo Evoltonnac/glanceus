@@ -1,197 +1,198 @@
 name: "Dribbble Home Shots"
 description: "WebView scraper demo for Dribbble signed-in home feed with horizontal multi-card layout."
 flow:
-  - id: capture_home_feed
-    use: webview
-    args:
-      url: "https://dribbble.com/shots/popular"
-      intercept_api: "/__dom_capture_disabled__"
-      script: |
-        (function () {
-          function textOf(node) {
-            if (!node || !node.textContent) return "";
-            return node.textContent.replace(/\s+/g, " ").trim();
-          }
+    - id: capture_home_feed
+      use: webview
+      args:
+          url: "https://dribbble.com/shots/popular"
+          intercept_api: "/__dom_capture_disabled__"
+          script: |
+              (function () {
+                function textOf(node) {
+                  if (!node || !node.textContent) return "";
+                  return node.textContent.replace(/\s+/g, " ").trim();
+                }
 
-          function pickImage(li) {
-            const img = li.querySelector(":scope > div.js-thumbnail-base.shot-thumbnail-base.disabled-shot-section.dribbble-shot.dribbble > figure > img")
-              || li.querySelector(":scope > div.js-thumbnail-base > figure > img")
-              || li.querySelector("figure img[srcset], figure img[src], figure img[data-src], noscript img[src]");
-            if (!img) return "";
-            const srcset = img.getAttribute("srcset") || "";
-            if (srcset) {
-              const first = srcset.split(",")[0] || "";
-              const srcFromSet = first.trim().split(/\s+/)[0] || "";
-              if (srcFromSet && srcFromSet.indexOf("data:image/") !== 0) {
-                return srcFromSet;
-              }
-            }
-            const src = img.getAttribute("src") || img.getAttribute("data-src") || "";
-            if (src && src.indexOf("data:image/") !== 0) {
-              return src;
-            }
-            return "";
-          }
+                function pickImage(li) {
+                  const img = li.querySelector(":scope > div.js-thumbnail-base.shot-thumbnail-base.disabled-shot-section.dribbble-shot.dribbble > figure > img")
+                    || li.querySelector(":scope > div.js-thumbnail-base > figure > img")
+                    || li.querySelector("figure img[srcset], figure img[src], figure img[data-src], noscript img[src]");
+                  if (!img) return "";
+                  const srcset = img.getAttribute("srcset") || "";
+                  if (srcset) {
+                    const first = srcset.split(",")[0] || "";
+                    const srcFromSet = first.trim().split(/\s+/)[0] || "";
+                    if (srcFromSet && srcFromSet.indexOf("data:image/") !== 0) {
+                      return srcFromSet;
+                    }
+                  }
+                  const src = img.getAttribute("src") || img.getAttribute("data-src") || "";
+                  if (src && src.indexOf("data:image/") !== 0) {
+                    return src;
+                  }
+                  return "";
+                }
 
-          function pickUrl(li) {
-            const link = li.querySelector("a.shot-thumbnail-link[href]");
-            if (!link) return "";
-            const href = link.getAttribute("href") || "";
-            if (!href) return "";
-            return href.indexOf("http") === 0 ? href : "https://dribbble.com" + href;
-          }
+                function pickUrl(li) {
+                  const link = li.querySelector("a.shot-thumbnail-link[href]");
+                  if (!link) return "";
+                  const href = link.getAttribute("href") || "";
+                  if (!href) return "";
+                  return href.indexOf("http") === 0 ? href : "https://dribbble.com" + href;
+                }
 
-          function pickTitle(li) {
-            const fromOverlay = textOf(li.querySelector(".shot-thumbnail-overlay .shot-title"));
-            if (fromOverlay) return fromOverlay;
-            const fromA11y = textOf(li.querySelector(".shot-thumbnail-link .accessibility-text"));
-            if (fromA11y.toLowerCase().indexOf("view ") === 0) {
-              return fromA11y.slice(5).trim();
-            }
-            return fromA11y;
-          }
+                function pickTitle(li) {
+                  const fromOverlay = textOf(li.querySelector(".shot-thumbnail-overlay .shot-title"));
+                  if (fromOverlay) return fromOverlay;
+                  const fromA11y = textOf(li.querySelector(".shot-thumbnail-link .accessibility-text"));
+                  if (fromA11y.toLowerCase().indexOf("view ") === 0) {
+                    return fromA11y.slice(5).trim();
+                  }
+                  return fromA11y;
+                }
 
-          function pickSummary(li, title, author) {
-            const img = li.querySelector("figure img[alt]");
-            const alt = img ? (img.getAttribute("alt") || "").trim() : "";
-            if (alt && alt !== title) {
-              return alt;
-            }
-            const byAuthor = author ? ("By " + author) : "";
-            return byAuthor || title;
-          }
+                function pickSummary(li, title, author) {
+                  const img = li.querySelector("figure img[alt]");
+                  const alt = img ? (img.getAttribute("alt") || "").trim() : "";
+                  if (alt && alt !== title) {
+                    return alt;
+                  }
+                  const byAuthor = author ? ("By " + author) : "";
+                  return byAuthor || title;
+                }
 
-          function readShots() {
-            const cards = Array.from(document.querySelectorAll("li.shot-thumbnail-container"));
-            console.log("[Dribbble] Found " + cards.length + " shot containers in DOM");
-            const shots = cards.slice(0, 12).map(function (li) {
-              const rawId = (li.id || "").replace(/^screenshot-/, "");
-              return {
-                id: rawId || pickUrl(li),
-                title: pickTitle(li),
-                author: textOf(li.querySelector(".user-information .display-name")) || "Unknown",
-                summary: pickSummary(
-                  li,
-                  pickTitle(li),
-                  textOf(li.querySelector(".user-information .display-name")) || "Unknown"
-                ),
-                image: pickImage(li),
-                url: pickUrl(li),
-                likes: textOf(li.querySelector("[data-shot-like-count]")) || "0",
-                views: textOf(li.querySelector(".js-shot-views-count")) || "0"
-              };
-            }).filter(function (item) {
-              return item.title && item.url;
-            });
-            return shots;
-          }
+                function readShots() {
+                  const cards = Array.from(document.querySelectorAll("li.shot-thumbnail-container"));
+                  console.log("[Dribbble] Found " + cards.length + " shot containers in DOM");
+                  const shots = cards.slice(0, 12).map(function (li) {
+                    const rawId = (li.id || "").replace(/^screenshot-/, "");
+                    return {
+                      id: rawId || pickUrl(li),
+                      title: pickTitle(li),
+                      author: textOf(li.querySelector(".user-information .display-name")) || "Unknown",
+                      summary: pickSummary(
+                        li,
+                        pickTitle(li),
+                        textOf(li.querySelector(".user-information .display-name")) || "Unknown"
+                      ),
+                      image: pickImage(li),
+                      url: pickUrl(li),
+                      likes: textOf(li.querySelector("[data-shot-like-count]")) || "0",
+                      views: textOf(li.querySelector(".js-shot-views-count")) || "0"
+                    };
+                  }).filter(function (item) {
+                    return item.title && item.url;
+                  });
+                  return shots;
+                }
 
-          function emitShots() {
-            console.log("[Dribbble] Reading shots from DOM...");
-            const shots = readShots();
-            console.log("[Dribbble] Found " + shots.length + " shots");
-            if (typeof window.__GLANCIER_EMIT_SCRAPED_DATA === "function") {
-              window.__GLANCIER_EMIT_SCRAPED_DATA({
-                shots: shots,
-                shots_count: shots.length,
-                capture_mode: "dom"
-              });
-              console.log("[Dribbble] Emitted " + shots.length + " shots via __GLANCIER_EMIT_SCRAPED_DATA");
-            } else {
-              console.log("[Dribbble] WARNING: __GLANCIER_EMIT_SCRAPED_DATA not found!");
-            }
-          }
+                function emitShots() {
+                  console.log("[Dribbble] Reading shots from DOM...");
+                  const shots = readShots();
+                  console.log("[Dribbble] Found " + shots.length + " shots");
+                  if (typeof window.__GLANCIER_EMIT_SCRAPED_DATA === "function") {
+                    window.__GLANCIER_EMIT_SCRAPED_DATA({
+                      shots: shots,
+                      shots_count: shots.length,
+                      capture_mode: "dom"
+                    });
+                    console.log("[Dribbble] Emitted " + shots.length + " shots via __GLANCIER_EMIT_SCRAPED_DATA");
+                  } else {
+                    console.log("[Dribbble] WARNING: __GLANCIER_EMIT_SCRAPED_DATA not found!");
+                  }
+                }
 
-          function run() {
-            console.log("[Dribbble] Starting capture...");
-            window.scrollTo(0, Math.floor(document.body.scrollHeight * 0.4));
-            console.log("[Dribbble] Scrolled to 40%, waiting for render...");
-            setTimeout(emitShots, 1200);
-          }
+                function run() {
+                  console.log("[Dribbble] Starting capture...");
+                  window.scrollTo(0, Math.floor(document.body.scrollHeight * 0.4));
+                  console.log("[Dribbble] Scrolled to 40%, waiting for render...");
+                  setTimeout(emitShots, 1200);
+                }
 
-          console.log("[Dribbble] Script loaded, document.readyState: " + document.readyState);
-          if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", function () {
-              console.log("[Dribbble] DOMContentLoaded fired");
-              setTimeout(run, 600);
-            });
-          } else {
-            console.log("[Dribbble] DOM already ready");
-            setTimeout(run, 600);
-          }
-        })();
-    outputs:
-      feed_payload: "webview_data"
-  - id: parse_shots
-    use: extract
-    args:
-      source: "{feed_payload}"
-      type: "jsonpath"
-      expr: "$.shots"
-    outputs:
-      shots: "$.shots"
-  - id: parse_shots_count
-    use: extract
-    args:
-      source: "{feed_payload}"
-      type: "jsonpath"
-      expr: "$.shots_count"
-    outputs:
-      shots_count: "$.shots_count"
+                console.log("[Dribbble] Script loaded, document.readyState: " + document.readyState);
+                if (document.readyState === "loading") {
+                  document.addEventListener("DOMContentLoaded", function () {
+                    console.log("[Dribbble] DOMContentLoaded fired");
+                    setTimeout(run, 600);
+                  });
+                } else {
+                  console.log("[Dribbble] DOM already ready");
+                  setTimeout(run, 600);
+                }
+              })();
+      outputs:
+          feed_payload: "webview_data"
+    - id: parse_shots
+      use: extract
+      args:
+          source: "{feed_payload}"
+          type: "jsonpath"
+          expr: "$.shots"
+      outputs:
+          shots: "$.shots"
+    - id: parse_shots_count
+      use: extract
+      args:
+          source: "{feed_payload}"
+          type: "jsonpath"
+          expr: "$.shots_count"
+      outputs:
+          shots_count: "$.shots_count"
 templates:
-  - id: "dribbble_home_cards"
-    type: "source_card"
-    ui:
-      title: "Dribbble Home Feed"
-      icon: "DRB"
-    widgets:
-      - type: "Container"
-        spacing: "sm"
-        items:
-          - type: "List"
-            data_source: "{shots}"
-            item_alias: "shot"
-            spacing: "lg"
-            limit: 2
-            render:
-              - type: "Container"
-                spacing: "lg"
-                items:
-                  - type: "ColumnSet"
-                    spacing: "lg"
-                    columns:
-                      - type: "Column"
-                        width: "auto"
+    - id: "dribbble_home_cards"
+      type: "source_card"
+      ui:
+          title: "Dribbble Home Feed"
+          icon: "DRB"
+      widgets:
+          - type: "Container"
+            spacing: "sm"
+            items:
+                - type: "List"
+                  data_source: "{shots}"
+                  item_alias: "shot"
+                  spacing: "lg"
+                  limit: 2
+                  render:
+                      - type: "Container"
+                        spacing: "lg"
                         items:
-                          - type: "Image"
-                            url: "{shot.image}"
-                            altText: "{shot.title}"
-                            size: "xl"
-                      - type: "Column"
-                        width: "stretch"
-                        items:
-                          - type: "TextBlock"
-                            text: "{shot.title}"
-                            size: "md"
-                            weight: "semibold"
-                            max_lines: 3
-                          - type: "ColumnSet"
-                            columns:
-                              - type: "Column"
-                                width: "auto"
-                                items:
-                                  - type: "Badge"
-                                    text: "Likes {shot.likes}"
-                                    tone: "success"
-                                  - type: "Badge"
-                                    text: "Views {shot.views}"
-                                    tone: "warning"
-                              - type: "Column"
-                                width: "stretch"
-                                items:
-                                  - type: "ActionSet"
-                                    actions:
-                                      - type: "Action.OpenUrl"
-                                        title: ""
-                                        url: "{shot.url}"
-                                        size: "sm"
+                            - type: "ColumnSet"
+                              spacing: "lg"
+                              columns:
+                                  - type: "Column"
+                                    width: "auto"
+                                    items:
+                                        - type: "Image"
+                                          url: "{shot.image}"
+                                          altText: "{shot.title}"
+                                          size: "xl"
+                                  - type: "Column"
+                                    width: "stretch"
+                                    items:
+                                        - type: "TextBlock"
+                                          text: "{shot.title}"
+                                          size: "md"
+                                          weight: "semibold"
+                                          max_lines: 2
+                                        - type: "ColumnSet"
+                                          columns:
+                                              - type: "Column"
+                                                width: "auto"
+                                                items:
+                                                    - type: "Badge"
+                                                      text: "Likes {shot.likes}"
+                                                      tone: "success"
+                                                    - type: "Badge"
+                                                      text: "Views {shot.views}"
+                                                      tone: "warning"
+                                              - type: "Column"
+                                                width: "stretch"
+                                                items:
+                                                    - type: "ActionSet"
+                                                      actions:
+                                                          - type: "Action.OpenUrl"
+                                                            title: ""
+                                                            url: "{shot.url}"
+                                                            size: "md"
+                                                            tone: "muted"

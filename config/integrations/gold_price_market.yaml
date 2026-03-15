@@ -48,7 +48,7 @@ templates:
           icon: "GLD"
       widgets:
           - type: "Container"
-            spacing: "md"
+            spacing: "sm"
             items:
                 - type: "ColumnSet"
                   spacing: "md"
@@ -81,6 +81,7 @@ templates:
                             - type: "Badge"
                               text: "{trend_label}"
                               size: "sm"
+                              tone: "{trend_tone}"
                 - type: "FactSet"
                   spacing: "sm"
                   facts:

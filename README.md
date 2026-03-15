@@ -6,10 +6,10 @@
 
 <p align="center"><strong>Config-first personal data hub for metrics, signals, and automation workflows.</strong></p>
 
-<p align="center">
+<!-- <p align="center">
   <img src="docs/assets/demo-placeholder.svg" alt="Glancier Demo (Placeholder)" width="900" />
 </p>
-<p align="center"><sub>Demo image placeholder. Replace with a real screenshot later.</sub></p>
+<p align="center"><sub>Demo image placeholder. Replace with a real screenshot later.</sub></p> -->
 
 ## Features
 

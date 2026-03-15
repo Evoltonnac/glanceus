@@ -28,6 +28,7 @@ templates:
                         columns:
                             - type: "Column"
                               width: "stretch"
+                              spacing: "sm"
                               items:
                                   - type: "TextBlock"
                                     text: "{article.title}"

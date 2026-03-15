@@ -180,15 +180,13 @@ flow:
                           age_text = "recently"
 
                       ranking_score = followed_ts
-                      subtitle = f"OFFLINE · followed {age_text}"
+                      subtitle = f"followed {age_text}"
                       status = "OFFLINE"
                       status_tone = "muted"
-                      title = "Currently offline"
 
                   followed_cards.append(
                       {
                           "user_name": broadcaster_name,
-                          "title": title,
                           "subtitle": subtitle,
                           "status": status,
                           "status_tone": status_tone,
@@ -269,10 +267,6 @@ templates:
                                           size: "sm"
                                           tone: "muted"
                                           max_lines: 1
-                                        - type: "TextBlock"
-                                          text: "{stream.title}"
-                                          size: "sm"
-                                          max_lines: 2
                                   - type: "Column"
                                     width: "auto"
                                     align_y: "start"

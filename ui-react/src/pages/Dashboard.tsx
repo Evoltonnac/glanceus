@@ -1107,11 +1107,9 @@ export default function Dashboard() {
                                         "number"
                                             ? "integration"
                                             : "global";
-                                    const lastUpdated =
-                                        source.updated_at ??
-                                        source.last_success_at;
+                                    const last_success_at = source.last_success_at;
                                     const freshnessStyle = getFreshnessStyles(
-                                        lastUpdated,
+                                        last_success_at,
                                         nowSeconds,
                                     );
 
@@ -1121,7 +1119,7 @@ export default function Dashboard() {
                                             className="relative bg-surface border-border/50 transition-shadow duration-150 hover:shadow-soft-elevation group"
                                         >
                                             <CardContent className="p-3">
-                                                {lastUpdated && (
+                                                {last_success_at && (
                                                     <div
                                                         className={cn(
                                                             "absolute -top-px -left-px px-1.5 py-0.5 rounded-tl-xl rounded-br-xl text-[9px] font-medium leading-none tabular-nums",
@@ -1129,7 +1127,7 @@ export default function Dashboard() {
                                                         )}
                                                     >
                                                         {getFreshnessText(
-                                                            lastUpdated,
+                                                            last_success_at,
                                                             nowSeconds,
                                                         )}
                                                     </div>

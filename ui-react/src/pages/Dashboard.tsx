@@ -66,7 +66,11 @@ import { EmptyState } from "../components/EmptyState";
 import { useStore } from "../store";
 import { useSidebar } from "../hooks/useSidebar";
 import { useScraper } from "../hooks/useScraper";
-import { mergeViewItemsWithGridNodes } from "./dashboardLayout";
+import {
+    mergeViewItemsWithGridNodes,
+    sanitizeGridNodeLayout,
+} from "./dashboardLayout";
+import { parseCssLengthToPixels } from "./gridSizing";
 import { invoke } from "@tauri-apps/api/core";
 import {
     Play,
@@ -90,6 +94,25 @@ function warnDashboardCompatibilityOnce(key: string, message: string): void {
     }
     warnedCompatibilityKeys.add(key);
     console.warn(message);
+}
+
+function getCssLengthInPixels(variableName: string, fallback: number): number {
+    if (typeof window === "undefined") {
+        return fallback;
+    }
+
+    const rootStyle = getComputedStyle(document.documentElement);
+    const rootFontSize = Number.parseFloat(rootStyle.fontSize) || 16;
+    const value = rootStyle.getPropertyValue(variableName);
+    return parseCssLengthToPixels(value, fallback, rootFontSize);
+}
+
+function parseGridIntAttr(
+    value: string | null,
+    fallback: number,
+): number {
+    const parsed = Number.parseInt(value ?? "", 10);
+    return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 function toSafeViewProps(
@@ -358,24 +381,8 @@ export default function Dashboard() {
     const currentDensity = settings?.density || "normal";
 
     // Get grid gap and row height from CSS variable
-    const gridGap =
-        typeof window !== "undefined"
-            ? parseInt(
-                  getComputedStyle(document.documentElement).getPropertyValue(
-                      "--qb-grid-gap",
-                  ) || "8",
-                  10,
-              )
-            : 8;
-    const gridRowHeight =
-        typeof window !== "undefined"
-            ? parseInt(
-                  getComputedStyle(document.documentElement).getPropertyValue(
-                      "--qb-grid-row-height",
-                  ) || "56",
-                  10,
-              )
-            : 56;
+    const gridGap = getCssLengthInPixels("--qb-grid-gap", 8);
+    const gridRowHeight = getCssLengthInPixels("--qb-grid-row-height", 56);
 
     // Apply density to document
     useEffect(() => {
@@ -515,18 +522,24 @@ export default function Dashboard() {
 
         const nodes = gs
             .getGridItems()
-            .map((el) => ({
-                id: el.getAttribute("gs-id") || "",
-                x: parseInt(el.getAttribute("gs-x") || "0"),
-                y: parseInt(el.getAttribute("gs-y") || "0"),
-                w: parseInt(el.getAttribute("gs-w") || "3"),
-                h: parseInt(el.getAttribute("gs-h") || "4"),
-            }))
+            .map((el) =>
+                sanitizeGridNodeLayout(
+                    {
+                        id: el.getAttribute("gs-id") || "",
+                        x: parseGridIntAttr(el.getAttribute("gs-x"), 0),
+                        y: parseGridIntAttr(el.getAttribute("gs-y"), 0),
+                        w: parseGridIntAttr(el.getAttribute("gs-w"), 3),
+                        h: parseGridIntAttr(el.getAttribute("gs-h"), 4),
+                    },
+                    expectedColumns,
+                ),
+            )
             .filter((n) => n.id !== "");
 
         const updatedItems = mergeViewItemsWithGridNodes(
             currentViewConfig.items,
             nodes,
+            expectedColumns,
         );
 
         const updatedView = { ...currentViewConfig, items: updatedItems };
@@ -613,17 +626,10 @@ export default function Dashboard() {
         if (!gs) return;
 
         // Get fresh values from CSS after density attribute change
-        const newGridGap = parseInt(
-            getComputedStyle(document.documentElement).getPropertyValue(
-                "--qb-grid-gap",
-            ) || "8",
-            10,
-        );
-        const newGridRowHeight = parseInt(
-            getComputedStyle(document.documentElement).getPropertyValue(
-                "--qb-grid-row-height",
-            ) || "56",
-            10,
+        const newGridGap = getCssLengthInPixels("--qb-grid-gap", 8);
+        const newGridRowHeight = getCssLengthInPixels(
+            "--qb-grid-row-height",
+            56,
         );
 
         gs.margin(newGridGap);
@@ -1452,6 +1458,16 @@ export default function Dashboard() {
                             className={`grid-stack grid-stack-${viewConfig.layout_columns || 12}`}
                         >
                             {viewConfig.items.map((item) => {
+                                const safeLayout = sanitizeGridNodeLayout(
+                                    {
+                                        id: item.id,
+                                        x: item.x,
+                                        y: item.y,
+                                        w: item.w,
+                                        h: item.h,
+                                    },
+                                    viewConfig.layout_columns || 12,
+                                );
                                 const sourceData = item.source_id
                                     ? dataMap[item.source_id]
                                     : null;
@@ -1495,10 +1511,10 @@ export default function Dashboard() {
                                         key={item.id}
                                         className="grid-stack-item"
                                         gs-id={item.id}
-                                        gs-x={String(item.x ?? 0)}
-                                        gs-y={String(item.y ?? 0)}
-                                        gs-w={String(item.w ?? 4)}
-                                        gs-h={String(item.h ?? 2)}
+                                        gs-x={String(safeLayout.x)}
+                                        gs-y={String(safeLayout.y)}
+                                        gs-w={String(safeLayout.w)}
+                                        gs-h={String(safeLayout.h)}
                                     >
                                         <div className="grid-stack-item-content relative overflow-hidden group/card">
                                             <DeleteBtn

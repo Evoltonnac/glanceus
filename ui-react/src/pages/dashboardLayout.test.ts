@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
     hasLayoutOverlap,
     mergeViewItemsWithGridNodes,
+    sanitizeGridNodeLayout,
 } from "./dashboardLayout";
 
 describe("dashboardLayout", () => {
@@ -54,5 +55,28 @@ describe("dashboardLayout", () => {
         expect(merged[0]).toMatchObject({ id: "a", x: 2, y: 2, w: 4, h: 2 });
         expect(merged[1]).toMatchObject({ id: "b", x: 5, w: 3, h: 2 });
         expect(hasLayoutOverlap(merged)).toBe(false);
+    });
+
+    it("sanitizes invalid layout values before overlap resolution", () => {
+        const items = [
+            { id: "a", x: -3, y: -2, w: 0, h: 0, source_id: "s1", template_id: "t1", props: {} },
+            { id: "b", x: 20, y: 0, w: 99, h: 1, source_id: "s2", template_id: "t2", props: {} },
+        ];
+        const nodes = [{ id: "a", x: 10, y: -5, w: -1, h: -2 }];
+
+        const merged = mergeViewItemsWithGridNodes(items, nodes, 12);
+
+        expect(merged[0]).toMatchObject({ id: "a", x: 9, y: 0, w: 3, h: 4 });
+        expect(merged[1]).toMatchObject({ id: "b", x: 0, y: 4, w: 12, h: 1 });
+        expect(hasLayoutOverlap(merged)).toBe(false);
+    });
+
+    it("clamps node width and x to stay within configured columns", () => {
+        const safe = sanitizeGridNodeLayout(
+            { id: "n", x: 11, y: 1, w: 8, h: 2 },
+            12,
+        );
+
+        expect(safe).toMatchObject({ id: "n", x: 4, y: 1, w: 8, h: 2 });
     });
 });

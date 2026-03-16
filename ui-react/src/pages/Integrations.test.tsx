@@ -197,7 +197,7 @@ describe("Integrations page", () => {
         fireEvent.click(screen.getByRole("button", { name: "新建" }));
         fireEvent.click(
             screen.getByRole("button", {
-                name: "Open AI prompt actions",
+                name: /Open AI prompt actions|打开 AI Prompt 操作/,
             }),
         );
 
@@ -249,7 +249,9 @@ describe("Integrations page", () => {
         expect(await screen.findByText("Source One")).toBeInTheDocument();
 
         fireEvent.click(
-            screen.getByRole("button", { name: "Delete source source-1" }),
+            screen.getByRole("button", {
+                name: /Delete source source-1|删除数据源 source-1/,
+            }),
         );
 
         expect(await screen.findByText("确认删除数据源")).toBeInTheDocument();

@@ -228,7 +228,7 @@ describe("FlowHandler", () => {
             />,
         );
 
-        const submitButton = screen.getByRole("button", { name: "Submit" });
+        const submitButton = screen.getByRole("button", { name: /Submit|提交/ });
         expect(submitButton).toBeDisabled();
 
         fireEvent.change(screen.getByLabelText("API Key *"), {
@@ -246,6 +246,35 @@ describe("FlowHandler", () => {
         });
         expect(onInteractSuccess).toHaveBeenCalledTimes(1);
         expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("prefers error code copy over interaction message in dialog title/description", async () => {
+        render(
+            <FlowHandler
+                source={{
+                    ...buildSource({
+                        type: "input_text",
+                        message: "Raw backend message",
+                        fields: [],
+                    }),
+                    status: "error",
+                    error_code: "auth.invalid_credentials",
+                }}
+                isOpen={true}
+                onClose={vi.fn()}
+                onInteractSuccess={vi.fn()}
+            />,
+        );
+
+        expect(
+            await screen.findByText(/Credentials invalid|凭证无效/),
+        ).toBeInTheDocument();
+        expect(
+            screen.getAllByText(
+                /Authorization is invalid|鉴权信息已失效/,
+            ).length,
+        ).toBeGreaterThan(0);
+        expect(screen.queryByText("Raw backend message")).not.toBeInTheDocument();
     });
 
     it("polls auth status while oauth window is open and closes when authorized", async () => {
@@ -295,7 +324,7 @@ describe("FlowHandler", () => {
             />,
         );
 
-        fireEvent.click(screen.getByText("Connect Test Source"));
+        fireEvent.click(screen.getByText(/Connect Test Source|连接 Test Source/));
         await act(async () => {
             await Promise.resolve();
         });
@@ -396,7 +425,7 @@ describe("FlowHandler", () => {
             />,
         );
 
-        fireEvent.click(screen.getByText("Connect Test Source"));
+        fireEvent.click(screen.getByText(/Connect Test Source|连接 Test Source/));
         await act(async () => {
             await Promise.resolve();
         });

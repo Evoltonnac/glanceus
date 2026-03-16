@@ -92,6 +92,20 @@ After create/update/delete:
 
 Do not place business state transitions in purely presentational components.
 
+## I18N Standard
+
+Scope: all user-facing copy in `ui-react/src/`.
+
+- Supported locales: `en` and `zh`.
+- Default and fallback locale: `en`.
+- UI-visible copy in app pages/components must use translation keys via `useI18n()`.
+- Add every new key to both catalogs:
+  - `ui-react/src/i18n/messages/en.ts`
+  - `ui-react/src/i18n/messages/zh.ts`
+- Key naming should be stable and domain-oriented (`settings.*`, `integrations.*`, `source.error.*`), not component-file-specific names.
+- Language preference is backend-owned and persisted through `/api/settings` (`SystemSettings.language`).
+- Standardized backend `error_code` should be mapped to localized, user-friendly copy when showing source/runtime errors.
+
 ## Documentation Policy
 
 Keep long-lived frontend docs under `docs/`, not `ui-react/`.

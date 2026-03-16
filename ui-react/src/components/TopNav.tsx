@@ -6,6 +6,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "./ui/tooltip";
+import { useI18n } from "../i18n";
 
 import { AppHeader } from "./AppHeader";
 
@@ -44,6 +45,7 @@ const LogoIcon = ({ className }: { className?: string }) => (
 export function TopNav() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { t } = useI18n();
 
     if (location.pathname === "/settings") {
         return null;
@@ -83,7 +85,7 @@ export function TopNav() {
                         {isHomeActive ? (
                             <Link to="/" className={navItemClass(true)}>
                                 <LayoutDashboard className="w-4 h-4 shrink-0" />
-                                <span className="text-sm">全部看板</span>
+                                <span className="text-sm">{t("topnav.dashboard")}</span>
                             </Link>
                         ) : (
                             <Tooltip>
@@ -94,12 +96,12 @@ export function TopNav() {
                                     >
                                         <LayoutDashboard className="w-4 h-4 shrink-0" />
                                         <span className="sr-only">
-                                            全部看板
+                                            {t("topnav.dashboard")}
                                         </span>
                                     </Link>
                                 </TooltipTrigger>
                                 <TooltipContent sideOffset={8}>
-                                    <p>全部看板</p>
+                                    <p>{t("topnav.dashboard")}</p>
                                 </TooltipContent>
                             </Tooltip>
                         )}
@@ -110,7 +112,7 @@ export function TopNav() {
                                 className={navItemClass(true)}
                             >
                                 <Blocks className="w-4 h-4 shrink-0" />
-                                <span className="text-sm">集成管理</span>
+                                <span className="text-sm">{t("topnav.integrations")}</span>
                             </Link>
                         ) : (
                             <Tooltip>
@@ -121,12 +123,12 @@ export function TopNav() {
                                     >
                                         <Blocks className="w-4 h-4 shrink-0" />
                                         <span className="sr-only">
-                                            集成管理
+                                            {t("topnav.integrations")}
                                         </span>
                                     </Link>
                                 </TooltipTrigger>
                                 <TooltipContent sideOffset={8}>
-                                    <p>集成管理</p>
+                                    <p>{t("topnav.integrations")}</p>
                                 </TooltipContent>
                             </Tooltip>
                         )}
@@ -140,13 +142,13 @@ export function TopNav() {
                             <button
                                 onClick={() => navigate("/settings")}
                                 className={actionButtonClass}
-                                aria-label="系统设置"
+                                aria-label={t("topnav.settings")}
                             >
                                 <Settings className="w-4 h-4" />
                             </button>
                         </TooltipTrigger>
                         <TooltipContent>
-                            <p>系统设置</p>
+                            <p>{t("topnav.settings")}</p>
                         </TooltipContent>
                     </Tooltip>
                 </div>

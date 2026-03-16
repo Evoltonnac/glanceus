@@ -14,6 +14,10 @@ import zhMessages from "./messages/zh";
 export type AppLanguage = "en" | "zh";
 type MessageCatalog = Record<string, string>;
 type MessageParams = Record<string, string | number>;
+export type ErrorCopy = {
+  title: string;
+  description: string;
+};
 
 const catalogs: Record<AppLanguage, MessageCatalog> = {
   en: enMessages,
@@ -41,25 +45,43 @@ function translate(locale: AppLanguage, key: string, params?: MessageParams): st
   return interpolate(raw, params);
 }
 
-function resolveErrorCodeMessage(t: Translate, errorCode?: string | null): string | null {
+function resolveErrorCopyByCode(t: Translate, errorCode?: string | null): ErrorCopy | null {
   if (!errorCode) return null;
-  const directKey = `error.code.${errorCode}`;
-  const direct = t(directKey);
-  if (direct !== directKey) return direct;
+
+  const titleKey = `error.copy.${errorCode}.title`;
+  const descriptionKey = `error.copy.${errorCode}.description`;
+  const title = t(titleKey);
+  const description = t(descriptionKey);
+  if (title !== titleKey || description !== descriptionKey) {
+    return {
+      title: title !== titleKey ? title : description,
+      description: description !== descriptionKey ? description : title,
+    };
+  }
 
   if (errorCode.startsWith("auth.")) {
-    return t("error.code.auth.generic");
+    return {
+      title: t("error.copy.auth.generic.title"),
+      description: t("error.copy.auth.generic.description"),
+    };
   }
   if (errorCode.startsWith("runtime.")) {
-    return t("error.code.runtime.generic");
+    return {
+      title: t("error.copy.runtime.generic.title"),
+      description: t("error.copy.runtime.generic.description"),
+    };
   }
-  return t("error.code.generic");
+  return {
+    title: t("error.copy.generic.title"),
+    description: t("error.copy.generic.description"),
+  };
 }
 
 type I18nContextValue = {
   locale: AppLanguage;
   setLocale: (locale: AppLanguage) => void;
   t: Translate;
+  getErrorCopyByCode: (errorCode?: string | null) => ErrorCopy | null;
   getErrorMessageByCode: (errorCode?: string | null) => string | null;
 };
 
@@ -68,8 +90,10 @@ const defaultContextValue: I18nContextValue = {
   locale: "zh",
   setLocale: () => undefined,
   t: defaultTranslate,
+  getErrorCopyByCode: (errorCode?: string | null) =>
+    resolveErrorCopyByCode(defaultTranslate, errorCode),
   getErrorMessageByCode: (errorCode?: string | null) =>
-    resolveErrorCodeMessage(defaultTranslate, errorCode),
+    resolveErrorCopyByCode(defaultTranslate, errorCode)?.description ?? null,
 };
 
 const I18nContext = createContext<I18nContextValue>(defaultContextValue);
@@ -92,13 +116,18 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   );
 
   const getErrorMessageByCode = useCallback(
-    (errorCode?: string | null) => resolveErrorCodeMessage(t, errorCode),
+    (errorCode?: string | null) => resolveErrorCopyByCode(t, errorCode)?.description ?? null,
+    [t],
+  );
+
+  const getErrorCopyByCode = useCallback(
+    (errorCode?: string | null) => resolveErrorCopyByCode(t, errorCode),
     [t],
   );
 
   const value = useMemo<I18nContextValue>(
-    () => ({ locale, setLocale, t, getErrorMessageByCode }),
-    [locale, setLocale, t, getErrorMessageByCode],
+    () => ({ locale, setLocale, t, getErrorCopyByCode, getErrorMessageByCode }),
+    [locale, setLocale, t, getErrorCopyByCode, getErrorMessageByCode],
   );
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;

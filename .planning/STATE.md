@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
-status: **Phase 01 Completed** — 2026-03-15
-last_updated: "2026-03-15T16:21:25Z"
-last_activity: "2026-03-16 - Completed quick task 011: Bundle skills prompt in client and add AI helper modal in integration create dialog"
+status: **Phase 02 In Progress** — Plans 01-02 completed (2026-03-16)
+last_updated: "2026-03-16T14:22:50Z"
+last_activity: "2026-03-16 - Completed Phase 02 Plan 02 (EN/ZH i18n foundation, settings language switch, error-code UX mapping)"
 progress:
   total_phases: 8
   completed_phases: 8
@@ -18,8 +18,8 @@ progress:
 See: .planning/PROJECT.md (Updated for v1.0)
 
 ## Current Position
-Status: **Phase 01 Completed** — 2026-03-15
-Post-v1.0 reliability phase completed. Manual UAT matrix confirmed for hidden, minimized, occluded, and non-Dashboard route scenarios.
+Status: **Phase 02 In Progress** — Plans 01-02 completed (2026-03-16)
+Phase 2 now has runtime/API standardized error envelope and EN/ZH i18n foundation in key pages. Remaining work is Plan 03 (refresh/encryption defaults and settings UX hardening).
 
 ## Performance Metrics (v1.0)
 - Completed Phases: 09, 10, 11, 12, 13, 14, 15
@@ -29,7 +29,12 @@ Post-v1.0 reliability phase completed. Manual UAT matrix confirmed for hidden, m
 ## Session Continuity
 
 Last session: 2026-03-15T16:21:25Z
-Last activity: 2026-03-16 - Completed quick task 011: Bundle skills prompt in client and add AI helper modal in integration create dialog
+Last activity: 2026-03-16 - Completed Phase 02 Plan 02 (EN/ZH i18n foundation, settings language switch, error-code UX mapping)
+- 2026-03-16: Added backend `SystemSettings.language` (`en`/`zh`, default `en`) and compatibility normalization for old settings payloads.
+- 2026-03-16: Added frontend i18n runtime (`ui-react/src/i18n/*`), wired provider in app bootstrap, and migrated core Settings/Dashboard/Integrations copy to translation keys.
+- 2026-03-16: Added frontend-friendly source error summary mapping from standardized `error_code` while preserving existing `error/error_details` flow.
+- 2026-03-16: Added `core/error_formatter.py`, integrated executor runtime error persistence, and aligned `/api/system/reload` error serialization with backward-compatible `detail` plus structured `error`.
+- 2026-03-16: Added `tests/core/test_error_formatter.py` and updated `tests/api/test_reload_error_boundary.py`; backend gate passed.
 - 2026-03-11: Executed Phase 15 plans 01/02/04/05 (Authlib refactor, device flow backend, client credentials + refresh hardening, integration tests).
 - 2026-03-11: Implemented Phase 15-03 frontend work and created plan summaries (`15-01` ~ `15-05`), with `15-03` remaining `checkpoint_pending`.
 - Pending checkpoint: manually verify device flow modal and callback fragment handling before closing milestone v1.0.
@@ -39,6 +44,7 @@ Last activity: 2026-03-16 - Completed quick task 011: Bundle skills prompt in cl
 ### Roadmap Evolution
 - 2026-03-15: Phase 1 added - Backend-driven webview scraper reliability for minimized, hidden, and occluded window states.
 - 2026-03-15: Phase 1 completed - all 3 plans executed and manual UAT matrix passed.
+- 2026-03-16: Phase 2 added - 易用性优化（统一界面文案与错误格式化、支持中英 i18n、刷新间隔和默认加密体验优化）。
 
 ### Pending Todos
 

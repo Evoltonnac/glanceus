@@ -12,6 +12,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { AlertCircle, ExternalLink, Wrench, Monitor, Download } from "lucide-react";
 import { api } from "../../api/client";
+import { useI18n } from "../../i18n";
 import { isTauri, openExternalLink } from "../../lib/utils";
 import { DeviceFlowModal, type DeviceFlowData } from "./DeviceFlowModal";
 
@@ -41,6 +42,7 @@ export function FlowHandler({
     onPushToQueue,
 }: FlowHandlerProps) {
     const inTauri = isTauri();
+    const { t, getErrorCopyByCode } = useI18n();
     const sourceId = source?.id ?? null;
     const [formData, setFormData] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(false);
@@ -61,6 +63,7 @@ export function FlowHandler({
     const interaction = source?.interaction ?? null;
     const isErrorState = source?.status === "error";
     const isSuspendedState = source?.status === "suspended";
+    const sourceErrorCopy = getErrorCopyByCode(source?.error_code);
 
     const handleInputChange = (key: string, value: string) => {
         setFormData((prev) => ({ ...prev, [key]: value }));
@@ -285,13 +288,13 @@ export function FlowHandler({
                     handleClose();
                 } else if (status.status === "expired") {
                     setDeviceStatus("expired");
-                    setError("Device code expired. Please restart authorization.");
+                    setError(t("flow.device.expired"));
                 } else if (status.status === "denied") {
                     setDeviceStatus("error");
-                    setError("Authorization was denied.");
+                    setError(t("flow.device.denied"));
                 } else if (status.status === "error") {
                     setDeviceStatus("error");
-                    setError(status.error_description || "Device flow error");
+                    setError(status.error_description || t("flow.device.error"));
                 }
             } catch (err) {
                 // Ignore errors - no existing flow
@@ -300,7 +303,7 @@ export function FlowHandler({
         };
 
         void checkExistingFlow();
-    }, [handleClose, interaction?.type, isOpen, onInteractSuccess, sourceId]);
+    }, [handleClose, interaction?.type, isOpen, onInteractSuccess, sourceId, t]);
 
     const handleSubmit = async () => {
         if (!source || !interaction) return;
@@ -308,7 +311,11 @@ export function FlowHandler({
             interaction.fields,
         );
         if (missingRequiredLabels.length > 0) {
-            setError(`Please fill required fields: ${missingRequiredLabels.join(", ")}`);
+            setError(
+                t("flow.error.missing_fields", {
+                    fields: missingRequiredLabels.join(", "),
+                }),
+            );
             return;
         }
 
@@ -320,7 +327,7 @@ export function FlowHandler({
             onInteractSuccess?.();
             handleClose();
         } catch (err: any) {
-            setError(err.message || "Interaction failed");
+            setError(err.message || t("flow.error.interaction_failed"));
         } finally {
             setLoading(false);
         }
@@ -348,27 +355,27 @@ export function FlowHandler({
             }
             if (pollResult.status === "expired") {
                 setDeviceStatus("expired");
-                setError("Device code expired. Please restart authorization.");
+                setError(t("flow.device.expired"));
                 return;
             }
             if (pollResult.status === "denied") {
                 setDeviceStatus("error");
-                setError("Authorization was denied.");
+                setError(t("flow.device.denied"));
                 return;
             }
             setDeviceStatus("error");
             setError(
                 pollResult.error_description ||
                     pollResult.error ||
-                    "Device flow polling failed",
+                    t("flow.device.poll_failed"),
             );
         } catch (err: any) {
             setDeviceStatus("error");
-            setError(err.message || "Failed to poll device token");
+            setError(err.message || t("flow.device.poll_exception"));
         } finally {
             setVerifying(false);
         }
-    }, [handleClose, onInteractSuccess, sourceId, verifying]);
+    }, [handleClose, onInteractSuccess, sourceId, t, verifying]);
 
     const handleOAuthStart = useCallback(async () => {
         if (!source || !sourceId || !interaction) return;
@@ -376,7 +383,11 @@ export function FlowHandler({
             interaction.fields,
         );
         if (missingRequiredLabels.length > 0) {
-            setError(`Please fill required fields: ${missingRequiredLabels.join(", ")}`);
+            setError(
+                t("flow.error.missing_fields", {
+                    fields: missingRequiredLabels.join(", "),
+                }),
+            );
             return;
         }
 
@@ -449,7 +460,7 @@ export function FlowHandler({
                 );
             }
         } catch (err: any) {
-            setError(err.message || "Failed to start OAuth flow");
+            setError(err.message || t("flow.oauth.start_failed"));
             setLoading(false);
             channel.close();
         }
@@ -463,6 +474,7 @@ export function FlowHandler({
         resolveOAuthRedirectUri,
         source,
         sourceId,
+        t,
     ]);
 
     const renderContent = () => {
@@ -557,7 +569,7 @@ export function FlowHandler({
                                     rel="noopener noreferrer"
                                     className="text-blue-500 hover:underline inline-flex items-center gap-1"
                                 >
-                                    How to create OAuth client?
+                                    {t("flow.oauth.help")}
                                     <ExternalLink className="h-3 w-3" />
                                 </a>
                             </div>
@@ -571,19 +583,19 @@ export function FlowHandler({
                             {loading ? (
                                 <>
                                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                    Waiting for authorization...
+                                    {t("flow.oauth.waiting")}
                                 </>
                             ) : (
                                 <>
                                     <ExternalLink className="mr-2 h-4 w-4" />
-                                    Connect {source.name}
+                                    {t("flow.oauth.connect", { name: source.name })}
                                 </>
                             )}
                         </Button>
                         <div className="text-xs text-muted-foreground text-center">
-                            A new window will open to authorize access.
+                            {t("flow.oauth.hint_1")}
                             <br />
-                            Do not close this dialog until completed.
+                            {t("flow.oauth.hint_2")}
                         </div>
                     </div>
                 );
@@ -602,7 +614,7 @@ export function FlowHandler({
             case "confirm":
                 return (
                     <div className="py-4 text-sm text-center">
-                        Please confirm to proceed with {source.name}.
+                        {t("flow.confirm.message", { name: source.name })}
                     </div>
                 );
 
@@ -616,11 +628,11 @@ export function FlowHandler({
                                 </div>
                                 <div className="text-sm text-muted-foreground text-center">
                                     <p className="font-semibold text-foreground mb-1">
-                                        需要手动介入
+                                        {t("flow.webview.manual.title")}
                                     </p>
-                                    <p>点击下方按钮请求后台重试，并在可用时前台显示浏览器窗口。</p>
+                                    <p>{t("flow.webview.manual.description_1")}</p>
                                     <p className="mt-1">
-                                        你可以在窗口中登录或通过验证码，完成后数据将自动采集并继续。
+                                        {t("flow.webview.manual.description_2")}
                                     </p>
                                 </div>
                                 <Button
@@ -635,7 +647,7 @@ export function FlowHandler({
                                     }}
                                     className="w-full"
                                 >
-                                    在前台打开浏览器
+                                    {t("flow.webview.manual.button")}
                                 </Button>
                             </>
                         ) : (
@@ -645,15 +657,13 @@ export function FlowHandler({
                                 </div>
                                 <div className="text-sm text-muted-foreground text-center space-y-2">
                                     <p className="font-semibold text-foreground">
-                                        此功能仅在桌面客户端可用
+                                        {t("flow.webview.desktop_only.title")}
                                     </p>
                                     <p>
-                                        由于浏览器安全限制，网页抓取任务（如自动登录、后台采集）无法在
-                                        Web 端直接运行。
+                                        {t("flow.webview.desktop_only.description")}
                                     </p>
                                     <p className="text-xs bg-muted/50 p-2 rounded-md border border-border/50">
-                                        请下载并使用 Glanceus
-                                        桌面客户端，它内置了安全的自动化引擎，能完美支持此类操作。
+                                        {t("flow.webview.desktop_only.tip")}
                                     </p>
                                 </div>
                                 <Button
@@ -666,7 +676,7 @@ export function FlowHandler({
                                     }
                                 >
                                     <Download className="h-4 w-4" />
-                                    下载桌面客户端
+                                    {t("flow.webview.desktop_only.download")}
                                 </Button>
                             </>
                         )}
@@ -676,7 +686,9 @@ export function FlowHandler({
             default:
                 return (
                     <div className="py-4 text-red-500">
-                        Unknown interaction type: {interaction.type}
+                        {t("flow.unknown_interaction", {
+                            type: interaction.type,
+                        })}
                     </div>
                 );
         }
@@ -685,6 +697,21 @@ export function FlowHandler({
     if (!source || !interaction) {
         return null;
     }
+
+    const dialogTitle =
+        sourceErrorCopy?.title ||
+        interaction.message ||
+        t("flow.title.action_required_with_name", { name: source.name });
+    const dialogDescription =
+        sourceErrorCopy?.description ||
+        (interaction.type === "oauth_start" ||
+        interaction.type === "oauth_device_flow"
+            ? t("flow.description.oauth")
+            : isErrorState
+              ? t("flow.description.error_invalid")
+              : isSuspendedState
+                ? t("flow.description.suspended")
+                : t("flow.description.default"));
 
     return (
         <Dialog
@@ -697,27 +724,17 @@ export function FlowHandler({
         >
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>
-                        {interaction.message ||
-                            `Action Required: ${source.name}`}
-                    </DialogTitle>
-                    <DialogDescription>
-                        {interaction.type === "oauth_start"
-                            ? "Authentication"
-                            : interaction.type === "oauth_device_flow"
-                            ? "Authentication"
-                            : isErrorState
-                              ? "凭证无效，请更新后重试。"
-                              : isSuspendedState
-                                ? "等待补充信息后继续执行。"
-                                : "Please provide the requested information."}
-                    </DialogDescription>
+                    <DialogTitle>{dialogTitle}</DialogTitle>
+                    <DialogDescription>{dialogDescription}</DialogDescription>
                 </DialogHeader>
 
                 {isErrorState && (
                     <div className="bg-error/15 text-error text-sm p-3 rounded-md flex items-start gap-2 mt-2">
                         <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                        <div>当前状态为 ERROR：凭证已提供但无效，请修正后重新提交。</div>
+                        <div>
+                            {sourceErrorCopy?.description ||
+                                t("flow.banner.error_invalid")}
+                        </div>
                     </div>
                 )}
 
@@ -745,14 +762,16 @@ export function FlowHandler({
                                 onClick={handleSubmit}
                                 disabled={loading || hasMissingRequiredFields}
                             >
-                                {loading ? "Submitting..." : "Submit"}
+                                {loading
+                                    ? t("flow.dialog.submitting")
+                                    : t("flow.dialog.submit")}
                             </Button>
                         )}
                     {(interaction.type === "oauth_start" ||
                         interaction.type === "oauth_device_flow" ||
                         interaction.type === "webview_scrape") && (
                         <Button variant="outline" onClick={handleClose}>
-                            关闭
+                            {t("flow.dialog.close")}
                         </Button>
                     )}
                 </DialogFooter>

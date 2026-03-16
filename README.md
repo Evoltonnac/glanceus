@@ -15,6 +15,7 @@
 
 - **AI-friendly**: Integration authoring and maintenance are optimized for AI-assisted workflows and structured docs.
 - **Declarative UI**: SDUI templates define cards and widgets without hardcoding frontend business logic.
+- **Bilingual i18n**: English (`en`) and Chinese (`zh`) UI support with English as default and Settings-based language switching.
 - **OAuth-first authentication**: Supports OAuth flows (Code + PKCE, Device Flow, Client Credentials), with API Key compatibility when needed.
 - **Local-first**: Data, source configs, and secrets stay on your machine by default.
 - **WebView Scraper**: Handles sites without stable APIs through interactive desktop scraping flow.

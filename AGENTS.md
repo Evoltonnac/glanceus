@@ -51,6 +51,11 @@ Data and runtime:
 - Keep comments concise and meaningful; use English for code comments.
 - Do not add placeholder logic for real execution paths.
 - Keep frontend business logic out of view components when backend/API should own it.
+- Follow i18n standards for user-facing copy:
+  - Supported app languages are `en` and `zh`; default/fallback language is `en`.
+  - Do not ship new hardcoded UI copy in pages/components; use translation keys from `ui-react/src/i18n/messages/*.ts`.
+  - New translation keys must be added in both `en.ts` and `zh.ts` with the same key name.
+  - Persist language preference through backend settings (`/api/settings`, `SystemSettings.language`), not ad-hoc frontend-only state.
 
 ## 5. Execution Boundaries
 

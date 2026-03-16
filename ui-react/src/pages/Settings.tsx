@@ -628,7 +628,7 @@ export default function SettingsPage() {
                                     <section className="space-y-4">
                                         <div className="flex items-center gap-2 text-base font-semibold">
                                             <Network className="w-4 h-4 text-brand" />
-                                            代理设置
+                                            {t("settings.section.proxy")}
                                         </div>
                                         <div className="rounded-xl border border-border px-5 py-4 bg-surface hover:border-foreground/20 hover:shadow-soft-elevation transition-all duration-150">
                                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -637,11 +637,10 @@ export default function SettingsPage() {
                                                         htmlFor="proxy"
                                                         className="text-sm font-medium"
                                                     >
-                                                        HTTP/HTTPS 代理
+                                                        {t("settings.proxy.label")}
                                                     </Label>
                                                     <p className="text-xs text-muted-foreground">
-                                                        适用于 Python 后端 HTTP
-                                                        请求。留空表示不使用。
+                                                        {t("settings.proxy.description")}
                                                     </p>
                                                 </div>
                                                 <Input
@@ -667,7 +666,7 @@ export default function SettingsPage() {
                                     <section className="space-y-4">
                                         <div className="flex items-center gap-2 text-base font-semibold">
                                             <MonitorPlay className="w-4 h-4 text-brand" />
-                                            抓取设置
+                                            {t("settings.section.scraper")}
                                         </div>
                                         <div className="rounded-xl border border-border px-5 py-4 bg-surface hover:border-foreground/20 hover:shadow-soft-elevation transition-all duration-150">
                                             <div className="flex flex-col gap-4">
@@ -677,11 +676,10 @@ export default function SettingsPage() {
                                                             htmlFor="scraper-timeout"
                                                         className="text-sm font-medium"
                                                     >
-                                                        抓取超时 (秒)
+                                                        {t("settings.scraper.timeout.label")}
                                                     </Label>
                                                     <p className="text-xs text-muted-foreground">
-                                                        默认 10
-                                                        秒。超时后任务会自动跳过。
+                                                        {t("settings.scraper.timeout.description")}
                                                     </p>
                                                 </div>
                                                     <Input
@@ -722,16 +720,16 @@ export default function SettingsPage() {
                                     <section className="space-y-4">
                                         <div className="flex items-center gap-2 text-base font-semibold">
                                             <Info className="w-4 h-4 text-brand" />
-                                            调试日志
+                                            {t("settings.section.debug")}
                                         </div>
                                         <div className="rounded-xl border border-border px-5 py-4 bg-surface hover:border-foreground/20 hover:shadow-soft-elevation transition-all duration-150 space-y-4">
                                             <div className="flex items-center justify-between">
                                                 <div className="space-y-1">
                                                     <p className="text-sm font-medium">
-                                                        启用详细日志
+                                                        {t("settings.debug.enabled.label")}
                                                     </p>
                                                     <p className="text-xs text-muted-foreground">
-                                                        记录更多调试信息，建议仅在排障时启用。
+                                                        {t("settings.debug.enabled.description")}
                                                     </p>
                                                 </div>
                                                 <Switch
@@ -796,13 +794,13 @@ export default function SettingsPage() {
                                     <section className="space-y-4">
                                         <div className="flex items-center gap-2 text-base font-semibold">
                                             <Network className="w-4 h-4 text-brand" />
-                                            网络端口
+                                            {t("settings.section.network")}
                                         </div>
                                         <div className="rounded-xl border border-border px-5 py-4 bg-surface hover:border-foreground/20 hover:shadow-soft-elevation transition-all duration-150">
                                             <div className="grid grid-cols-2 gap-8">
                                                 <div className="space-y-1">
                                                     <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
-                                                        API 服务
+                                                        {t("settings.network.api")}
                                                     </span>
                                                     <code className="block font-mono text-sm text-brand">
                                                         {apiPort || t("common.unknown")}
@@ -810,7 +808,7 @@ export default function SettingsPage() {
                                                 </div>
                                                 <div className="space-y-1">
                                                     <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
-                                                        WEB 服务
+                                                        {t("settings.network.web")}
                                                     </span>
                                                     <code className="block font-mono text-sm text-brand">
                                                         {webModePort || t("common.unknown")}
@@ -826,17 +824,16 @@ export default function SettingsPage() {
                                     <section className="space-y-4 pb-8">
                                         <div className="flex items-center gap-2 text-base font-semibold">
                                             <Shield className="w-4 h-4 text-brand" />
-                                            数据加密
+                                            {t("settings.section.encryption")}
                                         </div>
                                         <div className="space-y-4">
                                             <div className="flex items-center justify-between rounded-xl border border-border px-5 py-4 bg-surface hover:border-foreground/20 hover:shadow-soft-elevation transition-all duration-150">
                                                 <div className="space-y-1">
                                                     <p className="text-sm font-medium">
-                                                        本地 AES-256 加密
+                                                        {t("settings.encryption.local.label")}
                                                     </p>
                                                     <p className="text-xs text-muted-foreground">
-                                                        加密存储 API Key
-                                                        等敏感凭证。
+                                                        {t("settings.encryption.local.description")}
                                                     </p>
                                                 </div>
                                                 <Switch
@@ -859,10 +856,7 @@ export default function SettingsPage() {
                                                     <div className="flex items-start gap-3">
                                                         <Info className="w-4 h-4 text-brand shrink-0 mt-0.5" />
                                                         <p className="text-xs text-foreground/80 leading-relaxed">
-                                                            <strong>
-                                                                多端同步：
-                                                            </strong>{" "}
-                                                            先在此设备导出通行码，再在目标设备导入，两台设备便可共享解密能力。
+                                                            {t("settings.encryption.sync_note")}
                                                         </p>
                                                     </div>
                                                     <div className="flex gap-2">
@@ -874,7 +868,7 @@ export default function SettingsPage() {
                                                             }
                                                             className="bg-background text-xs h-8 rounded-lg"
                                                         >
-                                                            导出通行码
+                                                            {t("settings.button.export_passcode")}
                                                         </Button>
                                                         <Button
                                                             variant="outline"
@@ -886,7 +880,7 @@ export default function SettingsPage() {
                                                             }
                                                             className="bg-background text-xs h-8 rounded-lg"
                                                         >
-                                                            导入通行码
+                                                            {t("settings.button.import_passcode")}
                                                         </Button>
                                                     </div>
 
@@ -917,7 +911,7 @@ export default function SettingsPage() {
                                                     {showImport && (
                                                         <div className="flex gap-2 mt-2 pt-4 border-t border-brand/10">
                                                             <Input
-                                                                placeholder="Paste passcode..."
+                                                                placeholder={t("settings.input.passcode_placeholder")}
                                                                 value={
                                                                     importKeyValue
                                                                 }
@@ -939,7 +933,7 @@ export default function SettingsPage() {
                                                                 }
                                                                 className="h-9 px-4 rounded-lg"
                                                             >
-                                                                Import
+                                                                {t("settings.button.confirm_import")}
                                                             </Button>
                                                         </div>
                                                     )}

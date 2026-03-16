@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { api } from "../api/client";
+import { useI18n } from "../i18n";
 import type { ViewComponent, SourceSummary } from "../types/config";
 import {
     Dialog,
@@ -46,6 +47,7 @@ export function AddWidgetDialog({
     onOpenChange,
     onAddWidget,
 }: AddWidgetDialogProps) {
+    const { t } = useI18n();
     const [sources, setSources] = useState<SourceSummary[]>([]);
     const [selectedSourceId, setSelectedSourceId] = useState<string>("");
 
@@ -118,23 +120,21 @@ export function AddWidgetDialog({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
-                    <DialogTitle>添加小组件</DialogTitle>
+                    <DialogTitle>{t("add_widget.title")}</DialogTitle>
                     <DialogDescription>
-                        从已配置的数据源中选择一个模版，将其添加到当前监控面板。
+                        {t("add_widget.description")}
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="grid gap-3 py-4">
                     <div className="flex flex-col gap-2">
-                        <label className="text-sm font-medium">
-                            选择数据源
-                        </label>
+                        <label className="text-sm font-medium">{t("add_widget.source_label")}</label>
                         <Select
                             value={selectedSourceId}
                             onValueChange={setSelectedSourceId}
                         >
                             <SelectTrigger>
-                                <SelectValue placeholder="请选择你要展示的数据源..." />
+                                <SelectValue placeholder={t("add_widget.source_placeholder")} />
                             </SelectTrigger>
                             <SelectContent>
                                 {sources.map((source) => (
@@ -146,7 +146,7 @@ export function AddWidgetDialog({
                                             {source.name}
                                             {source.error && (
                                                 <span className="text-xs text-destructive">
-                                                    (异常)
+                                                    {t("add_widget.source_error_tag")}
                                                 </span>
                                             )}
                                         </div>
@@ -158,17 +158,15 @@ export function AddWidgetDialog({
 
                     {selectedSourceId && (
                         <div className="flex flex-col gap-2">
-                            <label className="text-sm font-medium">
-                                选择展示模版
-                            </label>
+                            <label className="text-sm font-medium">{t("add_widget.template_label")}</label>
 
                             {loading ? (
                                 <div className="p-4 text-center text-sm text-muted-foreground">
-                                    加载模版中...
+                                    {t("add_widget.loading_templates")}
                                 </div>
                             ) : templates.length === 0 ? (
                                 <div className="p-4 text-center text-sm text-muted-foreground bg-secondary/20 rounded-md border border-dashed">
-                                    该数据源的集成配置未提供任何展示模版。
+                                    {t("add_widget.no_templates")}
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-2 gap-3 max-h-[300px] pr-2">
@@ -233,13 +231,13 @@ export function AddWidgetDialog({
                         variant="outline"
                         onClick={() => onOpenChange(false)}
                     >
-                        取消
+                        {t("add_widget.cancel")}
                     </Button>
                     <Button
                         disabled={!selectedSourceId || selectedTemplateIdx < 0}
                         onClick={handleAdd}
                     >
-                        添加到视图
+                        {t("add_widget.confirm")}
                     </Button>
                 </DialogFooter>
             </DialogContent>

@@ -220,7 +220,7 @@ test.beforeEach(async ({ page }) => {
 
 test("dashboard renders mocked source statuses", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText("监控视图")).toBeVisible();
+    await expect(page.getByText("看板")).toBeVisible();
 });
 ```
 

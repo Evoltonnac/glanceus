@@ -9,6 +9,7 @@ import {
     Monitor,
 } from "lucide-react";
 import { cn, isTauri, openExternalLink } from "../lib/utils";
+import { useI18n } from "../i18n";
 import type { ScraperLifecycleLog } from "../hooks/useScraper";
 
 export interface ScraperStatusBannerProps {
@@ -28,6 +29,7 @@ export function ScraperStatusBanner({
     onSkip,
     onClearQueue,
 }: ScraperStatusBannerProps) {
+    const { t, locale } = useI18n();
     const [isExpanded, setIsExpanded] = useState(false);
     const [showLogViewer, setShowLogViewer] = useState(false);
     const logEndRef = useRef<HTMLDivElement>(null);
@@ -62,11 +64,14 @@ export function ScraperStatusBanner({
 
     const formatTimestamp = (timestamp: number) => {
         const date = new Date(timestamp);
-        const timeStr = date.toLocaleTimeString("zh-CN", {
+        const timeStr = date.toLocaleTimeString(
+            locale === "zh" ? "zh-CN" : "en-US",
+            {
             hour: "2-digit",
             minute: "2-digit",
             second: "2-digit",
-        });
+            },
+        );
         const ms = date.getMilliseconds().toString().padStart(3, "0");
         return `${timeStr}.${ms}`;
     };
@@ -80,7 +85,7 @@ export function ScraperStatusBanner({
                         <div className="flex items-center gap-2">
                             <FileText className="h-4 w-4 text-brand" />
                             <span className="text-sm font-medium text-foreground">
-                                Scraper Logs
+                                {t("scraper.banner.logs_title")}
                             </span>
                             <span className="text-xs text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded tabular-nums">
                                 {scraperLogs.length}
@@ -183,27 +188,29 @@ export function ScraperStatusBanner({
                                     <span className="text-sm font-medium whitespace-nowrap">
                                         <span className="text-muted-foreground mr-1">
                                             {hasTask
-                                                ? "正在后台抓取:"
-                                                : "当前任务:"}
+                                                ? t("scraper.banner.status.running_prefix")
+                                                : t("scraper.banner.status.current_prefix")}
                                         </span>
                                         <span className="text-foreground max-w-[150px] truncate inline-block align-bottom">
                                             {hasTask
                                                 ? activeScraperName ||
-                                                  "准备中..."
-                                                : "无任务"}
+                                                  t("scraper.banner.status.preparing")
+                                                : t("scraper.banner.status.none")}
                                         </span>
                                     </span>
 
                                     {hasTask && remainingCount > 0 && (
                                         <span className="text-xs font-semibold text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded tabular-nums ml-1">
-                                            剩余{remainingCount}
+                                            {t("scraper.banner.remaining", {
+                                                count: remainingCount,
+                                            })}
                                         </span>
                                     )}
                                 </>
                             ) : (
                                 <span className="text-sm font-medium text-muted-foreground whitespace-nowrap flex items-center gap-2">
                                     <Monitor className="h-3.5 w-3.5" />
-                                    Web 端无法进行网页抓取
+                                    {t("scraper.banner.web_unavailable")}
                                 </span>
                             )}
                         </div>
@@ -219,10 +226,10 @@ export function ScraperStatusBanner({
                                             setShowLogViewer(!showLogViewer);
                                         }}
                                         className="flex items-center gap-1.5 h-7 px-2.5 rounded-full text-xs font-medium text-muted-foreground hover:bg-foreground hover:text-background transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand relative"
-                                        title="查看日志"
+                                        title={t("scraper.banner.actions.logs")}
                                     >
                                         <FileText className="h-3.5 w-3.5" />
-                                        日志
+                                        {t("scraper.banner.actions.logs")}
                                         {scraperLogs.length > 0 && (
                                             <span className="absolute -top-1 -right-1 bg-brand text-background text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
                                                 {scraperLogs.length}
@@ -237,10 +244,10 @@ export function ScraperStatusBanner({
                                                     onShowWindow();
                                                 }}
                                                 className="flex items-center gap-1.5 h-7 px-2.5 rounded-full text-xs font-medium text-muted-foreground hover:bg-foreground hover:text-background transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand"
-                                                title="显示浏览器"
+                                                title={t("scraper.banner.actions.browser")}
                                             >
                                                 <ExternalLink className="h-3.5 w-3.5" />
-                                                浏览器
+                                                {t("scraper.banner.actions.browser")}
                                             </button>
                                             <button
                                                 onClick={(e) => {
@@ -248,10 +255,10 @@ export function ScraperStatusBanner({
                                                     onSkip();
                                                 }}
                                                 className="flex items-center gap-1.5 h-7 px-2.5 rounded-full text-xs font-medium text-muted-foreground hover:bg-foreground hover:text-background transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand"
-                                                title="跳过当前"
+                                                title={t("scraper.banner.actions.skip")}
                                             >
                                                 <SkipForward className="h-3.5 w-3.5" />
-                                                跳过
+                                                {t("scraper.banner.actions.skip")}
                                             </button>
                                             <button
                                                 onClick={(e) => {
@@ -259,10 +266,10 @@ export function ScraperStatusBanner({
                                                     onClearQueue();
                                                 }}
                                                 className="flex items-center gap-1.5 h-7 px-2.5 rounded-full text-xs font-medium text-error hover:bg-error hover:text-background transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand"
-                                                title="清空队列"
+                                                title={t("scraper.banner.actions.clear")}
                                             >
                                                 <XCircle className="h-3.5 w-3.5" />
-                                                清空
+                                                {t("scraper.banner.actions.clear")}
                                             </button>
 
                                             <div className="w-px h-4 bg-border mx-1" />
@@ -279,7 +286,7 @@ export function ScraperStatusBanner({
                                     }}
                                     className="flex items-center gap-1 h-7 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-brand/10 text-brand hover:bg-brand hover:text-background transition-all"
                                 >
-                                    获取客户端
+                                    {t("scraper.banner.actions.download_client")}
                                 </button>
                             )}
 
@@ -289,7 +296,7 @@ export function ScraperStatusBanner({
                                     setIsExpanded(false);
                                 }}
                                 className="flex items-center justify-center h-7 w-7 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand"
-                                title="收起"
+                                title={t("common.collapse")}
                             >
                                 <ChevronRight className="h-4 w-4" />
                             </button>

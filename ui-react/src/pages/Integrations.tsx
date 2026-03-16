@@ -208,6 +208,7 @@ function buildReloadToastMessage(
 }
 
 function DiagnosticItem({ diagnostic }: { diagnostic: IntegrationDiagnostic }) {
+    const { t } = useI18n();
     const [expanded, setExpanded] = useState(false);
     const locationPrefix =
         diagnostic.line && diagnostic.column
@@ -238,14 +239,31 @@ function DiagnosticItem({ diagnostic }: { diagnostic: IntegrationDiagnostic }) {
                 <div className="mt-2 text-muted-foreground pl-5 border-l-2 border-error/20 ml-1.5 space-y-1">
                     <p>
                         {diagnostic.line && diagnostic.column
-                            ? `Location: line ${diagnostic.line}, column ${diagnostic.column}`
-                            : "No precise position from backend"}
+                            ? t("integrations.diagnostic.location", {
+                                  line: diagnostic.line,
+                                  column: diagnostic.column,
+                              })
+                            : t("integrations.diagnostic.no_position")}
                     </p>
                     {diagnostic.fieldPath && (
-                        <p>Field: {diagnostic.fieldPath}</p>
+                        <p>
+                            {t("integrations.diagnostic.field", {
+                                value: diagnostic.fieldPath,
+                            })}
+                        </p>
                     )}
-                    {diagnostic.code && <p>Code: {diagnostic.code}</p>}
-                    <p>Source: {diagnostic.source}</p>
+                    {diagnostic.code && (
+                        <p>
+                            {t("integrations.diagnostic.code", {
+                                value: diagnostic.code,
+                            })}
+                        </p>
+                    )}
+                    <p>
+                        {t("integrations.diagnostic.source", {
+                            value: diagnostic.source,
+                        })}
+                    </p>
                 </div>
             )}
         </div>
@@ -513,11 +531,11 @@ export default function IntegrationsPage() {
             setSources(relatedSources);
             return data;
         } catch (err) {
-            setEditorError(`Failed to load ${filename}`);
+            setEditorError(t("integrations.error.load_file", { file: filename }));
             console.error(err);
             return null;
         }
-    }, []);
+    }, [t]);
 
     const handleReloadFile = useCallback(async () => {
         const targetFile = selectedFile;
@@ -570,7 +588,7 @@ export default function IntegrationsPage() {
             const reloadMessage =
                 typedReloadErr.detail ||
                 typedReloadErr.message ||
-                "Configuration reload failed";
+                t("integrations.error.reload_failed");
             const groupedDiagnostics = mapBackendDiagnostics(
                 loadedFilename ?? targetFile ?? "__reload__",
                 typedReloadErr.diagnostics,
@@ -586,7 +604,7 @@ export default function IntegrationsPage() {
                 return next;
             });
             setEditorError(reloadMessage);
-            setSuccess("Reload failed.");
+            setSuccess(t("integrations.status.reload_failed"));
             showToast(
                 t("integrations.toast.reload_failed", {
                     message: reloadMessage,
@@ -670,7 +688,7 @@ export default function IntegrationsPage() {
         try {
             await api.saveIntegrationFile(selectedFile, content);
             setOriginalContent(content);
-            setSuccess("Saved file.");
+            setSuccess(t("integrations.status.saved_file"));
 
             try {
                 const result = await api.reloadConfig();
@@ -692,7 +710,7 @@ export default function IntegrationsPage() {
                 const reloadMessage =
                     typedReloadErr.detail ||
                     typedReloadErr.message ||
-                    "Configuration reload failed";
+                    t("integrations.error.reload_failed");
                 const groupedDiagnostics = mapBackendDiagnostics(
                     selectedFile,
                     typedReloadErr.diagnostics,
@@ -707,7 +725,7 @@ export default function IntegrationsPage() {
                     );
                     return next;
                 });
-                setSuccess("Saved, but configuration reload failed.");
+                setSuccess(t("integrations.status.saved_reload_failed"));
                 setEditorError(reloadMessage);
                 showToast(
                     t("integrations.toast.save_reload_failed", {
@@ -720,7 +738,9 @@ export default function IntegrationsPage() {
             setTimeout(() => setSuccess(null), 4000);
         } catch (saveErr) {
             const message =
-                saveErr instanceof Error ? saveErr.message : "Failed to save";
+                saveErr instanceof Error
+                    ? saveErr.message
+                    : t("integrations.error.save_failed");
             setEditorError(message);
             showToast(
                 t("integrations.toast.save_failed", { message }),
@@ -763,7 +783,7 @@ export default function IntegrationsPage() {
             await loadIntegrationContent(created.filename);
         } catch (err: any) {
             setNewIntegrationError(
-                err.message || "Failed to create integration",
+                err.message || t("integrations.error.create_integration"),
             );
         }
     };
@@ -851,7 +871,7 @@ export default function IntegrationsPage() {
             setDeletingIntegration(null);
         } catch (err: any) {
             setDeleteIntegrationError(
-                err.message || "Failed to delete integration",
+                err.message || t("integrations.error.delete_integration"),
             );
         }
     };
@@ -880,7 +900,7 @@ export default function IntegrationsPage() {
             // Reload config
             await api.reloadConfig();
         } catch (err: any) {
-            setNewSourceError(err.message || "Failed to create source");
+            setNewSourceError(err.message || t("integrations.error.create_source"));
         }
     };
 
@@ -899,11 +919,15 @@ export default function IntegrationsPage() {
             setDeletingSourceId(null);
             const affectedViewCount = deleted.cleanup?.affected_view_count ?? 0;
             setSuccess(
-                `Source deleted. Cleared data/secrets and removed ${affectedViewCount} linked view item(s).`,
+                t("integrations.status.source_deleted_cleanup", {
+                    count: affectedViewCount,
+                }),
             );
             setTimeout(() => setSuccess(null), 3000);
         } catch (err: any) {
-            setDeleteSourceError(err.message || "Failed to delete source");
+            setDeleteSourceError(
+                err.message || t("integrations.error.delete_source"),
+            );
         }
     };
 
@@ -988,10 +1012,10 @@ export default function IntegrationsPage() {
                                         <>
                                             <DialogHeader>
                                             <DialogTitle>
-                                                New Integration
+                                                {t("integrations.new_dialog.title")}
                                             </DialogTitle>
                                             <DialogDescription>
-                                                Create an integration YAML file and optionally start from a preset.
+                                                {t("integrations.new_dialog.description")}
                                             </DialogDescription>
                                             </DialogHeader>
                                             <div className="py-3 space-y-4">
@@ -1002,18 +1026,18 @@ export default function IntegrationsPage() {
                                                         htmlFor="new-integration-id"
                                                         className="text-sm font-medium"
                                                     >
-                                                        ID (file name)
+                                                        {t("integrations.new_dialog.id_label")}
                                                     </Label>
                                                     {isDuplicateFilename && (
                                                         <span className="text-xs text-error font-medium">
-                                                            File already exists
+                                                            {t("integrations.new_dialog.file_exists")}
                                                         </span>
                                                     )}
                                                 </div>
                                                 <div className={`flex items-center rounded-md border transition-colors duration-150 ${isDuplicateFilename ? "border-error bg-error/5" : "border-input focus-within:border-brand focus-within:ring-1 focus-within:ring-brand/20"}`}>
                                                     <Input
                                                         id="new-integration-id"
-                                                        placeholder="github_oauth"
+                                                        placeholder={t("integrations.new_dialog.id_placeholder")}
                                                         value={newFilename}
                                                         onChange={(e) => {
                                                             const val =
@@ -1038,13 +1062,13 @@ export default function IntegrationsPage() {
                                                     htmlFor="new-integration-name"
                                                     className="text-sm font-medium"
                                                 >
-                                                    Name
+                                                    {t("integrations.new_dialog.name_label")}
                                                 </Label>
                                                 <Input
                                                     id="new-integration-name"
                                                     placeholder={
                                                         defaultIntegrationName ||
-                                                        "integration_name"
+                                                        t("integrations.new_dialog.name_placeholder")
                                                     }
                                                     value={newIntegrationName}
                                                     onChange={(e) =>
@@ -1059,7 +1083,7 @@ export default function IntegrationsPage() {
                                             {/* Presets Section */}
                                             <div className="space-y-2">
                                                 <Label className="text-sm font-medium">
-                                                    Process
+                                                    {t("integrations.new_dialog.process_label")}
                                                 </Label>
                                                 <div className="grid grid-cols-2 gap-2">
                                                     {integrationPresets.map(
@@ -1104,7 +1128,7 @@ export default function IntegrationsPage() {
                                                     <Button
                                                         variant="outline"
                                                         size="icon"
-                                                        aria-label="Open AI prompt actions"
+                                                        aria-label={t("integrations.new_dialog.ai_prompt_aria")}
                                                         onClick={() =>
                                                             setNewIntegrationDialogView(
                                                                 "ai-prompt",
@@ -1116,7 +1140,7 @@ export default function IntegrationsPage() {
                                                     </Button>
                                                 </TooltipTrigger>
                                                 <TooltipContent>
-                                                    AI Prompt
+                                                    {t("integrations.tooltip.open_ai_prompt")}
                                                 </TooltipContent>
                                             </Tooltip>
                                             <div className="flex-1" />
@@ -1128,7 +1152,7 @@ export default function IntegrationsPage() {
                                                     )
                                                 }
                                             >
-                                                Cancel
+                                                {t("integrations.button.cancel")}
                                             </Button>
                                             <Button
                                                 onClick={
@@ -1137,16 +1161,16 @@ export default function IntegrationsPage() {
                                                 disabled={!newFilename.trim() || isDuplicateFilename}
                                                 className="bg-brand-gradient text-white hover:opacity-90 transition-opacity duration-150"
                                             >
-                                                Create
+                                                {t("integrations.button.create")}
                                             </Button>
                                             </DialogFooter>
                                         </>
                                     ) : (
                                         <>
                                             <DialogHeader>
-                                                <DialogTitle>AI Prompt Helper</DialogTitle>
+                                                <DialogTitle>{t("integrations.ai_prompt.title")}</DialogTitle>
                                                 <DialogDescription>
-                                                    选择一个操作，快速使用 integration-editor skill。
+                                                    {t("integrations.ai_prompt.description")}
                                                 </DialogDescription>
                                             </DialogHeader>
                                             <div className="py-4 space-y-3">
@@ -1156,7 +1180,7 @@ export default function IntegrationsPage() {
                                                     onClick={handleCopyIntegrationPrompt}
                                                 >
                                                     <Copy className="h-4 w-4 text-brand" />
-                                                    复制完整 Prompt
+                                                    {t("integrations.ai_prompt.copy")}
                                                 </Button>
                                                 <Button
                                                     variant="outline"
@@ -1164,7 +1188,7 @@ export default function IntegrationsPage() {
                                                     onClick={handleOpenSkillsGithub}
                                                 >
                                                     <ExternalLink className="h-4 w-4 text-warning" />
-                                                    打开 GitHub skills 目录
+                                                    {t("integrations.ai_prompt.open_github")}
                                                 </Button>
                                                 <InlineError message={newIntegrationError} />
                                             </div>
@@ -1175,14 +1199,14 @@ export default function IntegrationsPage() {
                                                         setNewIntegrationDialogView("create")
                                                     }
                                                 >
-                                                    返回创建
+                                                    {t("integrations.ai_prompt.back")}
                                                 </Button>
                                                 <Button
                                                     onClick={() =>
                                                         handleNewIntegrationDialogChange(false)
                                                     }
                                                 >
-                                                    关闭
+                                                    {t("integrations.ai_prompt.close")}
                                                 </Button>
                                             </DialogFooter>
                                         </>
@@ -1207,7 +1231,9 @@ export default function IntegrationsPage() {
                                     </button>
                                 </TooltipTrigger>
                                 <TooltipContent side="right">
-                                    {sidebarCollapsed ? "展开" : "收起"}
+                                    {sidebarCollapsed
+                                        ? t("common.expand")
+                                        : t("common.collapse")}
                                 </TooltipContent>
                             </Tooltip>
                         </div>
@@ -1224,10 +1250,12 @@ export default function IntegrationsPage() {
                                         className="flex-1 h-8 bg-transparent border-border/50 text-muted-foreground hover:bg-foreground hover:text-background hover:border-foreground transition-all duration-200"
                                     >
                                         <Plus className="h-3.5 w-3.5 mr-1.5" />
-                                        新建
+                                        {t("integrations.sidebar.new")}
                                     </Button>
                                 </TooltipTrigger>
-                                <TooltipContent side="bottom" className="text-xs">新建集成</TooltipContent>
+                                <TooltipContent side="bottom" className="text-xs">
+                                    {t("integrations.sidebar.tooltip_new")}
+                                </TooltipContent>
                             </Tooltip>
                             <Tooltip>
                                 <TooltipTrigger asChild>
@@ -1238,11 +1266,11 @@ export default function IntegrationsPage() {
                                         className="flex-1 h-8 bg-transparent border-border/50 text-muted-foreground hover:bg-foreground hover:text-background hover:border-foreground transition-all duration-200"
                                     >
                                         <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                                        重载
+                                        {t("integrations.sidebar.reload")}
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent side="bottom" className="text-xs">
-                                    重新加载配置
+                                    {t("integrations.sidebar.tooltip_reload")}
                                 </TooltipContent>
                             </Tooltip>
                         </div>
@@ -1262,7 +1290,7 @@ export default function IntegrationsPage() {
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent side="right" className="text-xs">
-                                    重新加载配置
+                                    {t("integrations.sidebar.tooltip_reload")}
                                 </TooltipContent>
                             </Tooltip>
                             {integrations.map((file) => {
@@ -1351,7 +1379,7 @@ export default function IntegrationsPage() {
                                             </Tooltip>
                                             {hasFileErrors(file) && (
                                                 <Badge variant="error">
-                                                    Error
+                                                    {t("dashboard.status.error")}
                                                 </Badge>
                                             )}
                                         </div>
@@ -1379,7 +1407,7 @@ export default function IntegrationsPage() {
                                                     }}
                                                 >
                                                     <Trash2 className="mr-2 h-4 w-4" />
-                                                    Delete
+                                                    {t("common.delete")}
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
@@ -1388,7 +1416,7 @@ export default function IntegrationsPage() {
                             })}
                             {integrations.length === 0 && (
                                 <p className="text-xs text-muted-foreground p-2">
-                                    No integrations found
+                                    {t("integrations.empty.no_files")}
                                 </p>
                             )}
                         </div>
@@ -1415,7 +1443,7 @@ export default function IntegrationsPage() {
                                     )}
                                     {content !== originalContent && (
                                         <Badge variant="secondary">
-                                            Unsaved
+                                            {t("integrations.status.unsaved")}
                                         </Badge>
                                     )}
                                 </div>
@@ -1451,8 +1479,8 @@ export default function IntegrationsPage() {
                                         </TooltipTrigger>
                                         <TooltipContent>
                                             {selectedDiagnostics.length > 0
-                                                ? "Fix errors before saving"
-                                                : "Save (Ctrl+S)"}
+                                                ? t("integrations.tooltip.save_disabled")
+                                                : t("integrations.tooltip.save_enabled")}
                                         </TooltipContent>
                                     </Tooltip>
                                 </div>
@@ -1501,8 +1529,9 @@ export default function IntegrationsPage() {
                                         >
                                             <div className="flex items-center gap-2 text-sm font-medium text-error">
                                                 <AlertCircle className="h-4 w-4" />
-                                                配置错误 (
-                                                {selectedDiagnostics.length})
+                                                {t("integrations.validation_errors", {
+                                                    count: selectedDiagnostics.length,
+                                                })}
                                             </div>
                                             <ChevronRight
                                                 className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${diagnosticsExpanded ? "rotate-90" : "-rotate-90"}`}
@@ -1527,8 +1556,9 @@ export default function IntegrationsPage() {
                                 <div className="p-3 border-b border-border flex items-center justify-between">
                                     <h3 className="text-sm font-semibold flex items-center gap-2">
                                         <Database className="w-4 h-4" />
-                                        Sources using this integration (
-                                        {sources.length})
+                                        {t("integrations.sources.section_title", {
+                                            count: sources.length,
+                                        })}
                                     </h3>
                                     <Dialog
                                         open={showNewSourceDialog}
@@ -1539,26 +1569,25 @@ export default function IntegrationsPage() {
                                         <DialogTrigger asChild>
                                             <Button variant="outline" size="sm">
                                                 <Plus className="h-4 w-4 mr-1" />
-                                                Create Source
+                                                {t("integrations.sources.create_button")}
                                             </Button>
                                         </DialogTrigger>
                                         <DialogContent>
                                             <DialogHeader>
                                                 <DialogTitle>
-                                                    Create Source
+                                                    {t("integrations.sources.dialog.title")}
                                                 </DialogTitle>
                                                 <DialogDescription>
-                                                    Create a new data source
-                                                    based on this integration.
+                                                    {t("integrations.sources.dialog.description")}
                                                 </DialogDescription>
                                             </DialogHeader>
                                             <div className="py-4 space-y-4">
                                                 <div>
                                                     <label className="text-sm font-medium">
-                                                        Source Name
+                                                        {t("integrations.sources.dialog.name_label")}
                                                     </label>
                                                     <Input
-                                                        placeholder="My Source Name"
+                                                        placeholder={t("integrations.sources.dialog.name_placeholder")}
                                                         value={newSourceName}
                                                         onChange={(e) =>
                                                             setNewSourceName(
@@ -1568,9 +1597,7 @@ export default function IntegrationsPage() {
                                                         className="mt-1"
                                                     />
                                                     <p className="text-xs text-muted-foreground mt-1">
-                                                        ID will be
-                                                        auto-generated as a
-                                                        unique hash.
+                                                        {t("integrations.sources.dialog.name_hint")}
                                                     </p>
                                                 </div>
                                                 <InlineError message={newSourceError} />
@@ -1584,12 +1611,12 @@ export default function IntegrationsPage() {
                                                         )
                                                     }
                                                 >
-                                                    Cancel
+                                                    {t("integrations.button.cancel")}
                                                 </Button>
                                                 <Button
                                                     onClick={handleCreateSource}
                                                 >
-                                                    Create
+                                                    {t("integrations.sources.create_button")}
                                                 </Button>
                                             </DialogFooter>
                                         </DialogContent>
@@ -1609,22 +1636,24 @@ export default function IntegrationsPage() {
                                                                 {source.name}
                                                             </span>
                                                             <span className="text-xs text-muted-foreground ml-0 md:ml-2 inline-block">
-                                                                (ID: {source.id}
-                                                                )
+                                                                {t("integrations.sources.id", {
+                                                                    id: source.id,
+                                                                })}
                                                             </span>
                                                             {source.integration_id && (
                                                                 <span className="text-xs text-muted-foreground ml-0 md:ml-2 inline-block">
-                                                                    via{" "}
-                                                                    {
-                                                                        source.integration_id
-                                                                    }
+                                                                    {t("integrations.sources.via", {
+                                                                        integration: source.integration_id,
+                                                                    })}
                                                                 </span>
                                                             )}
                                                         </div>
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            aria-label={`Delete source ${source.id}`}
+                                                            aria-label={t("integrations.sources.delete_aria", {
+                                                                id: source.id,
+                                                            })}
                                                             className="h-8 w-8 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand/50"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
@@ -1640,7 +1669,7 @@ export default function IntegrationsPage() {
                                         </div>
                                     ) : (
                                         <p className="text-xs text-muted-foreground text-center py-4">
-                                            No sources use this integration yet.
+                                            {t("integrations.sources.empty")}
                                         </p>
                                     )}
                                 </div>
@@ -1650,9 +1679,9 @@ export default function IntegrationsPage() {
                         <div className="flex-1 flex items-center justify-center">
                             <EmptyState
                                 icon={<FileJson className="h-8 w-8" />}
-                                title="Select an Integration"
-                                description="Choose an integration from the sidebar or create a new one to get started."
-                                actionLabel="Create Integration"
+                                title={t("integrations.empty.title")}
+                                description={t("integrations.empty.description")}
+                                actionLabel={t("integrations.empty.action")}
                                 onAction={() => handleNewIntegrationDialogChange(true)}
                             />
                         </div>
@@ -1671,9 +1700,11 @@ export default function IntegrationsPage() {
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>确认删除集成文件</DialogTitle>
+                        <DialogTitle>{t("integrations.delete_integration.title")}</DialogTitle>
                         <DialogDescription>
-                            删除 "{deletingIntegration}" 后，该文件内配置将不可恢复。使用该集成的数据源不会自动删除，但可能因配置缺失而失效。
+                            {t("integrations.delete_integration.description", {
+                                name: deletingIntegration ?? "",
+                            })}
                         </DialogDescription>
                     </DialogHeader>
                     <InlineError message={deleteIntegrationError} className="mt-2" />
@@ -1685,7 +1716,7 @@ export default function IntegrationsPage() {
                                 setDeleteIntegrationError(null);
                             }}
                         >
-                            取消
+                            {t("integrations.button.cancel")}
                         </Button>
                         <Button
                             variant="destructive"
@@ -1694,7 +1725,7 @@ export default function IntegrationsPage() {
                                 handleDeleteIntegration(deletingIntegration)
                             }
                         >
-                            确认删除
+                            {t("common.confirmDelete")}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -1711,9 +1742,11 @@ export default function IntegrationsPage() {
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>确认删除数据源</DialogTitle>
+                        <DialogTitle>{t("integrations.delete_source.title")}</DialogTitle>
                         <DialogDescription>
-                            {`删除 "${deletingSourceId}" 后将同时清理该 source_id 下的数据、密钥，以及绑定到该 source_id 的视图组件。此操作不可撤销。`}
+                            {t("integrations.delete_source.description", {
+                                id: deletingSourceId ?? "",
+                            })}
                         </DialogDescription>
                     </DialogHeader>
                     <InlineError message={deleteSourceError} className="mt-2" />
@@ -1725,7 +1758,7 @@ export default function IntegrationsPage() {
                                 setDeleteSourceError(null);
                             }}
                         >
-                            取消
+                            {t("integrations.button.cancel")}
                         </Button>
                         <Button
                             variant="destructive"
@@ -1734,7 +1767,7 @@ export default function IntegrationsPage() {
                                 handleDeleteSource(deletingSourceId)
                             }
                         >
-                            确认删除
+                            {t("common.confirmDelete")}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

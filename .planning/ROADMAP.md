@@ -45,3 +45,30 @@ Plans:
 - [x] 01-01-PLAN.md — Backend durable scraper task pipeline
 - [x] 01-02-PLAN.md — Rust daemon claim loop and direct callback
 - [x] 01-03-PLAN.md — Frontend role refactor, reliability validation, and docs
+
+### Phase 2: 易用性优化。
+
+产品即将正式发布，在那之前，先统一所有界面文案及输出的错误信息。
+
+- 界面文案要贴近产品语言，不要用特别技术性、系统化的词语，也不要用冗长的句子。
+- 错误信息在输出时采用标准格式化方法，为后续 i18n 做准备。
+
+然后，进行全盘 i18n 国际化，先只处理中文和英文两种语言，默认语言使用英文。 语言切换放在设置页面中。
+最后
+- 自动刷新时间默认设置为30分钟，选择范围扩大一点，最大为一天，最小为5分钟，选项保持4到5个，例如5分钟、30分钟、1小时、一天等。
+- 高级设置中的加密默认开启，启动时为用户生成一次密钥。
+
+**Goal:** Deliver a release-ready usability layer with user-friendly copy, standardized runtime errors, bilingual (EN/ZH) UI, and safer default system settings for refresh/encryption.
+**Requirements**: [P2-REQ-01, P2-REQ-02, P2-REQ-03, P2-REQ-04]
+
+- **P2-REQ-01**: Core UI copy uses concise, product-facing language (avoid technical/system-heavy phrasing).
+- **P2-REQ-02**: Runtime error output follows a consistent formatted structure suitable for localization.
+- **P2-REQ-03**: Full i18n support for English and Chinese, default language is English, language switch is available in Settings.
+- **P2-REQ-04**: Global refresh default is 30 minutes with options from 5 minutes to 1 day; encryption is enabled by default and generates a master key once at startup.
+**Depends on:** Phase 1
+**Plans:** 2/3 plans executed
+
+Plans:
+- [x] 02-01-PLAN.md — Standardize runtime error envelope for localization-ready UX
+- [x] 02-02-PLAN.md — Build EN/ZH i18n foundation and migrate core UI copy
+- [ ] 02-03-PLAN.md — Finalize refresh/encryption defaults and settings UX hardening

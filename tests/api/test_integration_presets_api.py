@@ -64,3 +64,34 @@ content_template: |
     assert payload[0]["filename_hint"] == "api_key_example"
     assert payload[0]["content_template"].startswith("name:")
     assert payload[1]["label"] == "OAuth"
+
+
+def test_list_integration_presets_falls_back_to_bundled_directory(tmp_path, monkeypatch):
+    bundled_presets_dir = tmp_path / "bundled_presets"
+    bundled_presets_dir.mkdir(parents=True)
+    (bundled_presets_dir / "webscraper.yaml").write_text(
+        """
+id: webscraper
+label: Web Scraper
+description: Bundled preset
+filename_hint: webscraper_example
+content_template: |
+  name: {{display_name_single_quoted}}
+""".lstrip(),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(api_module, "DEFAULT_PRESETS_DIR", bundled_presets_dir)
+
+    client = _build_client(tmp_path)
+    response = client.get("/api/integrations/presets")
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "id": "webscraper",
+            "label": "Web Scraper",
+            "description": "Bundled preset",
+            "filename_hint": "webscraper_example",
+            "content_template": "name: {{display_name_single_quoted}}",
+        }
+    ]

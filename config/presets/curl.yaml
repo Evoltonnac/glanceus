@@ -1,24 +1,21 @@
 id: "curl"
 label: "cURL"
-description: "Collect request details from a user-provided cURL."
+description: "Starter template for replaying browser/API requests from pasted cURL commands."
 filename_hint: "curl_example"
 content_template: |
   name: {{display_name_single_quoted}}
-  description: "Preset for cURL-based session workflows."
+  description: "Paste a cURL command, extract headers, then call your endpoint."
   flow:
-    - id: paste_curl
+    - id: collect_curl
       use: curl
       args:
-        label: "Session cURL Command"
-        description: "Paste a complete cURL command copied from browser devtools."
-        message: "Please paste your cURL command."
+        label: "Session cURL"
+        description: "Paste the full cURL command copied from browser DevTools."
+      secrets:
+        curl_command: "curl_command"
       outputs:
         request_headers: "headers"
-    # cURL tutorial notes:
-    # 1) Replace the URL with your target endpoint.
-    # 2) Keep only required headers (for example: Authorization, Accept, X-Trace-Id).
-    # 3) Add query params directly in the URL or via your pasted cURL command.
-    # 4) Use JSONPath filters below to keep only the fields your dashboard needs.
+
     - id: fetch_data
       use: http
       args:
@@ -27,24 +24,23 @@ content_template: |
         headers: "{request_headers}"
       outputs:
         usage_payload: "http_response"
-    - id: parse_result_count
+
+    - id: parse_usage
       use: extract
       args:
         source: "{usage_payload}"
         type: "jsonpath"
-        expr: "$.results.length()"
       outputs:
         result_count: "$.results.length()"
+
   templates:
     - id: "curl_usage"
       type: "source_card"
       ui:
         title: "cURL Session"
-        icon: "🧪"
+        icon: "TERMINAL"
       widgets:
         - type: "FactSet"
           facts:
             - label: "Filtered Results"
               value: "{result_count}"
-            - label: "Tips"
-              value: "Edit JSONPath in parse_result_count to filter your payload."

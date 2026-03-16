@@ -62,6 +62,7 @@ class ScraperTaskFailRequest(BaseModel):
     error: str
 
 logger = logging.getLogger(__name__)
+DEFAULT_PRESETS_DIR = Path(__file__).resolve().parent.parent / "config" / "presets"
 
 router = APIRouter(prefix="/api")
 
@@ -105,6 +106,17 @@ def init_api(
 def get_runtime_config():
     """Expose current runtime config snapshot (used by background services)."""
     return _config
+
+
+def _resolve_integration_presets_dir(config_root: Path | None) -> Optional[Path]:
+    """Resolve presets directory with bundled fallback when workspace presets are absent."""
+    if config_root is not None:
+        workspace_dir = config_root / "presets"
+        if workspace_dir.is_dir():
+            return workspace_dir
+    if DEFAULT_PRESETS_DIR.is_dir():
+        return DEFAULT_PRESETS_DIR
+    return None
 
 
 def _require_local_request(request: Request) -> None:
@@ -1308,11 +1320,9 @@ async def list_integration_file_metadata() -> list[dict]:
 async def list_integration_presets() -> list[IntegrationPresetPayload]:
     """List integration presets (from config/presets/*.yaml)."""
     config_root = getattr(_integration_manager, "config_root", None)
-    if not config_root:
-        return []
-
-    presets_dir = Path(config_root) / "presets"
-    if not presets_dir.is_dir():
+    resolved_config_root = Path(config_root) if config_root else None
+    presets_dir = _resolve_integration_presets_dir(resolved_config_root)
+    if presets_dir is None:
         return []
 
     files: dict[str, Path] = {}

@@ -172,6 +172,7 @@ class Executor:
         message: str | None = None,
         interaction: InteractionRequest | None = None,
         error: str | None = None,
+        error_code: str | None = None,
     ):
         """Update state, log it, and persist to data.json."""
         state = self.get_source_state(source_id)
@@ -190,6 +191,7 @@ class Executor:
                 message=message,
                 interaction=interaction_dict,
                 error=error,
+                error_code=error_code,
             )
         except Exception as e:
             logger.error(f"[{source_id}] Failed to persist state: {e}")
@@ -245,11 +247,17 @@ class Executor:
             interaction = self._exception_to_interaction(source, normalized_error)
             if interaction:
                 status = self._interaction_status_for_error(normalized_error)
+                formatted_error = format_runtime_error(
+                    normalized_error,
+                    default_code="runtime.interaction_required",
+                    default_summary="Action required",
+                )
                 self._update_state(
                     source.id,
                     status,
                     str(normalized_error),
                     interaction,
+                    error_code=formatted_error["code"],
                 )
                 return
 
@@ -264,6 +272,7 @@ class Executor:
                 SourceStatus.ERROR,
                 formatted_error["details"],
                 error=formatted_error["summary"],
+                error_code=formatted_error["code"],
             )
 
     async def _run_flow(self, source: SourceConfig) -> Dict[str, Any]:
@@ -967,6 +976,7 @@ class RequiredSecretMissing(Exception):
         data: dict = None,
         warning_message: str = None,
         step_id: str | None = None,
+        code: str = "auth.missing_credentials",
     ):
         self.source_id = source_id
         self.step_id = step_id
@@ -975,6 +985,7 @@ class RequiredSecretMissing(Exception):
         self.message = message
         self.data = data
         self.warning_message = warning_message
+        self.code = code
         super().__init__(message)
 
 
@@ -987,11 +998,13 @@ class InvalidCredentialsError(Exception):
         step_id: str | None,
         message: str,
         status_code: int | None = None,
+        code: str = "auth.invalid_credentials",
     ):
         self.source_id = source_id
         self.step_id = step_id
         self.message = message
         self.status_code = status_code
+        self.code = code
         super().__init__(message)
 
 
@@ -1005,12 +1018,14 @@ class WebScraperBlockedError(Exception):
         message: str,
         status_code: int | None = None,
         data: dict | None = None,
+        code: str = "auth.manual_webview_required",
     ):
         self.source_id = source_id
         self.step_id = step_id
         self.message = message
         self.status_code = status_code
         self.data = data or {}
+        self.code = code
         super().__init__(message)
 
 

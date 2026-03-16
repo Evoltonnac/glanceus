@@ -138,6 +138,7 @@ class DataController:
         message: str | None = None,
         interaction: dict | None = None,
         error: str | None = None,
+        error_code: str | None = None,
     ):
         """
         Persist runtime state for a source (used by SourceState persistence).
@@ -162,6 +163,10 @@ class DataController:
             elif status != "error":
                 # Proactively clear stale error in non-error states.
                 record.pop("error", None)
+            if error_code is not None:
+                record["error_code"] = error_code
+            elif status not in {"error", "suspended"}:
+                record.pop("error_code", None)
             payload["latest_by_source"][source_id] = record
             self._save_payload_locked(payload)
         logger.debug("[%s] state persisted: %s", source_id, status)

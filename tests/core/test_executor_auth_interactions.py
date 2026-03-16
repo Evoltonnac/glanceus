@@ -185,3 +185,27 @@ async def test_oauth_client_secret_is_optional_across_oauth_flows(
     fields_by_key = {field.key: field for field in state.interaction.fields}
     assert "client_secret" in fields_by_key
     assert fields_by_key["client_secret"].required is False
+
+
+@pytest.mark.asyncio
+async def test_missing_credentials_interaction_persists_standard_error_code(
+    executor,
+    data_controller,
+):
+    source = build_source_config(
+        source_id="auth-error-code",
+        name="Auth Error Code Source",
+        flow=[build_step(step_id="api_key", use=StepType.API_KEY)],
+    )
+
+    await executor.fetch_source(source)
+
+    suspended_calls = [
+        call.kwargs
+        for call in data_controller.set_state.call_args_list
+        if call.kwargs.get("status") == SourceStatus.SUSPENDED.value
+    ]
+    assert suspended_calls
+    assert suspended_calls[-1]["error_code"] == "auth.missing_credentials"
+    # Keep legacy behavior for suspended state: no error summary field required.
+    assert suspended_calls[-1].get("error") is None

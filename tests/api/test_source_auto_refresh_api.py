@@ -225,3 +225,62 @@ def test_update_source_refresh_interval_rejects_invalid_value():
         json={"interval_minutes": 7},
     )
     assert response.status_code == 400
+
+
+def test_list_sources_includes_persisted_error_code():
+    source = StoredSource(
+        id="source-error-code",
+        integration_id="demo",
+        name="source-error-code",
+        config={},
+        vars={},
+    )
+    client = _build_client(
+        sources=[source],
+        integrations={"demo": IntegrationConfig(id="demo", flow=[])},
+        latest_by_source={
+            "source-error-code": {
+                "source_id": "source-error-code",
+                "status": "suspended",
+                "message": "Authorization required",
+                "error_code": "auth.invalid_credentials",
+                "interaction": {"type": "oauth_start", "fields": []},
+                "updated_at": 1000.0,
+            }
+        },
+    )
+
+    payload = client.get("/api/sources")
+    assert payload.status_code == 200
+    entry = payload.json()[0]
+    assert entry["status"] == "suspended"
+    assert entry["error_code"] == "auth.invalid_credentials"
+
+
+def test_list_sources_falls_back_to_interaction_error_code_for_legacy_records():
+    source = StoredSource(
+        id="source-legacy-code",
+        integration_id="demo",
+        name="source-legacy-code",
+        config={},
+        vars={},
+    )
+    client = _build_client(
+        sources=[source],
+        integrations={"demo": IntegrationConfig(id="demo", flow=[])},
+        latest_by_source={
+            "source-legacy-code": {
+                "source_id": "source-legacy-code",
+                "status": "suspended",
+                "message": "Manual action required",
+                "interaction": {"type": "webview_scrape", "fields": []},
+                "updated_at": 1000.0,
+            }
+        },
+    )
+
+    payload = client.get("/api/sources")
+    assert payload.status_code == 200
+    entry = payload.json()[0]
+    assert entry["status"] == "suspended"
+    assert entry["error_code"] == "auth.manual_webview_required"

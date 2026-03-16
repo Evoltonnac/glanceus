@@ -83,6 +83,7 @@ export interface SourceSummary {
     has_data: boolean;
     updated_at?: number;
     error?: string;
+    error_code?: string;
     error_details?: string;
     status: SourceStatus;
     message?: string;
@@ -100,6 +101,7 @@ export interface DataResponse {
     data: Record<string, unknown> | null;
     updated_at?: number;
     error?: string;
+    error_code?: string;
     message?: string;
 }
 

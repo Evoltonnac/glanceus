@@ -156,6 +156,22 @@ def _apply_runtime_log_level(debug_enabled: bool) -> None:
     logging.getLogger("uvicorn.access").setLevel(logging.INFO)
 
 
+def _infer_error_code_from_interaction(interaction: dict[str, Any] | None) -> str | None:
+    if not isinstance(interaction, dict):
+        return None
+    interaction_type = interaction.get("type")
+    mapping = {
+        "oauth_start": "auth.authorization_required",
+        "oauth_device_flow": "auth.authorization_required",
+        "input_text": "auth.missing_credentials",
+        "cookies_refresh": "auth.invalid_credentials",
+        "captcha": "auth.interactive_verification_required",
+        "webview_scrape": "auth.manual_webview_required",
+        "retry": "runtime.retry_required",
+    }
+    return mapping.get(interaction_type)
+
+
 # ── Source Listing ────────────────────────────────────
 
 @router.get("/sources")
@@ -196,11 +212,16 @@ async def list_sources() -> list[dict]:
         error = latest_data.get("error") if latest_data else None
         if not error and runtime_state and runtime_state.status == SourceStatus.ERROR and runtime_state.message:
             error = runtime_state.message.splitlines()[0].strip() or "Execution failed"
+        error_code = latest_data.get("error_code") if latest_data else None
 
         # Prefer persisted status/message; fallback to runtime values.
         status = persisted_status if persisted_status else (runtime_state.status.value if runtime_state else "disabled")
         message = persisted_message if persisted_message else (runtime_state.message if runtime_state else None)
         interaction = persisted_interaction if persisted_interaction else (runtime_state.interaction.model_dump() if runtime_state and runtime_state.interaction else None)
+        if not error_code:
+            error_code = _infer_error_code_from_interaction(interaction)
+        if not error_code and status == "error" and error:
+            error_code = "runtime.fetch_failed"
 
         # Build SourceSummary.
         source_refresh_interval = normalize_refresh_interval_minutes(
@@ -231,6 +252,7 @@ async def list_sources() -> list[dict]:
             "has_data": has_data,
             "updated_at": latest_data.get("updated_at") if latest_data else None,
             "error": error,
+            "error_code": error_code,
             "error_details": message if status == "error" else None,
             "status": status,
             "message": message,

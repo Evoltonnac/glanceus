@@ -40,7 +40,7 @@ if [ "${SKIP_TAURI_BUILD:-0}" = "1" ]; then
     PREPARE_ONLY=true
 fi
 
-echo "=== Glancier Build Script ==="
+echo "=== Glanceus Build Script ==="
 
 # Detect current platform Tauri target triple.
 ARCH=$(uname -m)
@@ -87,7 +87,7 @@ cd "$PROJECT_ROOT"
 pyinstaller \
     -y \
     --onedir \
-    --name "glancier-server" \
+    --name "glanceus-server" \
     --add-data "config:config" \
     --hidden-import uvicorn.logging \
     --hidden-import uvicorn.loops.auto \
@@ -102,11 +102,11 @@ echo "✅ Python backend packaging complete"
 echo ""
 echo "=== Step 2: Archive to Tauri binaries ==="
 mkdir -p "$TAURI_BINARIES_DIR"
-rm -rf "$TAURI_BINARIES_DIR"/glancier-server-*
+rm -rf "$TAURI_BINARIES_DIR"/glanceus-server-*
 
-SIDECAR_DIR_NAME="glancier-server-$TARGET_TRIPLE"
-SOURCE_SIDECAR_DIR="$PROJECT_ROOT/dist/glancier-server"
-SOURCE_ENTRY="$SOURCE_SIDECAR_DIR/glancier-server$BINARY_EXT"
+SIDECAR_DIR_NAME="glanceus-server-$TARGET_TRIPLE"
+SOURCE_SIDECAR_DIR="$PROJECT_ROOT/dist/glanceus-server"
+SOURCE_ENTRY="$SOURCE_SIDECAR_DIR/glanceus-server$BINARY_EXT"
 TARGET_ARCHIVE="$TAURI_BINARIES_DIR/$SIDECAR_DIR_NAME.tar.gz"
 
 if [ ! -d "$SOURCE_SIDECAR_DIR" ]; then
@@ -119,7 +119,7 @@ if [ ! -f "$SOURCE_ENTRY" ]; then
     exit 1
 fi
 
-COPYFILE_DISABLE=1 tar -C "$PROJECT_ROOT/dist" -czf "$TARGET_ARCHIVE" "glancier-server"
+COPYFILE_DISABLE=1 tar -C "$PROJECT_ROOT/dist" -czf "$TARGET_ARCHIVE" "glanceus-server"
 
 echo "✅ Archive generated: binaries/$(basename "$TARGET_ARCHIVE")"
 

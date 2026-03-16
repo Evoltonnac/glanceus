@@ -451,7 +451,7 @@ export function buildSduiSchemaFragment() {
 
   return {
     $schema: "https://json-schema.org/draft/2020-12/schema",
-    title: "Glancier React SDUI Fragment",
+    title: "Glanceus React SDUI Fragment",
     description: "Generated from React SDUI zod schemas.",
     $defs: defs,
     widget_tree: { $ref: "#/$defs/Widget" },

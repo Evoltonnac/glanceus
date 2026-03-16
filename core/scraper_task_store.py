@@ -27,7 +27,7 @@ class ScraperTaskStore:
         now_fn=None,
     ) -> None:
         if path is None:
-            data_root = Path(os.getenv("GLANCIER_DATA_DIR", ".")) / "data"
+            data_root = Path(os.getenv("GLANCEUS_DATA_DIR", ".")) / "data"
             path = data_root / "scraper_tasks.json"
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)

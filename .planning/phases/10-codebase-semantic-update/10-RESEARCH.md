@@ -1,13 +1,13 @@
 # 10-RESEARCH: Codebase Semantic Update (代码语义更新与组件重构)
 
 ## 1. 目标与范围 (Goal & Scope)
-本阶段的核心任务是将 "Quota Board" 品牌彻底从代码、配置和 UI 中抹除，并代之以新的 **Glancier** (Personal Data Aggregator & Hub) 身份。同时，通过重构 `App.tsx` 等复杂组件来偿还技术债。
+本阶段的核心任务是将 "Quota Board" 品牌彻底从代码、配置和 UI 中抹除，并代之以新的 **Glanceus** (Personal Data Aggregator & Hub) 身份。同时，通过重构 `App.tsx` 等复杂组件来偿还技术债。
 
 ## 2. 关键变更点 (Key Changes)
 
 ### 2.1 品牌与 UI 更名 (Branding & Identity)
 - **前端名称更新**：
-    - `ui-react/src-tauri/tauri.conf.json`: `productName`, `title` (Quota Board -> Glancier).
+    - `ui-react/src-tauri/tauri.conf.json`: `productName`, `title` (Quota Board -> Glanceus).
     - `ui-react/index.html`: `<title>`.
     - `ui-react/src/components/TopNav.tsx`: 品牌文字更新。
 - **后端名称更新**：
@@ -32,7 +32,7 @@
 
 ### 2.4 构建与 Sidecar (Build & Sidecar)
 - **Sidecar 命名**：
-    - `scripts/build.sh` 和 `tauri.conf.json`: 将 sidecar 二进制名从 `quota-board-server` 更新为 `glancier-server`。
+    - `scripts/build.sh` 和 `tauri.conf.json`: 将 sidecar 二进制名从 `quota-board-server` 更新为 `Glanceus-server`。
 
 ## 3. 兼容性策略 (Compatibility Strategy)
 1. **别名支持**：在 Pydantic 模型中使用 `alias` 支持旧的配置键。

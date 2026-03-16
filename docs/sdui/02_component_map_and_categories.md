@@ -1,4 +1,4 @@
-# Glancier SDUI Component Map and Category Dictionary
+# Glanceus SDUI Component Map and Category Dictionary
 
 This document defines the **single source of truth** for supported SDUI components in the frontend renderer.
 

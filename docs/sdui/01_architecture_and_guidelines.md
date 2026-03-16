@@ -1,8 +1,8 @@
-# Glancier SDUI Architecture and Template Guidelines
+# Glanceus SDUI Architecture and Template Guidelines
 
 ## 1. Goal
 
-Glancier uses SDUI (Schema-Driven UI) in the view layer:
+Glanceus uses SDUI (Schema-Driven UI) in the view layer:
 - Declare UI with YAML/JSON templates instead of hardcoding per-scenario pages.
 - Renderer handles parsing/validation/fallback, not request orchestration.
 - Flow owns authentication and fetching; SDUI only renders data.

@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 
 ENC_PREFIX = "ENC:"
 MASTER_KEY_BYTES = 32
-KEYCHAIN_SERVICE = os.getenv("GLANCIER_KEYCHAIN_SERVICE", "com.glancier.app")
-KEYCHAIN_ACCOUNT = os.getenv("GLANCIER_KEYCHAIN_ACCOUNT", "master-key")
+KEYCHAIN_SERVICE = os.getenv("GLANCEUS_KEYCHAIN_SERVICE", "com.glanceus.app")
+KEYCHAIN_ACCOUNT = os.getenv("GLANCEUS_KEYCHAIN_ACCOUNT", "master-key")
 
 try:
     import keyring

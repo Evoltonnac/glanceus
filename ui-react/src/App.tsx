@@ -37,14 +37,14 @@ function StartupGate({
                         <div className="flex h-full w-full items-center justify-center rounded-[10px] bg-background/95">
                             <img
                                 src={logoMark}
-                                alt="Glancier"
+                                alt="Glanceus"
                                 className="h-6 w-6 object-contain"
                             />
                         </div>
                     </div>
                     <div>
                         <p className="text-sm font-semibold text-foreground">
-                            Glancier
+                            Glanceus
                         </p>
                         <p className="text-xs text-muted-foreground">
                             正在启动本地引擎

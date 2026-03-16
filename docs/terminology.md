@@ -1,4 +1,4 @@
-# Glancier Terminology Dictionary
+# Glanceus Terminology Dictionary
 
 Use these terms consistently in docs, code comments, UI labels, and config examples.
 
@@ -6,7 +6,7 @@ Use these terms consistently in docs, code comments, UI labels, and config examp
 
 | Term | Definition |
 |------|------------|
-| **Glancier** | Product name. |
+| **Glanceus** | Product name. |
 | **Personal Data Aggregator & Hub** | Product positioning for multi-source personal data collection and visualization. |
 
 ## Logic and Execution
@@ -41,4 +41,4 @@ Use these terms consistently in docs, code comments, UI labels, and config examp
 
 | Constant | Description |
 |----------|-------------|
-| `GLANCIER_DATA_DIR` | Root path for local data, config, and secrets. |
+| `GLANCEUS_DATA_DIR` | Root path for local data, config, and secrets. |

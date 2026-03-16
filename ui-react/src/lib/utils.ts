@@ -50,8 +50,8 @@ export function cn(...inputs: ClassValue[]) {
  */
 export async function openExternalLink(url: string) {
   const nativeOpen =
-    typeof window !== "undefined" && (window as any).__GLANCIER_NATIVE_OPEN__
-      ? ((window as any).__GLANCIER_NATIVE_OPEN__ as typeof window.open)
+    typeof window !== "undefined" && (window as any).__GLANCEUS_NATIVE_OPEN__
+      ? ((window as any).__GLANCEUS_NATIVE_OPEN__ as typeof window.open)
       : window.open.bind(window);
 
   const fallbackOpen = () => nativeOpen(url, "_blank", "noopener,noreferrer");

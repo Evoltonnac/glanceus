@@ -464,7 +464,7 @@ _CONFIG_SEARCH_PATHS = [
 
 def find_config_root() -> Path:
     """Find the root config file or directory."""
-    base = Path(os.getenv("GLANCIER_DATA_DIR", "."))
+    base = Path(os.getenv("GLANCEUS_DATA_DIR", "."))
     # Check for config directory
     config_dir = base / "config"
     if config_dir.is_dir():

@@ -5,7 +5,7 @@
 ## Directory Layout
 
 ```
-glancier/                          # Project root
+Glanceus/                          # Project root
 ├── main.py                        # Backend entry point (FastAPI)
 ├── requirements.txt               # Python dependencies
 ├── config/                       # YAML configuration files
@@ -85,37 +85,37 @@ glancier/                          # Project root
 
 ## Directory Purposes
 
-**`/Users/xingminghua/Coding/evoltonnac/glancier/core/`:**
+**`/Users/xingminghua/Coding/evoltonnac/Glanceus/core/`:**
 - Purpose: All backend Python code
 - Contains: API routes, executors, controllers, models, steps, auth
 - Key files: `main.py`, `api.py`, `executor.py`, `config_loader.py`, `data_controller.py`
 
-**`/Users/xingminghua/Coding/evoltonnac/glancier/core/steps/`:**
+**`/Users/xingminghua/Coding/evoltonnac/Glanceus/core/steps/`:**
 - Purpose: Flow step implementations
 - Contains: HTTP requests, authentication, browser automation, extraction, scripting
 - Key files: `http_step.py`, `auth_step.py`, `browser_step.py`, `extract_step.py`, `script_step.py`
 
-**`/Users/xingminghua/Coding/evoltonnac/glancier/core/auth/`:**
+**`/Users/xingminghua/Coding/evoltonnac/Glanceus/core/auth/`:**
 - Purpose: Authentication and credential handling
 - Contains: OAuth flows, PKCE, credential management
 - Key files: `manager.py`, `oauth_auth.py`, `pkce.py`, `oauth_types.py`
 
-**`/Users/xingminghua/Coding/evoltonnac/glancier/config/`:**
+**`/Users/xingminghua/Coding/evoltonnac/Glanceus/config/`:**
 - Purpose: YAML configuration files
 - Contains: Integration definitions, source configs, view templates, presets
 - Key files: `integrations/*.yaml`, `presets/*.yaml`, `examples/*.yaml`
 
-**`/Users/xingminghua/Coding/evoltonnac/glancier/ui-react/src/`:**
+**`/Users/xingminghua/Coding/evoltonnac/Glanceus/ui-react/src/`:**
 - Purpose: React frontend source code
 - Contains: Pages, components, store, API client, hooks, types
 - Key files: `main.tsx`, `App.tsx`, `store/index.ts`, `api/client.ts`
 
-**`/Users/xingminghua/Coding/evoltonnac/glancier/ui-react/src/components/widgets/`:**
+**`/Users/xingminghua/Coding/evoltonnac/Glanceus/ui-react/src/components/widgets/`:**
 - Purpose: Widget rendering system for data visualization
 - Contains: WidgetRenderer, elements (TextBlock, Badge, Image, etc.), layouts, actions
 - Key files: `WidgetRenderer.tsx`, `elements/*.tsx`, `layouts/*.tsx`
 
-**`/Users/xingminghua/Coding/evoltonnac/glancier/tests/`:**
+**`/Users/xingminghua/Coding/evoltonnac/Glanceus/tests/`:**
 - Purpose: Backend pytest tests
 - Contains: Unit and integration tests
 - Key files: `conftest.py`, `test_*.py`
@@ -123,27 +123,27 @@ glancier/                          # Project root
 ## Key File Locations
 
 **Entry Points:**
-- `/Users/xingminghua/Coding/evoltonnac/glancier/main.py` - Backend (FastAPI app factory)
-- `/Users/xingminghua/Coding/evoltonnac/glancier/ui-react/src/main.tsx` - Frontend (React mount)
+- `/Users/xingminghua/Coding/evoltonnac/Glanceus/main.py` - Backend (FastAPI app factory)
+- `/Users/xingminghua/Coding/evoltonnac/Glanceus/ui-react/src/main.tsx` - Frontend (React mount)
 
 **Configuration:**
-- `/Users/xingminghua/Coding/evoltonnac/glancier/core/config_loader.py` - YAML loading and resolution
-- `/Users/xingminghua/Coding/evoltonnac/glancier/config/` - Integration and source YAML files
+- `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/config_loader.py` - YAML loading and resolution
+- `/Users/xingminghua/Coding/evoltonnac/Glanceus/config/` - Integration and source YAML files
 
 **Core Logic:**
-- `/Users/xingminghua/Coding/evoltonnac/glancier/core/api.py` - REST API endpoints
-- `/Users/xingminghua/Coding/evoltonnac/glancier/core/executor.py` - Flow execution engine
-- `/Users/xingminghua/Coding/evoltonnac/glancier/core/data_controller.py` - Scraped data storage
-- `/Users/xingminghua/Coding/evoltonnac/glancier/core/resource_manager.py` - Sources/views management
+- `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/api.py` - REST API endpoints
+- `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/executor.py` - Flow execution engine
+- `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/data_controller.py` - Scraped data storage
+- `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/resource_manager.py` - Sources/views management
 
 **State Management:**
-- `/Users/xingminghua/Coding/evoltonnac/glancier/core/source_state.py` - SourceStatus, InteractionRequest
-- `/Users/xingminghua/Coding/evoltonnac/glancier/ui-react/src/store/index.ts` - Zustand store
+- `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/source_state.py` - SourceStatus, InteractionRequest
+- `/Users/xingminghua/Coding/evoltonnac/Glanceus/ui-react/src/store/index.ts` - Zustand store
 
 **Testing:**
-- `/Users/xingminghua/Coding/evoltonnac/glancier/tests/conftest.py` - Pytest fixtures
-- `/Users/xingminghua/Coding/evoltonnac/glancier/ui-react/src/test/setup.ts` - Vitest setup
-- `/Users/xingminghua/Coding/evoltonnac/glancier/pytest.ini` - Pytest config
+- `/Users/xingminghua/Coding/evoltonnac/Glanceus/tests/conftest.py` - Pytest fixtures
+- `/Users/xingminghua/Coding/evoltonnac/Glanceus/ui-react/src/test/setup.ts` - Vitest setup
+- `/Users/xingminghua/Coding/evoltonnac/Glanceus/pytest.ini` - Pytest config
 
 ## Naming Conventions
 
@@ -169,28 +169,28 @@ glancier/                          # Project root
 ## Where to Add New Code
 
 **New Integration:**
-- Configuration: `/Users/xingminghua/Coding/evoltonnac/glancier/config/integrations/{id}.yaml`
-- Test data: `/Users/xingminghua/Coding/evoltonnac/glancier/config/examples/integrations/{id}.yaml`
+- Configuration: `/Users/xingminghua/Coding/evoltonnac/Glanceus/config/integrations/{id}.yaml`
+- Test data: `/Users/xingminghua/Coding/evoltonnac/Glanceus/config/examples/integrations/{id}.yaml`
 
 **New Flow Step:**
-- Implementation: `/Users/xingminghua/Coding/evoltonnac/glancier/core/steps/{step_type}_step.py`
-- Register in: `/Users/xingminghua/Coding/evoltonnac/glancier/core/steps/__init__.py`
-- Add StepType enum: `/Users/xingminghua/Coding/evoltonnac/glancier/core/config_loader.py`
+- Implementation: `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/steps/{step_type}_step.py`
+- Register in: `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/steps/__init__.py`
+- Add StepType enum: `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/config_loader.py`
 
 **New API Endpoint:**
-- Implementation: `/Users/xingminghua/Coding/evoltonnac/glancier/core/api.py` (add to router)
+- Implementation: `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/api.py` (add to router)
 - Depends on: Import from core modules and inject via `api.init_api()`
 
 **New Frontend Page:**
-- Implementation: `/Users/xingminghua/Coding/evoltonnac/glancier/ui-react/src/pages/{PageName}.tsx`
-- Routing: `/Users/xingminghua/Coding/evoltonnac/glancier/ui-react/src/App.tsx`
+- Implementation: `/Users/xingminghua/Coding/evoltonnac/Glanceus/ui-react/src/pages/{PageName}.tsx`
+- Routing: `/Users/xingminghua/Coding/evoltonnac/Glanceus/ui-react/src/App.tsx`
 
 **New Widget Type:**
-- Implementation: `/Users/xingminghua/Coding/evoltonnac/glancier/ui-react/src/components/widgets/{category}/{WidgetName}.tsx`
-- Register in: `/Users/xingminghua/Coding/evoltonnac/glancier/ui-react/src/components/widgets/WidgetRenderer.tsx`
+- Implementation: `/Users/xingminghua/Coding/evoltonnac/Glanceus/ui-react/src/components/widgets/{category}/{WidgetName}.tsx`
+- Register in: `/Users/xingminghua/Coding/evoltonnac/Glanceus/ui-react/src/components/widgets/WidgetRenderer.tsx`
 
 **New State (Frontend):**
-- Add to: `/Users/xingminghua/Coding/evoltonnac/glancier/ui-react/src/store/index.ts` (Zustand store)
+- Add to: `/Users/xingminghua/Coding/evoltonnac/Glanceus/ui-react/src/store/index.ts` (Zustand store)
 
 ## Special Directories
 

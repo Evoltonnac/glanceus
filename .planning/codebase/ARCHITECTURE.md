@@ -17,28 +17,28 @@
 
 **Backend Layer (`core/`):**
 - Purpose: Core business logic, data execution, and API serving
-- Location: `/Users/xingminghua/Coding/evoltonnac/glancier/core/`
+- Location: `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/`
 - Contains: API routes, executors, configuration loaders, data controllers
 - Depends on: Pydantic, FastAPI, httpx, YAML libraries
 - Used by: Frontend (via HTTP), Tauri desktop app
 
 **API Layer (`core/api.py`):**
 - Purpose: Expose REST endpoints for frontend consumption
-- Location: `/Users/xingminghua/Coding/evoltonnac/glancier/core/api.py`
+- Location: `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/api.py`
 - Contains: FastAPI router with endpoints for sources, views, integrations, auth
 - Depends on: All core modules (executor, data_controller, config, auth_manager)
 - Used by: Frontend HTTP client (`ui-react/src/api/client.ts`)
 
 **Execution Layer (`core/executor.py`):**
 - Purpose: Orchestrate data source fetching via flow steps
-- Location: `/Users/xingminghua/Coding/evoltonnac/glancier/core/executor.py`
+- Location: `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/executor.py`
 - Contains: Executor class that runs flows, manages SourceState
 - Depends on: Steps (http_step, auth_step, browser_step, etc.), SecretsController
 - Used by: API layer for fetch operations
 
 **Step Modules (`core/steps/`):**
 - Purpose: Implement individual flow step types
-- Location: `/Users/xingminghua/Coding/evoltonnac/glancier/core/steps/`
+- Location: `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/steps/`
 - Contains: `http_step.py`, `auth_step.py`, `browser_step.py`, `extract_step.py`, `script_step.py`
 - Depends on: httpx, browser automation, auth libraries
 - Used by: Executor
@@ -46,27 +46,27 @@
 **Data Persistence Layer:**
 - Purpose: JSON-based storage for sources, views, and scraped data
 - Locations:
-  - `/Users/xingminghua/Coding/evoltonnac/glancier/core/data_controller.py` - scraped data
-  - `/Users/xingminghua/Coding/evoltonnac/glancier/core/resource_manager.py` - sources/views metadata
-  - `/Users/xingminghua/Coding/evoltonnac/glancier/core/secrets_controller.py` - encrypted credentials
+  - `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/data_controller.py` - scraped data
+  - `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/resource_manager.py` - sources/views metadata
+  - `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/secrets_controller.py` - encrypted credentials
 
 **Configuration Layer (`core/config_loader.py`):**
 - Purpose: Parse and resolve YAML integration/source configs
-- Location: `/Users/xingminghua/Coding/evoltonnac/glancier/core/config_loader.py`
+- Location: `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/config_loader.py`
 - Contains: Pydantic models, YAML loading, variable substitution, integration inheritance
 - Depends on: PyYAML, Pydantic
 - Used by: Executor, API, bootstrap
 
 **Authentication Layer (`core/auth/`):**
 - Purpose: Handle OAuth, API key, and PKCE authentication flows
-- Location: `/Users/xingminghua/Coding/evoltonnac/glancier/core/auth/`
+- Location: `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/auth/`
 - Contains: `oauth_auth.py`, `pkce.py`, `manager.py`, `oauth_types.py`
 - Depends on: authlib, cryptography
 - Used by: Executor (auth steps), API (auth endpoints)
 
 **Frontend Layer (`ui-react/src/`):**
 - Purpose: React-based UI with Tauri desktop integration
-- Location: `/Users/xingminghua/Coding/evoltonnac/glancier/ui-react/src/`
+- Location: `/Users/xingminghua/Coding/evoltonnac/Glanceus/ui-react/src/`
 - Contains: Pages, components, store, API client, widget renderer
 - Depends on: React 18, Zustand, Monaco Editor, GridStack, Radix UI
 - Used by: End users via browser or Tauri desktop
@@ -111,48 +111,48 @@
 
 **SourceConfig:**
 - Purpose: Runtime representation of a data source with resolved flow
-- Examples: `/Users/xingminghua/Coding/evoltonnac/glancier/core/config_loader.py` (SourceConfig model)
+- Examples: `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/config_loader.py` (SourceConfig model)
 - Pattern: Pydantic BaseModel with flow, vars, schedule
 
 **StoredSource:**
 - Purpose: User-persisted source metadata (ID, integration_id, vars, config)
-- Examples: `/Users/xingminghua/Coding/evoltonnac/glancier/core/models.py`
+- Examples: `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/models.py`
 - Pattern: JSON-serializable Pydantic model
 
 **StepConfig:**
 - Purpose: Single step in a flow (HTTP request, auth, extraction, etc.)
-- Examples: `/Users/xingminghua/Coding/evoltonnac/glancier/core/config_loader.py` (StepConfig model)
+- Examples: `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/config_loader.py` (StepConfig model)
 - Pattern: Defines `id`, `use` (step type), `args`, `outputs`, `context`, `secrets`
 
 **SourceState:**
 - Purpose: Runtime state of a source (ACTIVE, ERROR, SUSPENDED, etc.)
-- Examples: `/Users/xingminghua/Coding/evoltonnac/glancier/core/source_state.py`
+- Examples: `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/source_state.py`
 - Pattern: Enum status + interaction request for suspended state
 
 **InteractionRequest:**
 - Purpose: Frontend instruction for user action (OAuth, API key input, retry)
-- Examples: `/Users/xingminghua/Coding/evoltonnac/glancier/core/source_state.py`
+- Examples: `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/source_state.py`
 - Pattern: Enum type + fields + data payload
 
 ## Entry Points
 
 **Backend Entry:**
-- Location: `/Users/xingminghua/Coding/evoltonnac/glancier/main.py`
+- Location: `/Users/xingminghua/Coding/evoltonnac/Glanceus/main.py`
 - Triggers: `python main.py [port]` or `uvicorn main:app`
 - Responsibilities: FastAPI app creation, component initialization, CORS setup, lifespan management
 
 **Frontend Entry:**
-- Location: `/Users/xingminghua/Coding/evoltonnac/glancier/ui-react/src/main.tsx`
+- Location: `/Users/xingminghua/Coding/evoltonnac/Glanceus/ui-react/src/main.tsx`
 - Triggers: `npm run dev` (Vite dev server) or Tauri build
 - Responsibilities: React app mount, routing setup, store initialization
 
 **API Router:**
-- Location: `/Users/xingminghua/Coding/evoltonnac/glancier/core/api.py`
+- Location: `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/api.py`
 - Triggers: HTTP requests from frontend
 - Responsibilities: All REST endpoints (sources, views, integrations, auth, settings)
 
 **Executor Entry:**
-- Location: `/Users/xingminghua/Coding/evoltonnac/glancier/core/executor.py` (Executor.fetch_source)
+- Location: `/Users/xingminghua/Coding/evoltonnac/Glanceus/core/executor.py` (Executor.fetch_source)
 - Triggers: API source fetch endpoint
 - Responsibilities: Flow execution, state management, error handling
 

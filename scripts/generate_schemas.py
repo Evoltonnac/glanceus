@@ -143,7 +143,7 @@ def generate_python_fragment() -> dict[str, Any]:
     schema = IntegrationFileSchema.model_json_schema(mode="serialization")
     schema = apply_step_variants_schema(schema)
     schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
-    schema["title"] = "Glancier Integration Configuration (Python Fragment)"
+    schema["title"] = "Glanceus Integration Configuration (Python Fragment)"
     schema["description"] = (
         "Generated from Python models: integration root, flow steps, and view component envelope."
     )
@@ -222,9 +222,9 @@ def compose_integration_schema(
 ) -> dict[str, Any]:
     """Compose final integration schema from Python and React fragments."""
     combined = deepcopy(python_fragment)
-    combined["title"] = "Glancier Integration Configuration"
+    combined["title"] = "Glanceus Integration Configuration"
     combined["description"] = (
-        "Composed schema for Glancier integration YAML files "
+        "Composed schema for Glanceus integration YAML files "
         "(Python flow definitions + React SDUI widget definitions)."
     )
 

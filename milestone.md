@@ -1,7 +1,7 @@
-# Milestone 1.0: Glancier Public Release Plan
+# Milestone 1.0: Glanceus Public Release Plan
 
 ## 1. Milestone Objective
-Position Glancier as a config-first personal data hub for power users.
+Position Glanceus as a config-first personal data hub for power users.
 The milestone targets a stable and demonstrable `v1.0` release through rebranding,
 documentation cleanup, semantic code alignment, and strict TDD enforcement.
 
@@ -13,8 +13,8 @@ In a fragmented SaaS/API ecosystem, users face:
 - Friction from constant tab switching and repeated auth flows.
 - Data silos when services expose no API or block scraping heavily.
 
-### 2.2 Solution: Glancier
-Glancier uses a headless execution engine plus a high-density client UI.
+### 2.2 Solution: Glanceus
+Glanceus uses a headless execution engine plus a high-density client UI.
 It offloads auth/fetch/parse complexity to background workflows so the user can
 consume key signals quickly.
 
@@ -34,7 +34,7 @@ Goal: unify terminology and narrative across the project.
 ### Phase 2: Semantic Codebase Update
 Goal: align code and naming with product direction.
 - Complete rebrand updates (name/icon/color).
-- Standardize namespaces and env/storage keys under `GLANCIER_`.
+- Standardize namespaces and env/storage keys under `GLANCEUS_`.
 - Refactor UI component naming toward reusable abstractions.
 
 ### Phase 3: Test Coverage and TDD

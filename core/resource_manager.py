@@ -13,7 +13,7 @@ from core.models import StoredSource, StoredView
 logger = logging.getLogger(__name__)
 
 # Default paths
-DATA_DIR = Path(os.getenv("GLANCIER_DATA_DIR", ".")) / "data"
+DATA_DIR = Path(os.getenv("GLANCEUS_DATA_DIR", ".")) / "data"
 SOURCES_FILE = DATA_DIR / "sources.json"
 VIEWS_FILE = DATA_DIR / "views.json"
 

@@ -214,7 +214,7 @@ describe("Integrations page", () => {
         );
         await waitFor(() => {
             expect(openExternalLinkMock).toHaveBeenCalledWith(
-                "https://github.com/Evoltonnac/glancier/tree/main/skills",
+                "https://github.com/Evoltonnac/glanceus/tree/main/skills",
             );
         });
     });

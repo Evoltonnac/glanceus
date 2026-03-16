@@ -1,8 +1,8 @@
-# PROJECT - Glancier
+# PROJECT - Glanceus
 
 ## 1. 项目定位 (Project Positioning)
 
-Glancier 是一个面向重度数字用户的个人全能数据枢纽 (Personal Data Aggregator & Hub)。
+Glanceus 是一个面向重度数字用户的个人全能数据枢纽 (Personal Data Aggregator & Hub)。
 摒弃传统的被动式静态面板，打造一个自带强抓取与 AI 清洗能力的 Headless 引擎与高密度可视化客户端。帮用户把所有脏活累活在后台处理完，前台只需“极简一瞥”。
 
 项目致力于将分散在各处的 API 数据与网页信息转化为统一的**指标 (Metrics)** 与**信号 (Signals)**。

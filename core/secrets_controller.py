@@ -12,7 +12,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_SECRETS_DIR = Path(os.getenv("GLANCIER_DATA_DIR", ".")) / "data"
+_SECRETS_DIR = Path(os.getenv("GLANCEUS_DATA_DIR", ".")) / "data"
 _SECRETS_FILE = "secrets.json"
 
 

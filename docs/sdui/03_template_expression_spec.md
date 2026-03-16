@@ -1,4 +1,4 @@
-# Glancier SDUI Template Expression Specification
+# Glanceus SDUI Template Expression Specification
 
 This document defines supported expression syntax and safety boundaries for SDUI template fields.
 

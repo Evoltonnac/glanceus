@@ -1,4 +1,4 @@
-# Glancier SDUI Component Reference (Current)
+# Glanceus SDUI Component Reference (Current)
 
 This reference documents supported SDUI widgets and fields for integration templates.
 

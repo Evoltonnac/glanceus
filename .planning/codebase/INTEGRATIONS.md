@@ -138,7 +138,7 @@
 
 **Outgoing:**
 - Tauri auto-updater endpoints (configurable)
-  - Default: `https://example.com/glancier/releases/{{target}}/{{arch}}/{{current_version}}`
+  - Default: `https://example.com/Glanceus/releases/{{target}}/{{arch}}/{{current_version}}`
 
 ---
 

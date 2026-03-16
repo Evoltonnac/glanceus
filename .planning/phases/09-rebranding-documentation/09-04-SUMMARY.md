@@ -1,7 +1,7 @@
 # 09-04-SUMMARY
 
 ## Completed Tasks
-- Scrubbed deep-dive architecture and component documentation files to replace "Quota Board" with "Glancier".
+- Scrubbed deep-dive architecture and component documentation files to replace "Quota Board" with "Glanceus".
 - Standardized terminology across all detailed `.md` files:
     - `Quota Bar` -> `Progress Bar`
     - `Quota Card` -> `Bento Card` / `Source Card`

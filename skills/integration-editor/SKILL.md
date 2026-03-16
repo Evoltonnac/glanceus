@@ -1,9 +1,9 @@
 ---
 name: integration-editor
-description: "Canonical skill for creating and editing Glancier integration YAML with deterministic create/edit/fallback behavior."
+description: "Canonical skill for creating and editing Glanceus integration YAML with deterministic create/edit/fallback behavior."
 ---
 
-# Glancier Integration Editor
+# Glanceus Integration Editor
 
 `integration-editor` is the canonical path for AI-assisted integration YAML authoring.
 This skill keeps structured sources (`SKILL.md` + `references/`) as the authoritative behavior contract.

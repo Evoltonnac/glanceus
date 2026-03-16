@@ -1,6 +1,6 @@
-# Glancier Skills
+# Glanceus Skills
 
-This directory stores the canonical AI skill assets used by Glancier.
+This directory stores the canonical AI skill assets used by Glanceus.
 
 ## Contents
 
@@ -13,7 +13,7 @@ This directory stores the canonical AI skill assets used by Glancier.
 
 ## How to use
 
-1. Open **Integrations** in the Glancier UI.
+1. Open **Integrations** in the Glanceus UI.
 2. Click **New** to open the integration creation dialog.
 3. Click the AI sparkles button in the dialog header.
 4. Choose one of the two actions:
@@ -21,7 +21,7 @@ This directory stores the canonical AI skill assets used by Glancier.
    - **Open GitHub skills folder**
 
 GitHub folder URL:
-- <https://github.com/Evoltonnac/glancier/tree/main/skills>
+- <https://github.com/Evoltonnac/glanceus/tree/main/skills>
 
 ## Maintenance notes
 

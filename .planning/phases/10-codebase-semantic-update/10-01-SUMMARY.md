@@ -23,7 +23,7 @@ completed: 2026-03-05T17:03:19Z
 
 # Phase 10 Plan 01: Core Backend Semantic Update Summary
 
-Updated backend environment variables, configuration schemas, and application identity to strictly use Glancier terminology.
+Updated backend environment variables, configuration schemas, and application identity to strictly use Glanceus terminology.
 
 ## Tasks Completed
 
@@ -36,7 +36,7 @@ Updated backend environment variables, configuration schemas, and application id
 - **Commit:** f6dfec0
 
 ### 3. Update Main Server Identity and Startup Validation
-- **Action:** Updated `main.py` FastAPI `title` to "Glancier API" and the startup logging message to "🚀 启动 Glancier 后端...".
+- **Action:** Updated `main.py` FastAPI `title` to "Glanceus API" and the startup logging message to "🚀 启动 Glanceus 后端...".
 - **Commit:** 03542c0
 
 ## Deviations from Plan

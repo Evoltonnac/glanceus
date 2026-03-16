@@ -113,7 +113,7 @@ const PRESET_ICON_BY_ID: Record<string, ComponentType<{ className?: string }>> =
     curl: Terminal,
     webscraper: Globe,
 };
-const SKILLS_GITHUB_URL = "https://github.com/Evoltonnac/glancier/tree/main/skills";
+const SKILLS_GITHUB_URL = "https://github.com/Evoltonnac/glanceus/tree/main/skills";
 
 function normalizePresetResponse(preset: IntegrationPresetResponse): IntegrationPreset {
     return {
@@ -1062,6 +1062,7 @@ export default function IntegrationsPage() {
                                                     <Button
                                                         variant="outline"
                                                         size="icon"
+                                                        aria-label="Open AI prompt actions"
                                                         onClick={() =>
                                                             setNewIntegrationDialogView(
                                                                 "ai-prompt",

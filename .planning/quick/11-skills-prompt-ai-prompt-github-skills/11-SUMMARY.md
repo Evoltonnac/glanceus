@@ -20,7 +20,7 @@ Bundle the `skills` prompt into the frontend and add an AI helper flow in the in
   - Clicking sparkles replaces dialog body with a new AI helper view
   - AI helper view includes two actions:
     - Copy full prompt to clipboard
-    - Open GitHub `skills` directory (`https://github.com/Evoltonnac/glancier/tree/main/skills`)
+    - Open GitHub `skills` directory (`https://github.com/Evoltonnac/Glanceus/tree/main/skills`)
 - Added frontend coverage for the new AI dialog flow:
   - `ui-react/src/pages/Integrations.test.tsx`
   - Verifies modal switch, prompt copy, and GitHub link action

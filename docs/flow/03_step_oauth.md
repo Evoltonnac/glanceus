@@ -1,4 +1,4 @@
-# Glancier OAuth Step Guide
+# Glanceus OAuth Step Guide
 
 ## 1. Scope
 

@@ -11,7 +11,7 @@
     --muted-foreground: 240 3.8% 46.1%;
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
-    --ring: 190 100% 45%; /* Cyan / Glancier focus ring */
+    --ring: 190 100% 45%; /* Cyan / Glanceus focus ring */
     --card: 0 0% 98%;
     --card-foreground: 0 0% 15%;
     --popover: 0 0% 98%;
@@ -26,7 +26,7 @@
     --destructive-foreground: 0 0% 98%;
 
     /* Semantic Colors */
-    --brand: 190 100% 45%; /* Cyan / Glancier Brand */
+    --brand: 190 100% 45%; /* Cyan / Glanceus Brand */
     --warning: 24.6 95% 53.1%; /* Orange 500 */
     --success: 142.1 70.6% 45.3%; /* Emerald 500 */
     --error: 0 84.2% 60.2%; /* Red 500 */
@@ -82,7 +82,7 @@
     --destructive-foreground: 0 0% 98%;
 
     /* Semantic Colors */
-    --brand: 190 100% 60%; /* Cyan / Glancier Brand */
+    --brand: 190 100% 60%; /* Cyan / Glanceus Brand */
     --warning: 24.6 95% 53.1%; /* Orange 500 */
     --success: 142.1 70.6% 45.3%; /* Emerald 500 */
     --error: 0 84.2% 60.2%; /* Red 500 */

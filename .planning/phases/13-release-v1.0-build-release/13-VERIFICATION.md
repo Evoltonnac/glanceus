@@ -12,7 +12,7 @@ The goal of "End-to-end polish and release preparation" has been achieved. All c
 2.  **UX Polish**: Verified `INTEGRATION_PRESETS` in `ui-react/src/pages/Integrations.tsx` providing templates for API Key, OAuth, Web Scraper, and cURL integrations.
 3.  **Supportability**: Verified `BUG_REPORT_URL` implementation in `ui-react/src/pages/Settings.tsx` pointing to the GitHub issues page.
 4.  **CI/CD Automation**: Verified `.github/workflows/ci.yml` contains a `release-tauri` job for macOS and Windows, triggered by `workflow_dispatch` and utilizing `tauri-action` for automated packaging.
-5.  **Branding**: Verified brand update to "Glancier" in `tauri.conf.json` along with icon and DMG background configurations.
+5.  **Branding**: Verified brand update to "Glanceus" in `tauri.conf.json` along with icon and DMG background configurations.
 6.  **E2E Verification**: Verified existence of `tests/smoke/test_phase13_e2e.py` for automated flow validation.
 
 ## Required Artifacts Verified

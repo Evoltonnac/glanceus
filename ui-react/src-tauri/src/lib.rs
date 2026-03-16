@@ -33,7 +33,7 @@ pub mod scraper;
 
 const WINDOW_MAIN: &str = "main";
 const APP_NAVIGATE_EVENT: &str = "app:navigate";
-const TRAY_ID: &str = "glancier-tray";
+const TRAY_ID: &str = "glanceus-tray";
 const MENU_SHOW_WINDOW: &str = "tray.show_window";
 const MENU_OPEN_INTEGRATIONS: &str = "tray.open_integrations";
 const MENU_OPEN_SETTINGS: &str = "tray.open_settings";
@@ -53,7 +53,7 @@ const MAX_WEB_MODE_REQUEST_HEADER_BYTES: usize = 64 * 1024;
 #[cfg(not(debug_assertions))]
 const MAX_WEB_MODE_REQUEST_BODY_BYTES: usize = 8 * 1024 * 1024;
 #[cfg(not(debug_assertions))]
-const BACKEND_BINARY_BASENAME: &str = "glancier-server";
+const BACKEND_BINARY_BASENAME: &str = "glanceus-server";
 #[cfg(all(not(debug_assertions), target_os = "windows"))]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 const DEVTOOLS_GUARD_INTERVAL: Duration = Duration::from_millis(80);
@@ -190,7 +190,7 @@ fn resolve_log_dir(app: &tauri::AppHandle) -> PathBuf {
     }
     app.path()
         .app_log_dir()
-        .unwrap_or_else(|_| env::temp_dir().join("glancier-logs"))
+        .unwrap_or_else(|_| env::temp_dir().join("glanceus-logs"))
 }
 
 fn open_path_in_file_manager(path: &Path) -> Result<(), String> {
@@ -351,7 +351,7 @@ fn terminate_backend_by_port(_port: u16) {
 #[cfg(not(debug_assertions))]
 fn backend_entry_filename() -> &'static str {
     if cfg!(target_os = "windows") {
-        "glancier-server.exe"
+        "glanceus-server.exe"
     } else {
         BACKEND_BINARY_BASENAME
     }
@@ -381,7 +381,7 @@ fn backend_runtime_root(data_root: Option<&PathBuf>) -> PathBuf {
         root.join("runtime").join("backend").join(CURRENT_TARGET_TRIPLE)
     } else {
         env::temp_dir()
-            .join("glancier-runtime")
+            .join("glanceus-runtime")
             .join("backend")
             .join(CURRENT_TARGET_TRIPLE)
     }
@@ -492,7 +492,7 @@ fn spawn_backend_process(
 
     if let Some(root) = data_root {
         command
-            .env("GLANCIER_DATA_DIR", root.as_os_str())
+            .env("GLANCEUS_DATA_DIR", root.as_os_str())
             .current_dir(root);
     } else {
         command.current_dir(&bundle_dir);
@@ -574,7 +574,7 @@ fn init_log_plugin(
         tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
         tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Folder {
             path: log_dir.to_path_buf(),
-            file_name: Some("glancier".to_string()),
+            file_name: Some("glanceus".to_string()),
         }),
     ];
 
@@ -1024,7 +1024,7 @@ fn create_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
 
     let mut tray_builder = TrayIconBuilder::with_id(TRAY_ID)
         .menu(&tray_menu)
-        .tooltip("Glancier")
+        .tooltip("Glanceus")
         .on_menu_event(|app, event| {
             handle_tray_menu_action(app, event.id().as_ref());
         })

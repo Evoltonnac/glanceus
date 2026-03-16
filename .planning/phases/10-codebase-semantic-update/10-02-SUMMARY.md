@@ -17,20 +17,20 @@ key-files:
   - ui-react/public/vite.svg
 decisions:
   - Renamed `QuotaBar` to `ProgressBar` to align with the new semantic terminology.
-  - Adopted Glancier Cyan as the primary brand color in both light and dark modes.
-  - Updated all visible app titles and metadata to "Glancier".
+  - Adopted Glanceus Cyan as the primary brand color in both light and dark modes.
+  - Updated all visible app titles and metadata to "Glanceus".
 duration: 450
 completed: 2026-03-06T01:15:00Z
 ---
 
 # Phase 10 Plan 02: UI Branding and Terminology Update Summary
 
-Updated UI branding artifacts, HTML titles, and renamed legacy widget components to visually align with the Glancier identity.
+Updated UI branding artifacts, HTML titles, and renamed legacy widget components to visually align with the Glanceus identity.
 
 ## Tasks Completed
 
 ### 1. Update App Branding and Meta
-- **Action:** Changed `productName` and `title` to "Glancier" in `tauri.conf.json`, updated the `<title>` tag in `index.html`, and updated branding text in `TopNav.tsx`.
+- **Action:** Changed `productName` and `title` to "Glanceus" in `tauri.conf.json`, updated the `<title>` tag in `index.html`, and updated branding text in `TopNav.tsx`.
 - **Commit:** 87ff037
 
 ### 2. Rename Widget Components
@@ -38,7 +38,7 @@ Updated UI branding artifacts, HTML titles, and renamed legacy widget components
 - **Commit:** 15b0a7d
 
 ### 3. Update App Icons and Theme Colors
-- **Action:** Updated CSS variables in `index.css` with Glancier Cyan brand colors and replaced the logo in `public/vite.svg`.
+- **Action:** Updated CSS variables in `index.css` with Glanceus Cyan brand colors and replaced the logo in `public/vite.svg`.
 - **Commit:** ef7a2be
 
 ## Deviations from Plan

@@ -25,7 +25,7 @@ Successfully abstracted foundational UI blocks and established a centralized typ
 ## Tasks Completed
 
 ### 1. Abstract Business Components
-- **Action:** Created `MetricCard.tsx` for standardizing metric displays and `BentoWidget.tsx` for flexible, Bento-style layout wrappers. These components provide a consistent visual language for the Glancier dashboard.
+- **Action:** Created `MetricCard.tsx` for standardizing metric displays and `BentoWidget.tsx` for flexible, Bento-style layout wrappers. These components provide a consistent visual language for the Glanceus dashboard.
 - **Commit:** (to be committed)
 
 ### 2. Organize Types using Mixed Approach

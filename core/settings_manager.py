@@ -30,7 +30,7 @@ class SystemSettings(BaseModel):
     density: str = "normal"
 
 
-_SETTINGS_DIR = Path(os.getenv("GLANCIER_DATA_DIR", ".")) / "data"
+_SETTINGS_DIR = Path(os.getenv("GLANCEUS_DATA_DIR", ".")) / "data"
 _SETTINGS_FILE = "settings.json"
 
 

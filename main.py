@@ -1,5 +1,5 @@
 """
-Glancier entrypoint: boot the FastAPI backend service.
+Glanceus entrypoint: boot the FastAPI backend service.
 """
 
 import asyncio
@@ -31,7 +31,7 @@ from core import api
 
 
 def resolve_initial_log_level() -> int:
-    data_root = Path(os.getenv("GLANCIER_DATA_DIR", "."))
+    data_root = Path(os.getenv("GLANCEUS_DATA_DIR", "."))
     settings_file = data_root / "data" / "settings.json"
     try:
         payload = json.loads(settings_file.read_text(encoding="utf-8"))
@@ -131,7 +131,7 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     """Create and configure the FastAPI app."""
     app = FastAPI(
-        title="Glancier API",
+        title="Glanceus API",
         description="API for metric monitoring and data aggregation",
         version="0.1.0",
         lifespan=lifespan,
@@ -249,7 +249,7 @@ def main():
     """Application entrypoint."""
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8400
 
-    logger.info("starting Glancier backend (port=%s)...", port)
+    logger.info("starting Glanceus backend (port=%s)...", port)
 
     app = create_app()
 

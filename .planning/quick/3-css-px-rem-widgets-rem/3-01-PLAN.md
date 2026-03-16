@@ -83,7 +83,7 @@ Output: Updated CSS variables in index.css using REM units.
     Make changes in BOTH :root (lines 36-60) and .dark (lines 90-101) blocks.
   </action>
   <verify>
-    <automated>grep -c "rem" /Users/xingminghua/Coding/evoltonnac/glancier/ui-react/src/index.css | head -1</automated>
+    <automated>grep -c "rem" /Users/xingminghua/Coding/evoltonnac/Glanceus/ui-react/src/index.css | head -1</automated>
   </verify>
   <done>All spacing variables use REM units; widgets automatically get REM-based spacing through qb-gap-* classes</done>
 </task>

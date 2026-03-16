@@ -1,10 +1,10 @@
-# AGENTS.md — AI Engineering Contract for Glancier
+# AGENTS.md — AI Engineering Contract for Glanceus
 
 This document defines the minimum required behavior for AI agents working in this repository.
 
 ## 1. Project Purpose and Product Goal
 
-Glancier is a config-first personal data hub.
+Glanceus is a config-first personal data hub.
 
 Primary goal:
 - Let users complete **auth -> fetch -> parse -> render** with integration YAML and templates, without hardcoding new platform logic in Python.
@@ -27,7 +27,7 @@ Frontend/Desktop:
 - Tauri v2 desktop shell
 
 Data and runtime:
-- Local JSON/TinyDB storage under `GLANCIER_DATA_DIR`
+- Local JSON/TinyDB storage under `GLANCEUS_DATA_DIR`
 - Local encrypted secrets storage
 
 ## 3. Core Directory Map

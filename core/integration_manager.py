@@ -12,7 +12,7 @@ import yaml
 # Use the same config-root discovery logic as config_loader.
 def find_config_root() -> Path:
     """Find the root config directory."""
-    base = Path(os.getenv("GLANCIER_DATA_DIR", "."))
+    base = Path(os.getenv("GLANCEUS_DATA_DIR", "."))
     config_dir = base / "config"
     if config_dir.is_dir():
         return config_dir

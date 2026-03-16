@@ -58,7 +58,7 @@ def test_reload_returns_400_when_config_loader_raises(monkeypatch):
 
 
 def test_reload_updates_templates_from_external_integration_change(tmp_path, monkeypatch):
-    monkeypatch.setenv("GLANCIER_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("GLANCEUS_DATA_DIR", str(tmp_path))
     integrations_dir = tmp_path / "config" / "integrations"
     integrations_dir.mkdir(parents=True, exist_ok=True)
     (integrations_dir / "demo.yaml").write_text("flow: []\n", encoding="utf-8")
@@ -93,7 +93,7 @@ def test_reload_updates_templates_from_external_integration_change(tmp_path, mon
 
 
 def test_reload_view_only_change_does_not_auto_refresh_sources(tmp_path, monkeypatch):
-    monkeypatch.setenv("GLANCIER_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("GLANCEUS_DATA_DIR", str(tmp_path))
     integrations_dir = tmp_path / "config" / "integrations"
     integrations_dir.mkdir(parents=True, exist_ok=True)
     integration_file = integrations_dir / "demo.yaml"
@@ -178,7 +178,7 @@ templates:
 
 
 def test_reload_logic_change_auto_refreshes_related_sources(tmp_path, monkeypatch):
-    monkeypatch.setenv("GLANCIER_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("GLANCEUS_DATA_DIR", str(tmp_path))
     integrations_dir = tmp_path / "config" / "integrations"
     integrations_dir.mkdir(parents=True, exist_ok=True)
     integration_file = integrations_dir / "demo.yaml"

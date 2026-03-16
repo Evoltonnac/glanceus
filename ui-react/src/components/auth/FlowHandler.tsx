@@ -652,7 +652,7 @@ export function FlowHandler({
                                         Web 端直接运行。
                                     </p>
                                     <p className="text-xs bg-muted/50 p-2 rounded-md border border-border/50">
-                                        请下载并使用 Glancier
+                                        请下载并使用 Glanceus
                                         桌面客户端，它内置了安全的自动化引擎，能完美支持此类操作。
                                     </p>
                                 </div>
@@ -661,7 +661,7 @@ export function FlowHandler({
                                     className="w-full gap-2 border-brand/20 hover:bg-brand/5 hover:border-brand/40 text-brand"
                                     onClick={() =>
                                         openExternalLink(
-                                            "https://github.com/xingminghua/glancier/releases",
+                                            "https://github.com/xingminghua/glanceus/releases",
                                         )
                                     }
                                 >

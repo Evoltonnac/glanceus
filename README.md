@@ -1,13 +1,13 @@
-# Glancier
+# Glanceus
 
 <p align="center">
-  <img src="ui-react/src/assets/logo.svg" alt="Glancier Logo" width="120" />
+  <img src="ui-react/src/assets/logo.svg" alt="Glanceus Logo" width="120" />
 </p>
 
 <p align="center"><strong>Config-first personal data hub for metrics, signals, and automation workflows.</strong></p>
 
 <!-- <p align="center">
-  <img src="docs/assets/demo-placeholder.svg" alt="Glancier Demo (Placeholder)" width="900" />
+  <img src="docs/assets/demo-placeholder.svg" alt="Glanceus Demo (Placeholder)" width="900" />
 </p>
 <p align="center"><sub>Demo image placeholder. Replace with a real screenshot later.</sub></p> -->
 

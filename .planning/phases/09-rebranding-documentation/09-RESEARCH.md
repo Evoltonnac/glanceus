@@ -6,18 +6,18 @@
 
 ## Summary
 
-The project is evolving from "Quota Board" (a niche API credit monitoring tool) to "Glancier" (a universal Personal Data Aggregator & Hub). The current documentation is heavily coupled to the restrictive "Quota" concept, which misaligns with its actual multimodal fetching and "Bento Grid" rendering capabilities. 
+The project is evolving from "Quota Board" (a niche API credit monitoring tool) to "Glanceus" (a universal Personal Data Aggregator & Hub). The current documentation is heavily coupled to the restrictive "Quota" concept, which misaligns with its actual multimodal fetching and "Bento Grid" rendering capabilities. 
 
-This phase focuses exclusively on resetting the mental model in the documentation layer. By deprecating the term "Quota" and refactoring it into "Metric," "Signal," or "Integration Data," we lay the semantic foundation for Phase 10 (Codebase Semantic Update). All primary documentation (`README.md`, `PROJECT.md`, `ARCHITECTURE.md`, `Agent.md`, `CONFIG.md`) must be rewritten to reflect the new Glancier positioning.
+This phase focuses exclusively on resetting the mental model in the documentation layer. By deprecating the term "Quota" and refactoring it into "Metric," "Signal," or "Integration Data," we lay the semantic foundation for Phase 10 (Codebase Semantic Update). All primary documentation (`README.md`, `PROJECT.md`, `ARCHITECTURE.md`, `Agent.md`, `CONFIG.md`) must be rewritten to reflect the new Glanceus positioning.
 
-**Primary recommendation:** Replace "Quota" with context-appropriate terms (Metric, Signal) across all `.md` files, firmly establish "Glancier" as the primary identity while retaining "(formerly Quota Board)" for discoverability, and define the "Personal Data Aggregator" architecture.
+**Primary recommendation:** Replace "Quota" with context-appropriate terms (Metric, Signal) across all `.md` files, firmly establish "Glanceus" as the primary identity while retaining "(formerly Quota Board)" for discoverability, and define the "Personal Data Aggregator" architecture.
 
 ## Standard Stack
 
 ### Documentation Targets (Core)
 | File | Current Status | Required Action | Why |
 |------|----------------|-----------------|-----|
-| `README.md` | "Quota Board" focused | Full rewrite | Main entry point; needs new Glancier positioning and updated feature list. |
+| `README.md` | "Quota Board" focused | Full rewrite | Main entry point; needs new Glanceus positioning and updated feature list. |
 | `PROJECT.md` | Partially updated | Terminology scrub | Must align goals with "Data Aggregator" rather than "Quota". |
 | `ARCHITECTURE.md`| "Configuration-driven modular monolith" | Terminology update | Needs to reflect "Flow -> Bento Grid" pipeline instead of quotas. |
 | `Agent.md` | Mentions Quota Board rules | AI instructions update | The AI assistant needs the new terminology to avoid regenerating old "Quota" terms. |
@@ -27,7 +27,7 @@ This phase focuses exclusively on resetting the mental model in the documentatio
 ### Supporting Terminology Dictionary
 | Old Term | New Term | Context/Usage |
 |----------|----------|---------------|
-| Quota Board | Glancier | The product name. Always use "Glancier". |
+| Quota Board | Glanceus | The product name. Always use "Glanceus". |
 | Quota | Metric | Numeric data points, e.g., "Usage Metric", "Hero Metric". |
 | Quota | Signal | Boolean or state data, e.g., "Status Signal". |
 | Quota | Integration Data | Generic term for fetched information. |
@@ -44,7 +44,7 @@ This phase focuses exclusively on resetting the mental model in the documentatio
 Instead of describing a flow as "Fetching API quotas," describe it as "Extracting Integration Metrics and Signals."
 
 ### Anti-Patterns to Avoid
-- **Total Erasure of Old Name:** Completely removing "Quota Board" from the `README.md`. *Instead:* Use "Glancier (formerly Quota Board)" in the main heading for SEO and continuity.
+- **Total Erasure of Old Name:** Completely removing "Quota Board" from the `README.md`. *Instead:* Use "Glanceus (formerly Quota Board)" in the main heading for SEO and continuity.
 - **Codebase Renaming in Phase 09:** Attempting to rename React components (`QuotaBar.tsx`) or Python variables (`QUOTA_BOARD_ROOT`) in this phase. *Instead:* Only update `.md` files. Phase 10 will handle code.
 - **Generic Replace-All:** Running a blind find-and-replace of "Quota" to "Metric". *Instead:* Contextually decide if the data is a Metric (numeric), Signal (boolean/status), or Integration Data (general).
 
@@ -60,7 +60,7 @@ Instead of describing a flow as "Fetching API quotas," describe it as "Extractin
 ## Common Pitfalls
 
 ### Pitfall 1: Inconsistent Terminology
-**What goes wrong:** `README.md` uses "Glancier" but `docs/flow_configuration.md` still refers to "Quota Board".
+**What goes wrong:** `README.md` uses "Glanceus" but `docs/flow_configuration.md` still refers to "Quota Board".
 **Why it happens:** Incomplete search across the `docs/` folder.
 **How to avoid:** Perform a global grep search for `Quota` and `quota-board` across all `.md` files before finalizing the PR.
 **Warning signs:** AI tools or developers generating new code using the old "Quota" namespace.
@@ -79,7 +79,7 @@ Instead of describing a flow as "Fetching API quotas," describe it as "Extractin
 
 **Deprecated/outdated:**
 - The term `Quota` as a broad catch-all: Replaced by Metric, Signal, or Integration Data to represent a wider variety of scraped information.
-- The product name `Quota Board`: Replaced by `Glancier`.
+- The product name `Quota Board`: Replaced by `Glanceus`.
 
 ## Open Questions
 
@@ -91,7 +91,7 @@ Instead of describing a flow as "Fetching API quotas," describe it as "Extractin
 ## Sources
 
 ### Primary (HIGH confidence)
-- `milestone.md` - Confirms the transition to "Glancier" and "Personal Data Aggregator & Hub".
+- `milestone.md` - Confirms the transition to "Glanceus" and "Personal Data Aggregator & Hub".
 - `.planning/PROJECT.md` - Confirms the current state and "Unfair Advantages" positioning.
 - `README.md` - Confirms the extensive current use of "Quota Board" and need for an overhaul.
 

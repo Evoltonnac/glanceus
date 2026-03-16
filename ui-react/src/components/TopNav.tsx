@@ -73,7 +73,7 @@ export function TopNav() {
                         </div>
                         <div>
                             <h1 className="text-lg font-bold leading-none tracking-tight">
-                                Glancier
+                                Glanceus
                             </h1>
                         </div>
                     </Link>

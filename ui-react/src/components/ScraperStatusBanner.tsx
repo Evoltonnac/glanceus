@@ -274,7 +274,7 @@ export function ScraperStatusBanner({
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         openExternalLink(
-                                            "https://github.com/xingminghua/glancier/releases",
+                                            "https://github.com/xingminghua/glanceus/releases",
                                         );
                                     }}
                                     className="flex items-center gap-1 h-7 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-brand/10 text-brand hover:bg-brand hover:text-background transition-all"

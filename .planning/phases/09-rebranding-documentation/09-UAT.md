@@ -4,8 +4,8 @@
 **版本:** v0.1
 
 ## 测试用例 1: 核心品牌识别 (README & PROJECT.md)
-**目标:** 验证主入口文档是否已正确切换到 "Glancier" 品牌。
-- [ ] `README.md` 以 "Glancier (formerly Quota Board)" 开头。
+**目标:** 验证主入口文档是否已正确切换到 "Glanceus" 品牌。
+- [ ] `README.md` 以 "Glanceus (formerly Quota Board)" 开头。
 - [ ] `.planning/PROJECT.md` 已更新定位为 "Personal Data Aggregator & Hub"。
 - [ ] 核心竞争力部分不再仅局限于 API 配额。
 

@@ -1064,7 +1064,7 @@
   "required": [
     "flow"
   ],
-  "title": "Glancier Integration Configuration (Python Fragment)",
+  "title": "Glanceus Integration Configuration (Python Fragment)",
   "type": "object",
   "$schema": "https://json-schema.org/draft/2020-12/schema"
 }

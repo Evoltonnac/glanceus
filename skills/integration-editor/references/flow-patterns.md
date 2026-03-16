@@ -1,6 +1,6 @@
-# Glancier Flow Patterns (Current)
+# Glanceus Flow Patterns (Current)
 
-This reference defines practical Flow authoring patterns for integration YAML in Glancier.
+This reference defines practical Flow authoring patterns for integration YAML in Glanceus.
 
 ## 1. Source of Truth
 

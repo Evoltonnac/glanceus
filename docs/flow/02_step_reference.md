@@ -1,4 +1,4 @@
-# Glancier Flow Step Reference
+# Glanceus Flow Step Reference
 
 ## 1. Auth and Blocking Steps
 
@@ -54,7 +54,7 @@
 
 ## 3. Adding a New Step
 
-- Add the new `StepType` in [core/config_loader.py](/Users/xingminghua/Coding/evoltonnac/glancier/core/config_loader.py).
+- Add the new `StepType` in [core/config_loader.py](/Users/xingminghua/Coding/evoltonnac/glanceus/core/config_loader.py).
 - Declare its `args` JSON schema in the colocated `STEP_ARGS_SCHEMAS_BY_USE` map (same file).
 - Run `make gen-schemas` to regenerate `config/schemas/integration.python.schema.json` and `config/schemas/integration.schema.json`.
 - The schema generator fails if a `StepType` has no matching `STEP_ARGS_SCHEMAS_BY_USE` declaration, preventing silent drift.

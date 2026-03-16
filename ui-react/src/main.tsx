@@ -8,7 +8,7 @@ import { isTauri, openExternalLink } from "./lib/utils.ts";
 // Global override for window.open in Tauri to ensure links open in system browser
 if (isTauri()) {
     const originalOpen = window.open.bind(window);
-    (window as any).__GLANCIER_NATIVE_OPEN__ = originalOpen;
+    (window as any).__GLANCEUS_NATIVE_OPEN__ = originalOpen;
     window.open = (url?: string | URL, target?: string, features?: string) => {
         const urlStr = url?.toString();
         if (urlStr && (urlStr.startsWith("http://") || urlStr.startsWith("https://"))) {

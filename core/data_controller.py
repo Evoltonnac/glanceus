@@ -13,7 +13,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_DATA_DIR = Path(os.getenv("GLANCIER_DATA_DIR", ".")) / "data"
+_DATA_DIR = Path(os.getenv("GLANCEUS_DATA_DIR", ".")) / "data"
 
 
 class DataController:

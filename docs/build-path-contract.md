@@ -62,18 +62,18 @@ These remain valid, but are secondary to `make` entrypoints:
 | Path | Owner | Type | Commit policy |
 | --- | --- | --- | --- |
 | `build/` | PyInstaller | Intermediate build output | Do not commit |
-| `dist/glancier-server/` | PyInstaller | Sidecar runtime folder | Do not commit |
+| `dist/glanceus-server/` | PyInstaller | Sidecar runtime folder | Do not commit |
 | `ui-react/dist/` | Vite | Frontend build output | Do not commit |
 | `ui-react/src-tauri/target/` | Cargo/Tauri | Rust/Tauri build output | Do not commit |
 | `ui-react/src-tauri/binaries/` | `scripts/build.sh` | Sidecar archive staging directory | Keep only generated archives needed for packaging; do not commit generated platform folders |
-| `ui-react/src-tauri/binaries/glancier-server-*.tar.gz` | `scripts/build.sh` | Sidecar archive for packaging | Do not commit |
+| `ui-react/src-tauri/binaries/glanceus-server-*.tar.gz` | `scripts/build.sh` | Sidecar archive for packaging | Do not commit |
 | `ui-react/test-results/` | Playwright | E2E results | Do not commit |
 | `.coverage` | pytest coverage | Local report artifact | Do not commit |
 
 ## Build Flow Contract
 
 1. Python sidecar build:
-   `main.py` -> `build/glancier-server/` + `dist/glancier-server/` -> `ui-react/src-tauri/binaries/glancier-server-<target>.tar.gz`
+   `main.py` -> `build/glanceus-server/` + `dist/glanceus-server/` -> `ui-react/src-tauri/binaries/glanceus-server-<target>.tar.gz`
 2. Frontend build:
    `ui-react/src/` -> `ui-react/dist/`
 3. Desktop bundle:

@@ -90,15 +90,15 @@ flow:
                   console.log("[Dribbble] Reading shots from DOM...");
                   const shots = readShots();
                   console.log("[Dribbble] Found " + shots.length + " shots");
-                  if (typeof window.__GLANCIER_EMIT_SCRAPED_DATA === "function") {
-                    window.__GLANCIER_EMIT_SCRAPED_DATA({
+                  if (typeof window.__GLANCEUS_EMIT_SCRAPED_DATA === "function") {
+                    window.__GLANCEUS_EMIT_SCRAPED_DATA({
                       shots: shots,
                       shots_count: shots.length,
                       capture_mode: "dom"
                     });
-                    console.log("[Dribbble] Emitted " + shots.length + " shots via __GLANCIER_EMIT_SCRAPED_DATA");
+                    console.log("[Dribbble] Emitted " + shots.length + " shots via __GLANCEUS_EMIT_SCRAPED_DATA");
                   } else {
-                    console.log("[Dribbble] WARNING: __GLANCIER_EMIT_SCRAPED_DATA not found!");
+                    console.log("[Dribbble] WARNING: __GLANCEUS_EMIT_SCRAPED_DATA not found!");
                   }
                 }
 

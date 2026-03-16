@@ -71,7 +71,7 @@ const REFRESH_INTERVAL_OPTIONS: Array<{ value: number; label: string }> = [
 const SCRAPER_TIMEOUT_MIN_SECONDS = 1;
 const SCRAPER_TIMEOUT_MAX_SECONDS = 300;
 const BUG_REPORT_URL =
-    "https://github.com/Evoltonnac/glancier/issues/new/choose";
+    "https://github.com/Evoltonnac/glanceus/issues/new/choose";
 
 interface RuntimePortInfo {
     api_target_port: number;
@@ -434,7 +434,7 @@ export default function SettingsPage() {
                                                     开机自启
                                                 </p>
                                                 <p className="text-xs text-muted-foreground">
-                                                    随系统启动自动运行 Glancier
+                                                    随系统启动自动运行 Glanceus
                                                 </p>
                                             </div>
                                             <Switch
@@ -871,14 +871,14 @@ export default function SettingsPage() {
                                             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 p-[1px]">
                                                 <img
                                                     src={logoMark}
-                                                    alt="Glancier"
+                                                    alt="Glanceus"
                                                     className="h-8 w-8 object-contain brightness-0 invert"
                                                 />
                                             </div>
                                         </div>
                                         <div className="text-center space-y-2">
                                             <h1 className="text-3xl font-bold tracking-tight">
-                                                Glancier
+                                                Glanceus
                                             </h1>
                                             <p className="text-muted-foreground">
                                                 个人数据聚合与监控看板

@@ -1,12 +1,12 @@
-# Roadmap: Glancier
+# Roadmap: Glanceus
 
 ## Overview
-This roadmap manages the delivery path for Glancier. Completed milestones are archived for historical reference.
+This roadmap manages the delivery path for Glanceus. Completed milestones are archived for historical reference.
 
 ## Milestones
 
 - [x] **v0.1: MVP Foundation & UI Refactoring** — [[Archived Roadmap](.planning/milestones/v0.1-ROADMAP.md)] [[Archived Requirements](.planning/milestones/v0.1-REQUIREMENTS.md)]
-- [x] **v1.0: 跃迁 —— Glancier 正式版发布计划** — [[Archived Roadmap](.planning/milestones/v1.0-ROADMAP.md)] [[Archived Requirements](.planning/milestones/v1.0-REQUIREMENTS.md)] [[Audit](.planning/milestones/v1.0-MILESTONE-AUDIT.md)]
+- [x] **v1.0: 跃迁 —— Glanceus 正式版发布计划** — [[Archived Roadmap](.planning/milestones/v1.0-ROADMAP.md)] [[Archived Requirements](.planning/milestones/v1.0-REQUIREMENTS.md)] [[Audit](.planning/milestones/v1.0-MILESTONE-AUDIT.md)]
 
 ## Active Milestones
 
@@ -22,7 +22,7 @@ This roadmap manages the delivery path for Glancier. Completed milestones are ar
 - [x] Phase 15: OAuth 架构重构与多流支持 (5/5 plans) — 2026-03-12
 
 **Key Deliverables:**
-- Glancier branding and semantic codebase update
+- Glanceus branding and semantic codebase update
 - Full TDD test coverage for backend/frontend
 - Error surfacing and visibility enhancements
 - Tauri release build with CI/CD

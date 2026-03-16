@@ -14,7 +14,7 @@ Implemented release metadata/branding, updater plumbing, and a manual-dispatch c
 
 1. Configured app metadata and DMG branding:
    - Bumped app versions to `1.0.0` in [`ui-react/src-tauri/tauri.conf.json`](ui-react/src-tauri/tauri.conf.json), [`ui-react/package.json`](ui-react/package.json), and [`ui-react/src-tauri/Cargo.toml`](ui-react/src-tauri/Cargo.toml).
-   - Updated bundle icon list to use existing Glancier assets (`icon.png`, `icon.icns`, `logo.ico`).
+   - Updated bundle icon list to use existing Glanceus assets (`icon.png`, `icon.icns`, `logo.ico`).
    - Added macOS DMG config and new instructional background image [`ui-react/src-tauri/icons/dmg-background.png`](ui-react/src-tauri/icons/dmg-background.png).
 2. Configured release GitHub Action in [`.github/workflows/ci.yml`](.github/workflows/ci.yml):
    - Added `workflow_dispatch` trigger.

@@ -104,14 +104,14 @@ class Executor:
         if isinstance(configured, int) and configured > 0:
             return configured
 
-        env_raw = os.getenv("GLANCIER_MAX_CONCURRENT_FETCHES")
+        env_raw = os.getenv("GLANCEUS_MAX_CONCURRENT_FETCHES")
         if env_raw:
             try:
                 parsed = int(env_raw)
                 if parsed > 0:
                     return parsed
             except ValueError:
-                logger.warning("Invalid GLANCIER_MAX_CONCURRENT_FETCHES=%s; fallback to default", env_raw)
+                logger.warning("Invalid GLANCEUS_MAX_CONCURRENT_FETCHES=%s; fallback to default", env_raw)
 
         return _DEFAULT_MAX_CONCURRENT_FETCHES
 

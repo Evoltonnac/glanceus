@@ -7,7 +7,7 @@ This document captures implementation decisions for Phase 10. Downstream agents 
 
 ### 1. Legacy Data & Environments
 Since there is no released version, we are dropping support for all legacy configurations and paths.
-- **Data Directories:** Ignore the old `~/.quota-board` directory completely. The app will solely rely on `~/.glancier` (or `GLANCIER_DATA_DIR`).
+- **Data Directories:** Ignore the old `~/.quota-board` directory completely. The app will solely rely on `~/.Glanceus` (or `GLANCIER_DATA_DIR`).
 - **Environment Variables:** Drop support for `QUOTA_BOARD_ROOT` entirely. If both are set, just use `GLANCIER_DATA_DIR`.
 - **Migration:** No automatic migration or backup of old user data is required.
 
@@ -23,9 +23,9 @@ The refactoring of the monolithic `App.tsx` will introduce better state manageme
 
 ### 4. Sidecar Binary & IPC Renaming
 A comprehensive replacement of branding artifacts across the stack.
-- **Binary Handling:** `glancier-server` is the new sidecar binary. The build process can leave any old `quota-board-server` binaries untouched. No symlinks or aliases will be provided for existing custom scripts; users must forcefully update their setups.
+- **Binary Handling:** `Glanceus-server` is the new sidecar binary. The build process can leave any old `quota-board-server` binaries untouched. No symlinks or aliases will be provided for existing custom scripts; users must forcefully update their setups.
 - **IPC & String Replacement:** Comprehensively search and replace all instances of "quota-board" and "quota_board" in Rust, Tauri IPC events, and TypeScript code.
-- **CLI Args:** All CLI arguments and default config paths associated with the sidecar must be renamed to reflect "glancier".
+- **CLI Args:** All CLI arguments and default config paths associated with the sidecar must be renamed to reflect "Glanceus".
 
 ## Code Context
 - **Configurations:** `core/config_loader.py`, `core/models.py` (Pydantic models need aliases removed and keys updated).

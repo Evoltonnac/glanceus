@@ -357,7 +357,7 @@ impl Default for ScraperState {
         ScraperState {
             handled_results: Mutex::new(HashSet::new()),
             active_task: Mutex::new(None),
-            daemon_worker_id: format!("glancier-daemon-{}", std::process::id()),
+            daemon_worker_id: format!("glanceus-daemon-{}", std::process::id()),
             log_control: Mutex::new(LogControlState::default()),
             error_logs_by_source: Mutex::new(HashMap::new()),
             #[cfg(target_os = "macos")]
@@ -857,7 +857,7 @@ pub async fn push_scraper_task(
                     console.error('Failed to emit scraped DOM data:', err);
                 }}
             }};
-            safeOverride(window, '__GLANCIER_EMIT_SCRAPED_DATA', emitScrapedData);
+            safeOverride(window, '__GLANCEUS_EMIT_SCRAPED_DATA', emitScrapedData);
 
             // User Injected Script
             try {{
@@ -1206,7 +1206,7 @@ async fn start_claimed_scraper_task(
                     console.error('Failed to emit scraped DOM data:', err);
                 }}
             }};
-            safeOverride(window, '__GLANCIER_EMIT_SCRAPED_DATA', emitScrapedData);
+            safeOverride(window, '__GLANCEUS_EMIT_SCRAPED_DATA', emitScrapedData);
 
             try {{
                 {}

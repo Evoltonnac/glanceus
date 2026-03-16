@@ -1,4 +1,4 @@
-# Glancier Flow Architecture and Orchestration
+# Glanceus Flow Architecture and Orchestration
 
 ## 1. Goal
 

@@ -3,7 +3,7 @@
 ## 1. Why WebView Scraper Exists
 
 For platforms with heavy CSR, complex cookie/session behavior, or no public API,
-pure HTTP is often insufficient. Glancier reuses Tauri WebView capabilities on desktop
+pure HTTP is often insufficient. Glanceus reuses Tauri WebView capabilities on desktop
 to run low-overhead background capture.
 
 ## 2. End-to-End Data Flow (Python -> FastAPI Internal API -> Rust -> JS)

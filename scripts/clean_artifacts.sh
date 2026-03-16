@@ -44,7 +44,7 @@ for rel in "${ARTIFACT_FILES[@]}"; do
 done
 
 shopt -s nullglob
-archives=("$ROOT_DIR"/ui-react/src-tauri/binaries/glancier-server-*.tar.gz)
+archives=("$ROOT_DIR"/ui-react/src-tauri/binaries/glanceus-server-*.tar.gz)
 for abs in "${archives[@]}"; do
   rel="${abs#$ROOT_DIR/}"
   if [[ "$DRY_RUN" == "--dry-run" ]]; then

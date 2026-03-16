@@ -2226,7 +2226,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "Composed schema for Glancier integration YAML files (Python flow definitions + React SDUI widget definitions).",
+  "description": "Composed schema for Glanceus integration YAML files (Python flow definitions + React SDUI widget definitions).",
   "properties": {
     "name": {
       "anyOf": [
@@ -2270,7 +2270,7 @@
   "required": [
     "flow"
   ],
-  "title": "Glancier Integration Configuration",
+  "title": "Glanceus Integration Configuration",
   "type": "object",
   "$schema": "https://json-schema.org/draft/2020-12/schema"
 }

@@ -264,9 +264,9 @@ class Executor:
         """Execute a predefined flow of steps with explicit variable scoping.
 
         Variable Resolution Priority:
-        1. outputs - from previous step (single step variables, only for next step)
-        2. context - global flow environment (persists across entire flow)
-        3. secrets - from SecretsController
+        1. context - global flow environment (persists across entire flow)
+        2. secrets - from SecretsController
+        3. outputs - from previous step (single step variables, only for next step)
         """
         context = {}
         # Initial context with source vars
@@ -288,7 +288,7 @@ class Executor:
             step_inputs = previous_outputs
 
             try:
-                # Resolve args with priority: outputs > context > secrets
+                # Resolve args with priority: context > secrets > outputs
                 args = self._resolve_args(step.args, step_inputs, context, source.id)
 
                 output = None
@@ -341,7 +341,7 @@ class Executor:
                 if current_outputs:
                     context.update(current_outputs)
 
-                # Only the current step's mapped outputs participate in next-step priority 1.
+                # Only the current step's mapped outputs participate in next-step fallback scope.
                 previous_outputs = current_outputs
 
             except Exception as step_error:
@@ -387,7 +387,7 @@ class Executor:
         context: Dict[str, Any],
         secrets_data: Dict[str, Any],
     ) -> Any:
-        for scope in (outputs, context, secrets_data):
+        for scope in (context, secrets_data, outputs):
             value = self._resolve_dotted_value(scope, key)
             if value is not _MISSING:
                 return value
@@ -431,11 +431,11 @@ class Executor:
         return _ESCAPE_TOKEN_PATTERN.sub(replace, text)
 
     def _resolve_args(self, args: Dict[str, Any], outputs: Dict[str, Any], context: Dict[str, Any], source_id: str) -> Dict[str, Any]:
-        """Recursive string substitution with priority: outputs > context > secrets.
+        """Recursive string substitution with priority: context > secrets > outputs.
 
-        Priority 1: outputs (from previous step)
-        Priority 2: context (global flow environment)
-        Priority 3: secrets (from SecretsController)
+        Priority 1: context (global flow environment)
+        Priority 2: secrets (from SecretsController)
+        Priority 3: outputs (from previous step)
         """
         if isinstance(args, str):
             try:

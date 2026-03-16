@@ -153,3 +153,31 @@ def test_resolve_args_honors_escaped_template_braces(executor):
         source_id=source_id,
     )
     assert resolved_with_escaped_backslash == r"path=C:\token-literal"
+
+
+def test_resolve_args_prioritizes_context_over_secrets_and_outputs(executor):
+    source_id = "scope-priority-context-first"
+    executor._secrets.set_secret(source_id, "token", "from-secret")
+
+    resolved = executor._resolve_args(
+        "{token}",
+        outputs={"token": "from-output"},
+        context={"token": "from-context"},
+        source_id=source_id,
+    )
+
+    assert resolved == "from-context"
+
+
+def test_resolve_args_prioritizes_secrets_over_outputs_when_context_missing(executor):
+    source_id = "scope-priority-secrets-second"
+    executor._secrets.set_secret(source_id, "token", "from-secret")
+
+    resolved = executor._resolve_args(
+        "{token}",
+        outputs={"token": "from-output"},
+        context={},
+        source_id=source_id,
+    )
+
+    assert resolved == "from-secret"

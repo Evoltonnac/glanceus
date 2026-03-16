@@ -1082,6 +1082,7 @@ pub fn run() {
             get_runtime_port_info
         ])
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
             None,

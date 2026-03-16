@@ -82,7 +82,17 @@ npm --prefix ui-react install
   - macOS Intel: `macos-15-intel` / `x86_64-apple-darwin` / `.dmg`
   - Windows x64: `windows-latest` / `x86_64-pc-windows-msvc` / `.exe` (NSIS)
 - Prebuild stage runs `bash scripts/build.sh --prepare-only` to stage sidecar archives before Tauri bundling.
-- In-app updater artifacts are intentionally disabled in the current release pipeline (`createUpdaterArtifacts: false`).
+- In-app updater artifacts are enabled (`createUpdaterArtifacts: true`) and signed during release build.
+- Required GitHub repository secrets for signed updater artifacts:
+  - `TAURI_SIGNING_PRIVATE_KEY`
+  - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
+
+Generate signer keys locally (private key must stay secret):
+
+```bash
+cd ui-react
+npx tauri signer generate --ci --write-keys src-tauri/gen/updater/tauri-update.key
+```
 
 ### AI workflow in this project (GSD + TDD)
 

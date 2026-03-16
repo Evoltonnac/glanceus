@@ -30,7 +30,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "createUpdaterArtifacts": false,
+    "createUpdaterArtifacts": true,
     "resources": [
       "binaries"
     ],
@@ -62,6 +62,14 @@
     }
   },
   "plugins": {
+    "updater": {
+      "active": true,
+      "dialog": false,
+      "endpoints": [
+        "https://github.com/Evoltonnac/glanceus/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQzMzE4N0QyMzQzQkIwOEMKUldTTXNEczAwb2N4MHgvOTVCUXRsZ3MyaTM2cXpKK0lNbG5HMzJXWDRFbXhpMmptL2grRUVIUXoK"
+    },
     "shell": {
       "open": "^https?://"
     }

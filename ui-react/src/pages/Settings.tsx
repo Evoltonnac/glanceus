@@ -68,6 +68,7 @@ const DEFAULT_REFRESH_INTERVAL_MINUTES = 30;
 const REFRESH_INTERVAL_OPTIONS_MINUTES = [0, 5, 30, 60, 1440] as const;
 const BUG_REPORT_URL =
     "https://github.com/Evoltonnac/glanceus/issues/new/choose";
+const RELEASES_URL = "https://github.com/Evoltonnac/glanceus/releases";
 
 interface RuntimePortInfo {
     api_target_port: number;
@@ -119,6 +120,7 @@ export default function SettingsPage() {
     const showToast = useStore((state) => state.showToast);
     const [settings, setSettings] = useState<SystemSettings>(DEFAULT_SETTINGS);
     const [saving, setSaving] = useState(false);
+    const [checkingUpdates, setCheckingUpdates] = useState(false);
     const [openingDevtools, setOpeningDevtools] = useState(false);
     const [openingLogFolder, setOpeningLogFolder] = useState(false);
     const [runtimePortInfo, setRuntimePortInfo] =
@@ -289,6 +291,43 @@ export default function SettingsPage() {
 
     const handleReportBug = () => {
         openExternalLink(BUG_REPORT_URL);
+    };
+
+    const handleCheckUpdates = async () => {
+        if (!tauriRuntime || checkingUpdates) return;
+
+        setCheckingUpdates(true);
+        showToast(t("settings.toast.check_update_checking"), "info");
+        try {
+            const { check } = await import("@tauri-apps/plugin-updater");
+            const update = await check();
+            if (!update) {
+                showToast(t("settings.about.up_to_date"), "info");
+                return;
+            }
+
+            const latestVersion =
+                update && typeof update.version === "string"
+                    ? update.version
+                    : "latest";
+            showToast(
+                t("settings.toast.check_update_available", {
+                    version: latestVersion,
+                }),
+                "info",
+            );
+            void openExternalLink(RELEASES_URL);
+        } catch (err) {
+            console.error("Failed to check updates:", err);
+            showToast(
+                t("settings.toast.check_update_failed", {
+                    reason: String(err),
+                }),
+                "error",
+            );
+        } finally {
+            setCheckingUpdates(false);
+        }
     };
 
     const handleOpenWebConsole = async () => {
@@ -995,15 +1034,24 @@ export default function SettingsPage() {
                                                 <Button
                                                     variant="outline"
                                                     className="rounded-full px-6 gap-2 hover:bg-foreground hover:text-background transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand/50"
-                                                    onClick={() =>
-                                                        showToast(
-                                                            t("settings.about.up_to_date"),
-                                                            "info",
-                                                        )
+                                                    onClick={
+                                                        handleCheckUpdates
+                                                    }
+                                                    disabled={
+                                                        !tauriRuntime ||
+                                                        checkingUpdates
                                                     }
                                                 >
-                                                    <Download className="w-4 h-4" />
-                                                    {t("settings.button.check_update")}
+                                                    <Download
+                                                        className={`w-4 h-4 ${checkingUpdates ? "animate-spin" : ""}`}
+                                                    />
+                                                    {checkingUpdates
+                                                        ? t(
+                                                              "settings.button.checking_update",
+                                                          )
+                                                        : t(
+                                                              "settings.button.check_update",
+                                                          )}
                                                 </Button>
                                                 <Button
                                                     variant="outline"

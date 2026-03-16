@@ -42,6 +42,12 @@ make dev-tauri  # backend + Tauri desktop shell
 - Create or edit YAML files under `config/integrations/`.
 - Reload integration definitions via API/UI when needed.
 
+### 4. AI-assisted YAML authoring (canonical path)
+
+- Use `skills/integration-editor` as the canonical integration YAML authoring path.
+- `skills/PROMPT.md` is the single-file convenience prompt aggregated from the integration-editor skill sources.
+- When prompt or fallback behavior changes, update root docs and phase acceptance artifacts in the same delivery.
+
 ## Developer & Maintainer Quick Reference
 
 ### Quick start (dependencies)

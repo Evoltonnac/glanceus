@@ -1,90 +1,191 @@
-# Glancier Flow 鉴权与数据处理模式
+# Glancier Flow Patterns (Current)
 
-本文档提供了编写 `flow` 阶段时的常见设计模式。每个 step 必须包含 `id` 和 `use`。
+This reference defines practical Flow authoring patterns for integration YAML in Glancier.
 
-## 1. 鉴权模式 (Authentication Patterns)
+## 1. Source of Truth
 
-当需要调用外部受保护 API 时，必须在 flow 的开头设置鉴权步骤，将其凭证存入 `secrets`，供后续步骤使用。
+Use these in priority order:
+1. Code and schemas (`config/schemas/integration.schema.json`)
+2. Flow docs (`docs/flow/01_architecture_and_orchestration.md`, `docs/flow/02_step_reference.md`, `docs/flow/03_step_oauth.md`)
+3. Working integration examples (`config/integrations/*.yaml`)
 
-### A. API Key / PAT (Personal Access Token) 模式
-最简单的鉴权方式，适用于提供长期 Token 的平台。
+If examples conflict with docs, prefer current code/schema behavior.
 
-```yaml
-- id: setup_auth
-  use: api_key
-  args:
-    header_name: "Authorization"     # 请求头名称
-    header_format: "Bearer {key}"    # 如何格式化（{key}会被替换为用户输入的秘钥）
-    doc_url: "https://docs.example.com/api-keys"
-  secrets:
-    api_token: "api_key"             # 将用户输入的键值存入 secrets 的 `api_token` 中
-```
+## 2. Minimum Step Contract
 
-### B. OAuth 2.0 (Device Flow) 模式
-适用于 CLI 和桌面端。不需要重定向回调 URL，用户在浏览器中输入验证码。
+Each flow step should include:
+- `id` (required)
+- `use` (required)
+- optional `args`, `outputs`, `context`, `secrets`, `run`
 
-```yaml
-- id: authorize
-  use: oauth
-  args:
-    oauth_flow: "device"
-    device_authorization_url: "https://example.com/oauth/device/code"
-    token_url: "https://example.com/oauth/token"
-    scopes: ["read", "user"]
-    client_id: "YOUR_CLIENT_ID"      # 必须提供
-    token_request_type: "json"       # 或 "form"
-    device_poll_interval: 5
-  secrets:
-    oauth_secrets: "oauth_secrets"   # 输出为 secrets 的 `oauth_secrets`
-```
+Current `use` values:
+- `http`
+- `oauth`
+- `api_key`
+- `curl`
+- `extract`
+- `script`
+- `log`
+- `webview`
 
-### C. OAuth 2.0 (PKCE) 模式
-需要起本地 HTTP 服务器接收回调，安全性高。
+## 3. Step Roles
 
-```yaml
-- id: authorize
-  use: oauth
-  args:
-    oauth_flow: "pkce"
-    authorization_url: "https://example.com/oauth/authorize"
-    token_url: "https://example.com/oauth/token"
-    scopes: ["read"]
-    client_id: "YOUR_CLIENT_ID"
-    pkce_method: "S256"
-  secrets:
-    oauth_secrets: "oauth_secrets"
-```
+| Step | Purpose | Typical Notes |
+| --- | --- | --- |
+| `api_key` | Collect API token from user interaction | Persist token in `secrets` |
+| `oauth` | Run OAuth flow and persist token bundle | Use `oauth_secrets.access_token` in downstream HTTP headers |
+| `curl` | Collect browser-captured cURL input | Use when API auth is not straightforward |
+| `webview` | Desktop-assisted browser interception | Use for platforms without stable public API |
+| `http` | Fetch data from remote endpoint | Map response into `outputs`/`context` |
+| `extract` | Pull fields from structured payloads | `type` often `jsonpath` or `key` |
+| `script` | Lightweight transformation/aggregation | Keep deterministic and bounded |
+| `log` | Emit debugging breadcrumbs | Useful in investigation or migrations |
 
-## 2. 数据拉取与处理模式 (Data Fetching & Processing)
+## 4. Output Channels and Persistence
 
-### A. HTTP 拉取
-使用先前保存的 `secrets` 作为 Authorization 头。
+Each step may map values into three channels:
 
-```yaml
-- id: fetch_data
-  use: http
-  args:
-    url: "https://api.example.com/v1/user"
-    method: "GET"
-    headers:
-      # 注意：从 secrets 中读取变量使用 {secrets.变量名} 或类似语法
-      # 如果上方存的是 oauth_secrets，则使用 {oauth_secrets.access_token}
-      Authorization: "Bearer {oauth_secrets.access_token}" 
-      Accept: "application/json"
-  outputs:
-    raw_response: "http_response"    # 将请求结果存入上下文 `raw_response`
-```
+| Field | Persistence | Security | Use |
+| --- | --- | --- | --- |
+| `secrets` | Persistent | Encrypted | Credentials, token bundles, sensitive session state |
+| `outputs` | Persistent | Plaintext | Display-facing data for templates/widgets |
+| `context` | In-memory only | Plaintext | Intermediate values for downstream steps |
 
-### B. Extract 提取数据
-从 HTTP 返回的 JSON 中，利用 JSONPath 提取需要的字段。
+Rules:
+- Always map credentials/tokens to `secrets`.
+- Use `outputs` only for values needed in UI or durable data snapshots.
+- Use `context` for temporary intermediate values.
+
+## 5. Variable Resolution Priority
+
+When resolving `{var}` in step args:
+1. Flow runtime context
+2. Persisted secrets
+3. Previously mapped outputs
+
+Design expressions so this precedence does not create ambiguous names.
+
+## 6. Canonical Patterns
+
+### Pattern A: API Key -> HTTP -> Extract
 
 ```yaml
-- id: parse_name
-  use: extract
-  args:
-    source: "{raw_response}"         # 指向 HTTP 的输出变量
-    type: "jsonpath"
-    expr: "$.data.user.name"         # JSONPath 表达式
-  outputs:
-    user_name: "$.data.user.name"    # 映射为输出变量 user_name，供 SDUI 使用
+flow:
+  - id: collect_api_key
+    use: api_key
+    args:
+      label: "API Key"
+      description: "Enter your API token"
+    secrets:
+      api_key: "api_key"
+
+  - id: fetch_metrics
+    use: http
+    args:
+      url: "https://api.example.com/v1/metrics"
+      method: "GET"
+      headers:
+        Authorization: "Bearer {api_key}"
+        Accept: "application/json"
+    outputs:
+      metrics_payload: "http_response"
+
+  - id: parse_metrics
+    use: extract
+    args:
+      source: "{metrics_payload}"
+      type: "jsonpath"
+    outputs:
+      total_value: "$.total"
+      trend_label: "$.trend"
 ```
+
+### Pattern B: OAuth -> HTTP with token bundle
+
+```yaml
+flow:
+  - id: authorize
+    use: oauth
+    args:
+      oauth_flow: "device"
+      device_authorization_url: "https://provider.example.com/oauth/device/code"
+      token_url: "https://provider.example.com/oauth/token"
+      scopes: ["read"]
+      client_id: "REPLACE_ME"
+    secrets:
+      oauth_secrets: "oauth_secrets"
+
+  - id: fetch_profile
+    use: http
+    args:
+      url: "https://provider.example.com/api/profile"
+      method: "GET"
+      headers:
+        Authorization: "Bearer {oauth_secrets.access_token}"
+    outputs:
+      profile_payload: "http_response"
+```
+
+### Pattern C: WebView interception -> Extract
+
+```yaml
+flow:
+  - id: webview_fetch
+    use: webview
+    args:
+      url: "https://console.example.com"
+      intercept_api: "/dashboard"
+    outputs:
+      dashboard_payload: "webview_data"
+
+  - id: parse_dashboard
+    use: extract
+    args:
+      source: "{dashboard_payload}"
+      type: "jsonpath"
+    outputs:
+      balance: "$.billing.available_balance"
+      currency: "$.billing.currency"
+```
+
+### Pattern D: Script summarization
+
+```yaml
+flow:
+  - id: summarize
+    use: script
+    args:
+      code: |
+        # Keep script deterministic and bounded.
+        item_count = len(items or [])
+        healthy = item_count > 0
+    outputs:
+      item_count: "item_count"
+      healthy: "healthy"
+```
+
+## 7. Interaction and Resume Notes
+
+`api_key`, `oauth`, `curl`, and `webview` can suspend execution with an interaction state.
+
+Design implications:
+- Keep pre-interaction steps idempotent.
+- Do not depend on `context` surviving long suspensions.
+- Persist required cross-resume values in `secrets` or `outputs`.
+
+## 8. Common Errors to Avoid
+
+- Storing tokens in `outputs`.
+- Flat token naming when token bundle exists (`access_token` instead of `oauth_secrets.access_token`).
+- Overloading `outputs` with temporary-only values.
+- Using unsupported `use` step names.
+- Mixing template-layer logic into flow (flow fetches/parses; SDUI renders).
+
+## 9. Authoring Checklist
+
+- [ ] Step `id` and `use` are present for every step.
+- [ ] Sensitive values map to `secrets` only.
+- [ ] UI-facing fields map to `outputs`.
+- [ ] Temporary-only fields stay in `context`.
+- [ ] OAuth references use `oauth_secrets.*` dotted paths.
+- [ ] Blocking steps are idempotent/resume-safe.

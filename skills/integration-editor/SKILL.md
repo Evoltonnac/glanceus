@@ -1,58 +1,187 @@
 ---
 name: integration-editor
-description: "用于创建、编辑和修改 Glancier 平台的 Integration YAML 配置文件。当需要添加新集成、修改数据拉取流程 (flow) 或调整界面模板 (SDUI templates) 时使用此技能。"
+description: "Canonical skill for creating and editing Glancier integration YAML with deterministic create/edit/fallback behavior."
 ---
 
-# Glancier Integration Editor 技能指南
+# Glancier Integration Editor
 
-这个技能为你提供了创建和修改 Glancier 集成配置 (`.yaml`) 的能力。Glancier 的配置包含了鉴权、数据获取步骤 (`flow`) 以及服务器驱动 UI 模板 (`templates`)。
+`integration-editor` is the canonical path for AI-assisted integration YAML authoring.
+This skill keeps structured sources (`SKILL.md` + `references/`) as the authoritative behavior contract.
 
-## 🎯 核心工作流：意图驱动
+## Packaging Contract (create-skill style)
 
-你不需要每次都执行从头到尾的完整流程。请首先分析用户的需求，进入对应的模块。
+- Keep the skill in the planned location: `skills/integration-editor/`.
+- Keep these source files as the canonical source of truth:
+  - `skills/integration-editor/SKILL.md`
+  - `skills/integration-editor/references/flow-patterns.md`
+  - `skills/integration-editor/references/sdui-components.md`
+- Do not remove `references/`; they are required for accurate flow and SDUI behavior constraints.
 
-*   **场景 A：从 0 到 1 创建新集成** 👉 依次执行 【模块 1】 -> 【模块 2】 -> 【模块 3】 -> 【模块 4】。
-*   **场景 B：仅修改数据流/鉴权方式** 👉 跳过 UI 模块，直接执行 【模块 1】 或 【模块 2】 -> 【模块 4】。
-*   **场景 C：仅修改 SDUI 界面** 👉 跳过接口研究，直接执行 【模块 3】 -> 【模块 4】。
+## Sync Order (Must Follow)
 
----
+Always update in this strict order:
+1. Codebase code (actual runtime/schema behavior)
+2. Codebase docs (project-level docs under `docs/` and root contracts)
+3. Skill sources (`SKILL.md` + `references/`)
 
-## 🛠️ 模块 1：鉴权方式研究 (Auth Discovery)
-*目的：决定最合适的 API 鉴权方式。*
+## Authoring Order (Required)
 
-1.  **首选 API Key**：通过 Google 搜索 `{平台名称} API Personal Access Token` 或 `developer keys`。如果平台支持长期有效的 Token，请选择 **`api_key`** 模式。
-2.  **次选 OAuth 2.0**：如果不支持 API Key，搜索 `{平台名称} OAuth 2.0 scopes endpoints`。如果是桌面端/CLI环境，优先寻找 **Device Code Flow**。如果支持，选择 **`oauth`** 模式。
-3.  **退避策略**：如果没有公开 API，考虑 `webview` 抓取或 `curl`。
-4.  **查阅参考**：在确定方式后，请查看 `references/flow-patterns.md` 获取该鉴权模式在 YAML 中的标准写法。
+1. Update `SKILL.md`.
+2. Update `references/` files.
+3. Validate skill frontmatter:
+   - `python /Users/xingminghua/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/integration-editor`
 
----
+## Canonical Ownership
 
-## 🛠️ 模块 2：数据流设计 (Flow Design)
-*目的：设计 `http` 和 `extract` 步骤。*
+- Use this skill for both create and edit requests on integration YAML.
+- Treat this file and `references/` as canonical authoring sources.
 
-1.  研究目标平台的 API 响应结构。
-2.  在 YAML 的 `flow` 数组中添加 `http` 步骤拉取数据，并使用 `extract` (JSONPath) 提取所需字段到 `outputs` 变量中。
-3.  **查阅参考**：具体字段要求请查看 `references/flow-patterns.md`。
+## Deterministic Modes
 
----
+1. **create mode**
+- Generate a complete integration YAML package (metadata, auth, flow, templates).
+- Return full file content rather than partial snippets.
+- Keep auth -> fetch -> parse -> render flow explicit and traceable.
 
-## 🛠️ 模块 3：界面模板设计 (SDUI Design)
-*目的：使用提取的变量渲染界面。*
+2. **edit mode**
+- Edit only the sections requested by the user.
+- Preserve untouched sections exactly unless the user asks for wider changes.
+- Explain what changed and what intentionally remained unchanged.
 
-1.  **必须查阅 UI 组件速查表**：阅读 `references/sdui-components.md`，了解所有可用的 Widget 及其属性（这是 JSON Schema 的精简版）。
-2.  在 `templates[x].widgets` 中组合组件。不要臆造不存在的组件（例如不要使用 `Button`，而应使用 `ActionSet`）。
-3.  使用 `{变量名}` 将 `flow` 中提取的 `outputs` 绑定到 UI 属性上（例如 `text: "{user_name}"`）。
+## Prerequisite Gate
 
----
+- Before writing YAML, check required prerequisites:
+  - target platform and API entrypoint
+  - auth strategy (api_key, oauth, webview)
+  - expected outputs/metrics/signals
+  - target UI card intent
+- If prerequisites are missing, ask concise clarifying questions first.
+- Do not invent unavailable credentials, scopes, or undocumented endpoints.
 
-## 🛠️ 模块 4：写入与自我校验 (Validate & Iterate) 🚨关键步骤🚨
-*目的：确保 YAML 文件符合 Glancier 的严格 JSON Schema。*
+## Fallback Policy (Local-First)
 
-1.  **写入文件**：使用代码编辑工具将生成的 YAML 写入 `config/integrations/` 目录下（或直接使用 replace 修改现有文件）。
-2.  **强制校验**：执行完成后，必须验证 YAML 是否符合 Schema。如果项目中存在类似 `validate_yaml.py` 或内置的 CLI 验证命令（例如针对 `config/integrations/xx.yaml` 进行测试），请运行它。
-    *   *(注：如果不确定如何运行命令，可以使用 `scripts/generate_schemas.py` 相关的验证逻辑，或运行项目的测试脚本。)*
-3.  **自我修正 (Iteration Loop)**：如果校验或测试返回了错误信息（例如：`Additional properties are not allowed`, `Missing required property`），**你必须仔细阅读错误信息，查阅对应的参考文档，并修复 YAML 文件**。只有在没有验证错误的情况下，任务才算真正完成。
+- Prefer local context first: existing project files, current integration YAML, and local docs.
+- Use external fallback only when local context is insufficient.
+- Any fallback usage must disclose:
+  - reason fallback was needed
+  - source category used (docs/api/community examples)
+  - limitations and confidence level
+- Never present fallback assumptions as verified facts.
 
----
+## Validation Guidance (Optional Final Step)
 
-💡 **记住**：YAML 的缩进和层级非常重要。当修改已有文件时，优先考虑使用精准搜索替换，避免破坏原有文件的注释。
+- Validation is optional-final when the environment is constrained.
+- If execution is possible, run available checks for impacted files.
+- If execution is not possible, provide concrete validation commands and expected pass signals.
+- Always distinguish "validated" from "not executed" outcomes.
+
+## Execution Workflow
+
+1. Confirm mode (`create mode` or `edit mode`).
+2. Use `references/flow-patterns.md` and `references/sdui-components.md` as domain constraints.
+3. Confirm prerequisites; ask for missing fields before generating YAML.
+4. Produce or update YAML deterministically, respecting mode scope.
+5. Apply fallback disclosure and optional-final validation status in the final response.
+
+## Simple Complete YAML Example
+
+Use this as a minimal but end-to-end baseline (auth -> fetch -> parse -> render):
+
+```yaml
+name: "Example API Snapshot"
+description: "Fetch usage data with API key auth and render a compact source card."
+flow:
+  - id: collect_api_key
+    use: api_key
+    args:
+      label: "API Key"
+      description: "Enter your API key."
+    secrets:
+      api_key: "api_key"
+
+  - id: fetch_usage
+    use: http
+    args:
+      url: "https://api.example.com/v1/usage"
+      method: "GET"
+      headers:
+        Authorization: "Bearer {api_key}"
+        Accept: "application/json"
+    outputs:
+      usage_payload: "http_response"
+
+  - id: parse_usage
+    use: extract
+    args:
+      source: "{usage_payload}"
+      type: "jsonpath"
+    outputs:
+      metric_value: "$.usage.current"
+      metric_limit: "$.usage.limit"
+      usage_percent: "$.usage.percent"
+      signal_label: "$.usage.status"
+      updated_at: "$.usage.updated_at"
+
+  - id: summarize
+    use: script
+    args:
+      code: |
+        value = float(metric_value or 0)
+        limit = float(metric_limit or 0)
+        percent = float(usage_percent or 0)
+        remaining = max(limit - value, 0)
+        if percent >= 90:
+            signal_tone = "danger"
+        elif percent >= 70:
+            signal_tone = "warning"
+        else:
+            signal_tone = "success"
+    outputs:
+      remaining_value: "remaining"
+      signal_tone: "signal_tone"
+
+templates:
+  - id: "usage_snapshot"
+    type: "source_card"
+    ui:
+      title: "Usage Snapshot"
+      icon: "📊"
+    widgets:
+      - type: "Container"
+        spacing: "md"
+        items:
+          - type: "TextBlock"
+            text: "{metric_value}"
+            size: "xl"
+            weight: "bold"
+          - type: "Progress"
+            value: "{usage_percent}"
+            label: "Usage {usage_percent}%"
+            thresholds:
+              warning: 70
+              danger: 90
+          - type: "FactSet"
+            facts:
+              - label: "Limit"
+                value: "{metric_limit}"
+              - label: "Remaining"
+                value: "{remaining_value}"
+              - label: "Updated"
+                value: "{updated_at}"
+          - type: "Badge"
+            text: "{signal_label}"
+            tone: "{signal_tone}"
+          - type: "ActionSet"
+            actions:
+              - type: "Action.OpenUrl"
+                title: "Open Dashboard"
+                url: "https://app.example.com/dashboard"
+              - type: "Action.Copy"
+                title: "Copy Status"
+                text: "{signal_label}"
+```
+
+## References
+
+- `skills/integration-editor/references/flow-patterns.md`
+- `skills/integration-editor/references/sdui-components.md`

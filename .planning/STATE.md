@@ -29,7 +29,7 @@ Phase 2 now has runtime/API standardized error envelope and EN/ZH i18n foundatio
 ## Session Continuity
 
 Last session: 2026-03-15T16:21:25Z
-Last activity: 2026-03-16 - Completed Phase 02 Plan 02 (EN/ZH i18n foundation, settings language switch, error-code UX mapping)
+Last activity: 2026-03-16 - Completed quick task 012: Settings About page UI redesign with Header SVG
 - 2026-03-16: Added backend `SystemSettings.language` (`en`/`zh`, default `en`) and compatibility normalization for old settings payloads.
 - 2026-03-16: Added frontend i18n runtime (`ui-react/src/i18n/*`), wired provider in app bootstrap, and migrated core Settings/Dashboard/Integrations copy to translation keys.
 - 2026-03-16: Added frontend-friendly source error summary mapping from standardized `error_code` while preserving existing `error/error_details` flow.
@@ -60,6 +60,7 @@ Last activity: 2026-03-16 - Completed Phase 02 Plan 02 (EN/ZH i18n foundation, s
 | 006 | SDUI schema 去重重构：$defs 单一真源、Widget 分类分流、保留 widget_tree 与 widget_defs 兼容视图 | 2026-03-14 | bf8d327 | [6-sdui-schema-widget-widget-tree-widget-de](./quick/6-sdui-schema-widget-widget-tree-widget-de/) |
 | 008 | Translate Chinese-written docs/comments to English and optimize redundant content | 2026-03-14 | pending | [8-translate-all-chinese-written-docs-and-c](./quick/8-translate-all-chinese-written-docs-and-c/) |
 | 009 | Commit opener fix and sync CI/build docs for recent release pipeline changes | 2026-03-16 | pending | [9-ci-build](./quick/9-ci-build/) |
+| 012 | 重新处理设置页的关于页面 UI 展示，将图标替换为 Header SVG 并添加相同背景色，美化介绍 | 2026-03-16 | c9cd0a0 | [12-ui-header-svg](./quick/12-ui-header-svg/) |
 | 010 | Clarify API key step vs generic form step boundaries | 2026-03-16 | pending | [10-api-key-api-key-data-output-api-key-secr](./quick/10-api-key-api-key-data-output-api-key-secr/) |
 | 011 | 将 skills 下的 prompt 打包进项目文件（客户端），并在集成创建弹窗加入 AI 星星按钮与新弹窗（复制 prompt/跳转 GitHub skills） | 2026-03-16 | c0e201f | [11-skills-prompt-ai-prompt-github-skills](./quick/11-skills-prompt-ai-prompt-github-skills/) |
 

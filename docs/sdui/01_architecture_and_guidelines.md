@@ -7,11 +7,6 @@ Glancier uses SDUI (Schema-Driven UI) in the view layer:
 - Renderer handles parsing/validation/fallback, not request orchestration.
 - Flow owns authentication and fetching; SDUI only renders data.
 
-Related docs:
-- [Component Map and Categories](./02_component_map_and_categories.md)
-- [Template Expression Spec](./03_template_expression_spec.md)
-- [Flow Docs Entry](../flow/README.md)
-
 ## 2. Template Structure (`templates`)
 
 Each integration can define multiple templates. Current primary template type: `source_card`.
@@ -87,8 +82,6 @@ To output literal template markers, use backslash escapes:
 - Arbitrary code execution is forbidden.
 - Parse failures degrade to empty values without breaking card rendering.
 
-Full rules: [03_template_expression_spec.md](./03_template_expression_spec.md)
-
 ## 5. List and Layout Composition
 
 ```yaml
@@ -107,8 +100,6 @@ Full rules: [03_template_expression_spec.md](./03_template_expression_spec.md)
       value: "{key_item.percent}"
       label: "Usage"
 ```
-
-Component responsibilities: [02_component_map_and_categories.md](./02_component_map_and_categories.md)
 
 ### 5.1 Widget Visual Baseline (Spacing and List Item)
 
@@ -135,4 +126,4 @@ For the same `spacing` token: **Layout >= Micro**. Current mapping:
 
 - SDUI: presentation layer only.
 - Flow: auth/fetch/extract/resume execution.
-- Flow docs entry: [../flow/README.md](../flow/README.md)
+- Flow docs entry: [../flow/01_architecture_and_orchestration.md](../flow/01_architecture_and_orchestration.md)

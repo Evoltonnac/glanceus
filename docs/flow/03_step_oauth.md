@@ -5,10 +5,6 @@
 The `oauth` step is used for authorization-code exchange and device authorization.
 Flow is responsible for blocking when credentials are missing and resuming after authorization completes.
 
-References:
-- [Flow Architecture](./01_architecture_and_orchestration.md)
-- [Flow Step Reference](./02_step_reference.md)
-
 ## 2. Execution Stages
 
 1. Check whether a valid token already exists in secrets.
@@ -40,4 +36,3 @@ Common failures:
 Recommended handling:
 - Keep source state recoverable (no crash path)
 - Provide a clear “Reconnect OAuth” UI action
-- Failure examples: [04_step_failure_test_inputs.md](./04_step_failure_test_inputs.md)

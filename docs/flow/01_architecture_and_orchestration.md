@@ -60,5 +60,5 @@ This model applies to `api_key`, `oauth`, `curl`, and `webview`.
 
 ## 5. Boundary with SDUI and WebView
 
-- Flow produces data and runtime state; SDUI renders it: [../sdui/README.md](../sdui/README.md)
-- WebView step capabilities come from the Scraper subsystem: [../webview-scraper/README.md](../webview-scraper/README.md)
+- Flow produces data and runtime state; SDUI renders it: [../sdui/01_architecture_and_guidelines.md](../sdui/01_architecture_and_guidelines.md)
+- WebView step capabilities come from the Scraper subsystem: [../webview-scraper/01_architecture_and_dataflow.md](../webview-scraper/01_architecture_and_dataflow.md)

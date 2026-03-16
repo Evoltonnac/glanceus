@@ -1,12 +1,12 @@
 # Frontend Engineering Guide
 
-This guide is the canonical frontend reference for `ui-react/`.
+Canonical frontend rules for `ui-react/`.
 
 ## Scope
 
-- React UI implementation (`ui-react/src/`)
-- Data fetching/state update conventions
-- UI-facing reliability rules (StrictMode, effect safety)
+- React UI implementation in `ui-react/src/`
+- Data fetching and cache invalidation patterns
+- Reliability rules for effects and runtime behavior
 
 ## Stack
 
@@ -14,7 +14,7 @@ This guide is the canonical frontend reference for `ui-react/`.
 - Vite
 - Tailwind CSS
 - SWR
-- Tauri v2 bridge (desktop runtime)
+- Tauri v2 bridge
 
 ## Canonical Sources
 
@@ -26,7 +26,7 @@ This guide is the canonical frontend reference for `ui-react/`.
 
 ## Data Fetching Standard
 
-Use `ui-react/src/hooks/useSWR.ts` hooks first.
+Use hooks from `ui-react/src/hooks/useSWR.ts` first.
 
 Available hooks:
 
@@ -40,7 +40,7 @@ Available hooks:
 - `useIntegrationFile(filename)`
 - `useIntegrationSources(filename)`
 
-Cache invalidation helpers:
+Cache helpers:
 
 - `invalidateSources()`
 - `invalidateViews()`
@@ -52,15 +52,13 @@ Cache invalidation helpers:
 
 ## Effect Safety and StrictMode
 
-React 18 StrictMode intentionally re-runs effects in development.
+React 18 StrictMode re-runs effects in development.
 
 Rules:
 
-- Always add cleanup in `useEffect` when side effects can leak.
-- For one-time side effects, guard with a ref flag.
-- Keep idempotency for request/retry flows.
-
-Example pattern:
+- Always add cleanup for side effects.
+- Guard one-time effects with a ref.
+- Keep request/retry logic idempotent.
 
 ```tsx
 const initializedRef = useRef(false);
@@ -79,24 +77,21 @@ useEffect(() => {
 
 ## API Client Notes
 
-`ui-react/src/api/client.ts` centralizes backend calls and runtime base URL resolution.
+`ui-react/src/api/client.ts` owns backend calls and base URL resolution.
 
-Current constraint:
-
-- Public API methods do not expose caller-level request cancellation (`signal`) for general usage.
-- If cancellation is required for a new path, add explicit `signal` plumbing in `ApiClient` first.
+- Public API methods currently do not expose caller-level cancellation (`signal`).
+- Add explicit `signal` plumbing in `ApiClient` before using cancellation in new paths.
 
 ## Mutation Pattern
 
-After create/update/delete operations:
+After create/update/delete:
 
 1. call API method
 2. apply optimistic update if needed
-3. invalidate the relevant SWR cache key(s)
+3. invalidate relevant SWR keys
 
-Do not couple business state transitions to pure presentational components.
+Do not place business state transitions in purely presentational components.
 
 ## Documentation Policy
 
-Frontend documentation belongs under `docs/`.
-Do not add long-lived engineering guidance under `ui-react/`.
+Keep long-lived frontend docs under `docs/`, not `ui-react/`.

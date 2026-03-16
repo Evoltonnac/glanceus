@@ -1,8 +1,6 @@
 # Glancier SDUI Component Map and Category Dictionary
 
 This document defines the **single source of truth** for supported SDUI components in the frontend renderer.
-Template structure: [01_architecture_and_guidelines.md](./01_architecture_and_guidelines.md)
-Expression syntax: [03_template_expression_spec.md](./03_template_expression_spec.md)
 
 ## 0. Template Hierarchy
 
@@ -71,10 +69,10 @@ The following names are not part of the current renderer and must not be used in
 
 ## 8. Maintenance Rules
 
-When adding a component, update all of:
-- [01_architecture_and_guidelines.md](./01_architecture_and_guidelines.md)
-- [02_component_map_and_categories.md](./02_component_map_and_categories.md)
-- [03_template_expression_spec.md](./03_template_expression_spec.md) if new expression fields are introduced
+When adding a component, update:
+- `01_architecture_and_guidelines.md`
+- `02_component_map_and_categories.md`
+- `03_template_expression_spec.md` (if new expression fields are introduced)
 
 Flow/OAuth/WebView are execution-layer capabilities, not SDUI widget responsibilities.
-See: [../flow/README.md](../flow/README.md)
+See: [../flow/02_step_reference.md](../flow/02_step_reference.md)

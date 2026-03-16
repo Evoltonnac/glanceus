@@ -2,10 +2,6 @@
 
 This document defines supported expression syntax and safety boundaries for SDUI template fields.
 
-Related docs:
-- [Architecture and Template Guidelines](./01_architecture_and_guidelines.md)
-- [Component Map and Category Dictionary](./02_component_map_and_categories.md)
-
 ## 1. Usage Forms
 
 - Full expression: `"{...}"` -> returns original type (`number` / `boolean` / `string` / `null`).

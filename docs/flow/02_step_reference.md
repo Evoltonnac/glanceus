@@ -1,7 +1,5 @@
 # Glancier Flow Step Reference
 
-Architecture background: [01_architecture_and_orchestration.md](./01_architecture_and_orchestration.md)
-
 ## 1. Auth and Blocking Steps
 
 ### `api_key`
@@ -12,7 +10,6 @@ Architecture background: [01_architecture_and_orchestration.md](./01_architectur
 ### `oauth`
 - Purpose: run OAuth and persist tokens.
 - Typical output: `oauth_secrets` (token bundle, for example `oauth_secrets.access_token`)
-- See details: [03_step_oauth.md](./03_step_oauth.md)
 
 ### `curl`
 - Purpose: ask the user to paste a browser-captured cURL command.
@@ -66,7 +63,3 @@ flow:
       available_balance: "$.billing.available_balance_usd"
       currency: "$.billing.currency"
 ```
-
-## 4. Failure Replay Inputs
-
-See [04_step_failure_test_inputs.md](./04_step_failure_test_inputs.md)

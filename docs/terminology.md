@@ -1,49 +1,44 @@
 # Glancier Terminology Dictionary
 
-This document defines the core terminology for **Glancier**.
+Use these terms consistently in docs, code comments, UI labels, and config examples.
 
 ## Core Identity
 
 | Term | Definition |
 |------|------------|
-| **Glancier** | The product name. Represents the "at-a-glance" nature of the data dashboard. |
-| **Personal Data Aggregator & Hub** | The project's positioning. A system that fetches, processes, and visualizes arbitrary data from APIs and web sources. |
+| **Glancier** | Product name. |
+| **Personal Data Aggregator & Hub** | Product positioning for multi-source personal data collection and visualization. |
 
-## Logic & Execution (The Flow Engine)
-
-| Term | Usage |
-|------|-------|
-| **Flow** | The execution pipeline for an integration, defining the sequence of Steps. |
-| **Step** | An atomic unit of execution within a Flow (e.g., `http`, `oauth`, `extract`, `webview`). |
-| **Interaction** | A state where a Flow is suspended (`SUSPENDED`) waiting for user input or external action (e.g., entering an API key, completing OAuth, or manual web scraping). |
-| **Secrets** | Sensitive credentials (tokens, keys, session strings) managed by the `SecretsController` and excluded from standard data persistence. |
-
-## Data & Logic Concepts (The Result Set)
+## Logic and Execution
 
 | Term | Usage |
 |------|-------|
-| **Attribute (Data Point)** | A single piece of information (Number, String, Boolean, or Object) extracted via Flow. |
-| **Result Set** | The complete dictionary of all Attributes produced by a Source's Flow after extraction. |
-| **Context** | The environment where expressions (e.g., `"{usage > 80}"`) are evaluated, typically scoped to the Result Set or a List Item. |
+| **Flow** | Ordered execution pipeline for one integration. |
+| **Step** | Atomic flow action (for example `http`, `oauth`, `extract`, `webview`). |
+| **Interaction** | Suspended flow state waiting for user input/external action. |
+| **Secrets** | Sensitive credentials stored in encrypted secret storage. |
 
-## UI & Presentation (The Bento Engine)
-
-The interface follows a **Bento Grid** philosophy, where data is organized into clean, modular tiles.
+## Data Concepts
 
 | Term | Usage |
 |------|-------|
-| **SDUI (Schema-Driven UI)** | The architecture where UI is defined by templates (YAML/JSON) rather than hardcoded React components. |
-| **Bento Widget (Card)** | The top-level modular tile on the dashboard representing an integration (Source + Template). |
-| **Template** | The SDUI definition that maps a Result Set to a visual layout. |
-| **Atomic Widget** | The smallest visual building blocks: `TextBlock`, `Progress`, `Badge`, `Image`, `FactSet`. |
-| **Structural Widget** | Components used for organization and layout: `Container`, `ColumnSet`, `List`. |
+| **Metric** | Key numeric value shown to users. |
+| **Signal** | State or trend indicator derived from data. |
+| **Integration Data** | Structured data produced by integration flows. |
+| **Context** | Runtime expression scope for template evaluation. |
 
-## Technical & Environment Constants
+## UI and Presentation
+
+| Term | Usage |
+|------|-------|
+| **SDUI (Schema-Driven UI)** | UI defined by templates instead of hardcoded component trees. |
+| **Bento Card** | Top-level dashboard card for one source/integration view. |
+| **Template** | SDUI layout definition that maps data to UI. |
+| **Atomic Widget** | Smallest render unit (`TextBlock`, `Progress`, `Badge`, `Image`, `FactSet`). |
+| **Structural Widget** | Layout/grouping unit (`Container`, `ColumnSet`, `List`). |
+
+## Constants
 
 | Constant | Description |
 |----------|-------------|
-| `GLANCIER_DATA_DIR` | The environment variable defining the root directory for data, configuration, and secrets. |
-
-## Usage Rule
-
-- Documentation, code comments, UI labels, and config examples must use this dictionary as the single source of truth.
+| `GLANCIER_DATA_DIR` | Root path for local data, config, and secrets. |

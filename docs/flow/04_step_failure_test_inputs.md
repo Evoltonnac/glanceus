@@ -1,7 +1,6 @@
 # Step Failure Test Input Examples
 
 These inputs are for fast regression on recoverability after auth failures.
-OAuth-specific details: [03_step_oauth.md](./03_step_oauth.md)
 
 ## 1. `test_fail_step_api_key.yaml`
 

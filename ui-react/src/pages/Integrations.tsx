@@ -77,6 +77,7 @@ import { RouteInterceptor } from "../components/RouteInterceptor";
 import { EmptyState } from "../components/EmptyState";
 import { InlineError } from "../components/InlineError";
 import { INTEGRATION_EDITOR_PROMPT } from "../constants/integrationSkillPrompt";
+import { useI18n, type Translate } from "../i18n";
 
 type ReloadConfigError = Error & {
     diagnostics?: ReloadConfigDiagnostic[];
@@ -138,6 +139,7 @@ function unique(values: string[]): string[] {
 }
 
 function buildReloadToastMessage(
+    t: Translate,
     action: "save" | "reload",
     result: ReloadConfigResponse,
     focusFile: string | null,
@@ -156,8 +158,8 @@ function buildReloadToastMessage(
 
     if (scopedChanges.length === 0) {
         return action === "save"
-            ? "保存成功，配置已重载。"
-            : "配置已重载，未检测到配置变更。";
+            ? t("integrations.reload.save_ok")
+            : t("integrations.reload.no_change");
     }
 
     const logicChanges = scopedChanges.filter(
@@ -169,22 +171,40 @@ function buildReloadToastMessage(
     const autoRefreshedSources = unique(
         scopedChanges.flatMap((item) => item.auto_refreshed_sources ?? []),
     );
-    const prefix = action === "save" ? "保存成功：" : "重载成功：";
+    const prefix =
+        action === "save"
+            ? t("integrations.reload.save_prefix")
+            : t("integrations.reload.reload_prefix");
 
     if (logicChanges.length > 0) {
         const logicFiles = logicChanges.map((item) => item.filename).join(", ");
         const refreshText =
             autoRefreshedSources.length > 0
-                ? `已自动刷新 ${autoRefreshedSources.length} 个 source`
-                : "未检测到可自动刷新的 source";
+                ? t("integrations.reload.logic_refresh_count", {
+                      count: autoRefreshedSources.length,
+                  })
+                : t("integrations.reload.logic_refresh_none");
         if (viewChanges.length > 0) {
-            return `${prefix}检测到逻辑改动（${logicFiles}），${refreshText}；另有 ${viewChanges.length} 个文件仅视图改动。`;
+            return (
+                prefix +
+                t("integrations.reload.logic_with_view", {
+                    files: logicFiles,
+                    refreshText,
+                    count: viewChanges.length,
+                })
+            );
         }
-        return `${prefix}检测到逻辑改动（${logicFiles}），${refreshText}。`;
+        return (
+            prefix +
+            t("integrations.reload.logic_only", {
+                files: logicFiles,
+                refreshText,
+            })
+        );
     }
 
     const viewFiles = viewChanges.map((item) => item.filename).join(", ");
-    return `${prefix}仅视图改动（${viewFiles}），未触发 source 自动刷新。`;
+    return prefix + t("integrations.reload.view_only", { files: viewFiles });
 }
 
 function DiagnosticItem({ diagnostic }: { diagnostic: IntegrationDiagnostic }) {
@@ -234,6 +254,7 @@ function DiagnosticItem({ diagnostic }: { diagnostic: IntegrationDiagnostic }) {
 
 export default function IntegrationsPage() {
     useTheme(); // Ensure context is used if needed, or simply remove
+    const { t } = useI18n();
     const [isDarkTheme, setIsDarkTheme] = useState(false);
 
     useEffect(() => {
@@ -509,7 +530,12 @@ export default function IntegrationsPage() {
         if (targetFile) {
             const data = await loadIntegrationContent(targetFile);
             if (!data) {
-                showToast(`重载文件失败：${targetFile}`, "error");
+                showToast(
+                    t("integrations.toast.reload_failed_file", {
+                        file: targetFile,
+                    }),
+                    "error",
+                );
             } else {
                 loadedFilename = data.filename;
                 fileContentUpdated = data.content !== previousContent;
@@ -529,12 +555,13 @@ export default function IntegrationsPage() {
             }
 
             let message = buildReloadToastMessage(
+                t,
                 "reload",
                 reloadResult,
                 resolvedFocusFile,
             );
             if (fileContentUpdated) {
-                message = `已重载最新文件。${message}`;
+                message = t("integrations.toast.reloaded_latest", { message });
             }
             setSuccess(message);
             showToast(message, "success");
@@ -559,8 +586,13 @@ export default function IntegrationsPage() {
                 return next;
             });
             setEditorError(reloadMessage);
-            setSuccess("重载失败。");
-            showToast(`重载失败：${reloadMessage}`, "error");
+            setSuccess("Reload failed.");
+            showToast(
+                t("integrations.toast.reload_failed", {
+                    message: reloadMessage,
+                }),
+                "error",
+            );
         }
 
         setTimeout(() => setSuccess(null), 4000);
@@ -572,6 +604,7 @@ export default function IntegrationsPage() {
         mapBackendDiagnostics,
         selectedFile,
         showToast,
+        t,
     ]);
 
     // Use SWR for data fetching - handles dedup and StrictMode automatically
@@ -647,6 +680,7 @@ export default function IntegrationsPage() {
                     await invalidateSources();
                 }
                 const message = buildReloadToastMessage(
+                    t,
                     "save",
                     result,
                     selectedFile,
@@ -673,9 +707,14 @@ export default function IntegrationsPage() {
                     );
                     return next;
                 });
-                setSuccess("保存成功，但配置重载失败。");
+                setSuccess("Saved, but configuration reload failed.");
                 setEditorError(reloadMessage);
-                showToast(`保存成功，但重载失败：${reloadMessage}`, "error");
+                showToast(
+                    t("integrations.toast.save_reload_failed", {
+                        message: reloadMessage,
+                    }),
+                    "error",
+                );
             }
 
             setTimeout(() => setSuccess(null), 4000);
@@ -683,7 +722,10 @@ export default function IntegrationsPage() {
             const message =
                 saveErr instanceof Error ? saveErr.message : "Failed to save";
             setEditorError(message);
-            showToast(`保存失败：${message}`, "error");
+            showToast(
+                t("integrations.toast.save_failed", { message }),
+                "error",
+            );
         } finally {
             setSaving(false);
         }
@@ -741,10 +783,10 @@ export default function IntegrationsPage() {
         setNewIntegrationError(null);
         try {
             await navigator.clipboard.writeText(INTEGRATION_EDITOR_PROMPT);
-            showToast("已复制完整 Prompt。", "success");
+            showToast(t("integrations.toast.prompt_copied"), "success");
         } catch (error) {
             console.error("Failed to copy integration prompt:", error);
-            setNewIntegrationError("复制失败，请检查浏览器剪贴板权限。");
+            setNewIntegrationError(t("integrations.toast.copy_failed"));
         }
     };
 
@@ -754,7 +796,7 @@ export default function IntegrationsPage() {
             await openExternalLink(SKILLS_GITHUB_URL);
         } catch (error) {
             console.error("Failed to open skills GitHub folder:", error);
-            setNewIntegrationError("打开 GitHub 目录失败，请稍后重试。");
+            setNewIntegrationError(t("integrations.toast.open_github_failed"));
         }
     };
 
@@ -931,7 +973,7 @@ export default function IntegrationsPage() {
                         {!sidebarCollapsed && (
                             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2 flex-1">
                                 <FileJson className="w-4 h-4" />
-                                Integrations
+                                {t("integrations.title")}
                             </h2>
                         )}
                         <div className="flex items-center gap-1">

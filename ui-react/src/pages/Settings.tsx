@@ -36,11 +36,13 @@ import {
     Palette,
     Terminal,
     FolderOpen,
+    Globe,
     RefreshCw,
 } from "lucide-react";
 import { TooltipProvider } from "../components/ui/tooltip";
 import { useTheme } from "../components/theme-provider";
 import { AppHeader } from "../components/AppHeader";
+import { useI18n } from "../i18n";
 import { isTauri, openExternalLink } from "../lib/utils";
 import { EmptyState } from "../components/EmptyState";
 import { useStore } from "../store";
@@ -57,16 +59,8 @@ const DEFAULT_SETTINGS: SystemSettings = {
     master_key: null,
     theme: "system",
     density: "normal",
+    language: "en",
 };
-
-const REFRESH_INTERVAL_OPTIONS: Array<{ value: number; label: string }> = [
-    { value: 0, label: "关闭自动刷新" },
-    { value: 5, label: "5 分钟" },
-    { value: 15, label: "15 分钟" },
-    { value: 30, label: "30 分钟" },
-    { value: 60, label: "1 小时" },
-    { value: 180, label: "3 小时" },
-];
 
 const SCRAPER_TIMEOUT_MIN_SECONDS = 1;
 const SCRAPER_TIMEOUT_MAX_SECONDS = 300;
@@ -122,6 +116,15 @@ export default function SettingsPage() {
     const [showImport, setShowImport] = useState(false);
     const [copied, setCopied] = useState(false);
     const { theme, setTheme } = useTheme();
+    const { t, setLocale } = useI18n();
+    const refreshIntervalOptions: Array<{ value: number; label: string }> = [
+        { value: 0, label: t("settings.refresh.option.off") },
+        { value: 5, label: t("settings.refresh.option.5m") },
+        { value: 15, label: t("settings.refresh.option.15m") },
+        { value: 30, label: t("settings.refresh.option.30m") },
+        { value: 60, label: t("settings.refresh.option.1h") },
+        { value: 180, label: t("settings.refresh.option.3h") },
+    ];
 
     const loadRuntimePortInfo = async (): Promise<RuntimePortInfo | null> => {
         if (!tauriRuntime) return null;
@@ -138,7 +141,7 @@ export default function SettingsPage() {
                 }
             } catch (error) {
                 if (attempt === 4) {
-                    console.warn("读取运行时端口信息失败:", error);
+                    console.warn("Failed to read runtime port info:", error);
                     return lastInfo;
                 }
             }
@@ -213,15 +216,20 @@ export default function SettingsPage() {
             await api.updateSettings(settings);
             if (autostartError) {
                 showToast(
-                    `设置已保存，但开机启动更新失败：${String(autostartError)}`,
+                    t("settings.toast.autostart_failed", {
+                        reason: String(autostartError),
+                    }),
                     "error",
                 );
             } else {
-                showToast("设置已保存");
+                showToast(t("settings.toast.saved"));
             }
         } catch (err) {
-            console.error("保存设置失败:", err);
-            showToast("保存设置失败：" + err, "error");
+            console.error("Failed to save settings:", err);
+            showToast(
+                t("settings.toast.save_failed", { reason: String(err) }),
+                "error",
+            );
         } finally {
             setSaving(false);
         }
@@ -242,10 +250,13 @@ export default function SettingsPage() {
             await api.importMasterKey(importKeyValue.trim());
             setImportKeyValue("");
             setShowImport(false);
-            showToast("主密钥导入成功！");
+            showToast(t("settings.toast.import_key_success"));
         } catch (err) {
             console.error(err);
-            showToast("导入失败：" + err, "error");
+            showToast(
+                t("settings.toast.import_key_failed", { reason: String(err) }),
+                "error",
+            );
         }
     };
 
@@ -266,8 +277,11 @@ export default function SettingsPage() {
         try {
             await invoke("open_main_devtools");
         } catch (err) {
-            console.error("打开网页控制台失败:", err);
-            showToast("打开网页控制台失败：" + err, "error");
+            console.error("Failed to open web console:", err);
+            showToast(
+                t("settings.toast.open_console_failed", { reason: String(err) }),
+                "error",
+            );
         } finally {
             setOpeningDevtools(false);
         }
@@ -279,8 +293,11 @@ export default function SettingsPage() {
         try {
             await invoke<string>("open_logs_folder");
         } catch (err) {
-            console.error("打开日志文件夹失败:", err);
-            showToast("打开日志文件夹失败：" + err, "error");
+            console.error("Failed to open log folder:", err);
+            showToast(
+                t("settings.toast.open_log_failed", { reason: String(err) }),
+                "error",
+            );
         } finally {
             setOpeningLogFolder(false);
         }
@@ -315,7 +332,7 @@ export default function SettingsPage() {
                             <ChevronLeft className="w-5 h-5" />
                         </Button>
                         <h2 className="text-lg font-bold tracking-tight">
-                            设置
+                            {t("settings.page.title")}
                         </h2>
                     </div>
                 </AppHeader>
@@ -326,8 +343,8 @@ export default function SettingsPage() {
                             icon={
                                 <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
                             }
-                            title="加载中..."
-                            description="正在获取系统配置"
+                            title={t("common.loading.title")}
+                            description={t("common.loading.description")}
                         />
                     </div>
                 ) : (
@@ -343,19 +360,19 @@ export default function SettingsPage() {
                                         value="general"
                                         className="flex-1 h-full rounded-full data-[state=active]:bg-brand data-[state=active]:text-primary-foreground data-[state=active]:shadow-none transition-all font-medium"
                                     >
-                                        通用
+                                        {t("settings.tabs.general")}
                                     </TabsTrigger>
                                     <TabsTrigger
                                         value="advanced"
                                         className="flex-1 h-full rounded-full data-[state=active]:bg-brand data-[state=active]:text-primary-foreground data-[state=active]:shadow-none transition-all font-medium"
                                     >
-                                        高级
+                                        {t("settings.tabs.advanced")}
                                     </TabsTrigger>
                                     <TabsTrigger
                                         value="about"
                                         className="flex-1 h-full rounded-full data-[state=active]:bg-brand data-[state=active]:text-primary-foreground data-[state=active]:shadow-none transition-all font-medium"
                                     >
-                                        关于
+                                        {t("settings.tabs.about")}
                                     </TabsTrigger>
                                 </TabsList>
                             </div>
@@ -371,16 +388,16 @@ export default function SettingsPage() {
                                     <div className="space-y-4">
                                         <div className="flex items-center gap-2 text-base font-semibold mb-2">
                                             <Palette className="w-4 h-4 text-brand" />
-                                            外观主题
+                                            {t("settings.section.appearance")}
                                         </div>
                                         <div className="rounded-xl border border-border px-5 py-4 bg-surface hover:border-foreground/20 hover:shadow-soft-elevation transition-all duration-150">
                                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                                 <div className="space-y-1">
                                                     <p className="text-sm font-medium">
-                                                        主题模式
+                                                        {t("settings.theme.mode.title")}
                                                     </p>
                                                     <p className="text-xs text-muted-foreground">
-                                                        选择应用的外观主题，立即生效。
+                                                        {t("settings.theme.mode.description")}
                                                     </p>
                                                 </div>
                                                 <Tabs
@@ -401,21 +418,21 @@ export default function SettingsPage() {
                                                             className="flex-1 h-full rounded-lg data-[state=active]:bg-brand data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm flex items-center justify-center gap-2 text-xs"
                                                         >
                                                             <Sun className="w-3.5 h-3.5" />
-                                                            浅色
+                                                            {t("settings.theme.light")}
                                                         </TabsTrigger>
                                                         <TabsTrigger
                                                             value="dark"
                                                             className="flex-1 h-full rounded-lg data-[state=active]:bg-brand data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm flex items-center justify-center gap-2 text-xs"
                                                         >
                                                             <Moon className="w-3.5 h-3.5" />
-                                                            深色
+                                                            {t("settings.theme.dark")}
                                                         </TabsTrigger>
                                                         <TabsTrigger
                                                             value="system"
                                                             className="flex-1 h-full rounded-lg data-[state=active]:bg-brand data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm flex items-center justify-center gap-2 text-xs"
                                                         >
                                                             <Monitor className="w-3.5 h-3.5" />
-                                                            系统
+                                                            {t("settings.theme.system")}
                                                         </TabsTrigger>
                                                     </TabsList>
                                                 </Tabs>
@@ -425,16 +442,87 @@ export default function SettingsPage() {
 
                                     <div className="space-y-4">
                                         <div className="flex items-center gap-2 text-base font-semibold mb-2">
+                                            <Globe className="w-4 h-4 text-brand" />
+                                            {t("settings.section.language")}
+                                        </div>
+                                        <div className="rounded-xl border border-border px-5 py-4 bg-surface hover:border-foreground/20 hover:shadow-soft-elevation transition-all duration-150">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                <div className="space-y-1 flex-1">
+                                                    <Label
+                                                        htmlFor="language-select"
+                                                        className="text-sm font-medium"
+                                                    >
+                                                        {t("settings.language.label")}
+                                                    </Label>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {t("settings.language.description")}
+                                                    </p>
+                                                </div>
+                                                <div className="w-full sm:w-[220px]">
+                                                    <Select
+                                                        value={settings.language ?? "en"}
+                                                        onValueChange={async (value) => {
+                                                            const language: "en" | "zh" =
+                                                                value === "zh"
+                                                                    ? "zh"
+                                                                    : "en";
+                                                            const newSettings = {
+                                                                ...settings,
+                                                                language,
+                                                            };
+                                                            setSettings(newSettings);
+                                                            setLocale(language);
+                                                            try {
+                                                                await api.updateSettings(newSettings);
+                                                                showToast(
+                                                                    t("settings.toast.language_saved"),
+                                                                );
+                                                            } catch (err) {
+                                                                console.error(
+                                                                    "Failed to auto-save language:",
+                                                                    err,
+                                                                );
+                                                                showToast(
+                                                                    t(
+                                                                        "settings.toast.language_save_failed",
+                                                                        {
+                                                                            reason: String(err),
+                                                                        },
+                                                                    ),
+                                                                    "error",
+                                                                );
+                                                            }
+                                                        }}
+                                                    >
+                                                        <SelectTrigger id="language-select">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="en">
+                                                                {t("settings.language.en")}
+                                                            </SelectItem>
+                                                            <SelectItem value="zh">
+                                                                {t("settings.language.zh")}
+                                                            </SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2 text-base font-semibold mb-2">
                                             <MonitorPlay className="w-4 h-4 text-brand" />
-                                            窗口行为
+                                            {t("settings.section.windowBehavior")}
                                         </div>
                                         <div className="flex items-center justify-between rounded-xl border border-border px-5 py-4 bg-surface hover:border-foreground/20 hover:shadow-soft-elevation transition-all duration-150">
                                             <div className="space-y-1">
                                                 <p className="text-sm font-medium">
-                                                    开机自启
+                                                    {t("settings.window.autostart.title")}
                                                 </p>
                                                 <p className="text-xs text-muted-foreground">
-                                                    随系统启动自动运行 Glanceus
+                                                    {t("settings.window.autostart.description")}
                                                 </p>
                                             </div>
                                             <Switch
@@ -469,7 +557,7 @@ export default function SettingsPage() {
                                     <div className="space-y-4">
                                         <div className="flex items-center gap-2 text-base font-semibold mb-2">
                                             <RefreshCw className="w-4 h-4 text-brand" />
-                                            数据刷新
+                                            {t("settings.section.dataRefresh")}
                                         </div>
                                         <div className="rounded-xl border border-border px-5 py-4 bg-surface hover:border-foreground/20 hover:shadow-soft-elevation transition-all duration-150">
                                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -478,10 +566,10 @@ export default function SettingsPage() {
                                                         htmlFor="global-refresh-interval"
                                                         className="text-sm font-medium"
                                                     >
-                                                        全局自动刷新
+                                                        {t("settings.refresh.global.title")}
                                                     </Label>
                                                     <p className="text-xs text-muted-foreground">
-                                                        默认刷新间隔。source 或 integration 可单独覆盖。
+                                                        {t("settings.refresh.global.description")}
                                                     </p>
                                                 </div>
                                                 <div className="w-full sm:w-[180px]">
@@ -511,7 +599,7 @@ export default function SettingsPage() {
                                                             <SelectValue />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            {REFRESH_INTERVAL_OPTIONS.map(
+                                                            {refreshIntervalOptions.map(
                                                                 (option) => (
                                                                     <SelectItem
                                                                         key={option.value}
@@ -677,8 +765,8 @@ export default function SettingsPage() {
                                                 >
                                                     <Terminal className="w-3.5 h-3.5" />
                                                     {openingDevtools
-                                                        ? "打开中..."
-                                                        : "打开网页控制台"}
+                                                        ? t("settings.button.opening")
+                                                        : t("settings.button.open_console")}
                                                 </Button>
                                                 <Button
                                                     type="button"
@@ -695,8 +783,8 @@ export default function SettingsPage() {
                                                 >
                                                     <FolderOpen className="w-3.5 h-3.5" />
                                                     {openingLogFolder
-                                                        ? "打开中..."
-                                                        : "打开日志文件夹"}
+                                                        ? t("settings.button.opening")
+                                                        : t("settings.button.open_log_folder")}
                                                 </Button>
                                             </div>
                                         </div>
@@ -717,7 +805,7 @@ export default function SettingsPage() {
                                                         API 服务
                                                     </span>
                                                     <code className="block font-mono text-sm text-brand">
-                                                        {apiPort || "未知"}
+                                                        {apiPort || t("common.unknown")}
                                                     </code>
                                                 </div>
                                                 <div className="space-y-1">
@@ -725,7 +813,7 @@ export default function SettingsPage() {
                                                         WEB 服务
                                                     </span>
                                                     <code className="block font-mono text-sm text-brand">
-                                                        {webModePort || "未知"}
+                                                        {webModePort || t("common.unknown")}
                                                     </code>
                                                 </div>
                                             </div>
@@ -829,7 +917,7 @@ export default function SettingsPage() {
                                                     {showImport && (
                                                         <div className="flex gap-2 mt-2 pt-4 border-t border-brand/10">
                                                             <Input
-                                                                placeholder="粘贴通行码..."
+                                                                placeholder="Paste passcode..."
                                                                 value={
                                                                     importKeyValue
                                                                 }
@@ -851,7 +939,7 @@ export default function SettingsPage() {
                                                                 }
                                                                 className="h-9 px-4 rounded-lg"
                                                             >
-                                                                确认导入
+                                                                Import
                                                             </Button>
                                                         </div>
                                                     )}
@@ -881,7 +969,7 @@ export default function SettingsPage() {
                                                 Glanceus
                                             </h1>
                                             <p className="text-muted-foreground">
-                                                个人数据聚合与监控看板
+                                                {t("settings.about.tagline")}
                                             </p>
                                             <p className="text-sm font-mono text-muted-foreground/60 pt-2">
                                                 Version {appVersion}
@@ -895,13 +983,13 @@ export default function SettingsPage() {
                                                     className="rounded-full px-6 gap-2 hover:bg-foreground hover:text-background transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand/50"
                                                     onClick={() =>
                                                         showToast(
-                                                            "当前已是最新版本",
+                                                            t("settings.about.up_to_date"),
                                                             "info",
                                                         )
                                                     }
                                                 >
                                                     <Download className="w-4 h-4" />
-                                                    检查更新
+                                                    {t("settings.button.check_update")}
                                                 </Button>
                                                 <Button
                                                     variant="outline"
@@ -929,7 +1017,9 @@ export default function SettingsPage() {
                                         disabled={saving || loading}
                                         className="px-8 bg-brand hover:bg-foreground hover:text-background text-primary-foreground rounded-full transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand/50"
                                     >
-                                        {saving ? "保存中..." : "保存高级设置"}
+                                        {saving
+                                            ? t("common.saving")
+                                            : t("settings.button.save_advanced")}
                                     </Button>
                                 </div>
                             </div>

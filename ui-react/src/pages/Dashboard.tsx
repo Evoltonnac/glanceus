@@ -64,6 +64,7 @@ import { AddWidgetDialog } from "../components/AddWidgetDialog";
 import { ScraperStatusBanner } from "../components/ScraperStatusBanner";
 import { EmptyState } from "../components/EmptyState";
 import { useStore } from "../store";
+import { useI18n } from "../i18n";
 import { useSidebar } from "../hooks/useSidebar";
 import { useScraper } from "../hooks/useScraper";
 import {
@@ -256,8 +257,13 @@ function hasActionableInteraction(source: SourceSummary): boolean {
 
 function getSourceErrorSummary(
     source: SourceSummary,
+    getErrorMessageByCode: (errorCode?: string | null) => string | null,
     sourceData?: DataResponse | null,
 ): string {
+    const friendlyByCode = getErrorMessageByCode(source.error_code);
+    if (friendlyByCode) {
+        return friendlyByCode;
+    }
     return (
         source.error ||
         sourceData?.error ||
@@ -279,21 +285,15 @@ function getSourceErrorDetails(
     );
 }
 
-const REFRESH_INTERVAL_OPTIONS: Array<{ value: number; label: string }> = [
-    { value: 0, label: "关闭自动刷新" },
-    { value: 5, label: "5 分钟" },
-    { value: 15, label: "15 分钟" },
-    { value: 30, label: "30 分钟" },
-    { value: 60, label: "1 小时" },
-    { value: 180, label: "3 小时" },
-];
-
-function formatRefreshInterval(minutes: number | null | undefined): string {
+function formatRefreshInterval(
+    minutes: number | null | undefined,
+    t: (key: string) => string,
+): string {
     if (typeof minutes !== "number" || !Number.isFinite(minutes)) {
-        return "未设置";
+        return t("dashboard.refresh.not_set");
     }
     if (minutes <= 0) {
-        return "关闭自动刷新";
+        return t("dashboard.refresh.off");
     }
     if (minutes % 60 === 0) {
         return `${minutes / 60}h`;
@@ -301,10 +301,14 @@ function formatRefreshInterval(minutes: number | null | undefined): string {
     return `${minutes}m`;
 }
 
-function getFreshnessText(updatedAt: number, nowSeconds: number): string {
+function getFreshnessText(
+    updatedAt: number,
+    nowSeconds: number,
+    t: (key: string) => string,
+): string {
     const deltaSeconds = Math.max(0, Math.floor(nowSeconds - updatedAt));
     if (deltaSeconds < 60) {
-        return "刚刚";
+        return t("dashboard.refresh.just_now");
     }
     if (deltaSeconds < 3600) {
         return `${Math.floor(deltaSeconds / 60)}m`;
@@ -341,6 +345,7 @@ function getFreshnessStyles(
 
 export default function Dashboard() {
     const navigate = useNavigate();
+    const { t, getErrorMessageByCode } = useI18n();
     const {
         viewConfig: storeViewConfig,
         setViewConfig,
@@ -356,6 +361,14 @@ export default function Dashboard() {
         setDeletingSourceId,
         setSkippedScrapers,
     } = useStore();
+    const refreshIntervalOptions: Array<{ value: number; label: string }> = [
+        { value: 0, label: t("settings.refresh.option.off") },
+        { value: 5, label: t("settings.refresh.option.5m") },
+        { value: 15, label: t("settings.refresh.option.15m") },
+        { value: 30, label: t("settings.refresh.option.30m") },
+        { value: 60, label: t("settings.refresh.option.1h") },
+        { value: 180, label: t("settings.refresh.option.3h") },
+    ];
 
     // Use SWR for data fetching - handles dedup, caching, and StrictMode automatically
     const {
@@ -435,7 +448,7 @@ export default function Dashboard() {
         if (!currentView) {
             currentView = {
                 id: `view-${Date.now()}`,
-                name: "默认监控面板",
+                name: t("dashboard.view.default_name"),
                 layout_columns: 12,
                 items: [],
             };
@@ -811,8 +824,8 @@ export default function Dashboard() {
                         icon={
                             <Play className="h-8 w-8 animate-spin text-muted-foreground" />
                         }
-                        title="加载中..."
-                        description="正在获取配置和数据"
+                        title={t("dashboard.loading.title")}
+                        description={t("dashboard.loading.description")}
                     />
                 </div>
             </TooltipProvider>
@@ -825,7 +838,7 @@ export default function Dashboard() {
         const actionable = hasActionableInteraction(source);
         if ((source.status as string) === "refreshing") {
             return {
-                label: "刷新中",
+                label: t("dashboard.status.refreshing"),
                 variant: "info" as const,
                 colorClass: "bg-blue-500/10 text-blue-500",
                 icon: Play,
@@ -833,7 +846,7 @@ export default function Dashboard() {
         }
         if ((source.status as string) === "suspended") {
             return {
-                label: "需操作",
+                label: t("dashboard.status.suspended"),
                 variant: "warning" as const,
                 colorClass: "bg-warning/20 text-warning",
                 icon: Wrench,
@@ -841,7 +854,7 @@ export default function Dashboard() {
         }
         if ((source.status as string) === "error" && actionable) {
             return {
-                label: "需修复",
+                label: t("dashboard.status.needs_fix"),
                 variant: "error" as const,
                 colorClass: "bg-error/20 text-error",
                 icon: Wrench,
@@ -849,7 +862,7 @@ export default function Dashboard() {
         }
         if (hasError) {
             return {
-                label: "错误",
+                label: t("dashboard.status.error"),
                 variant: "error" as const,
                 colorClass: "bg-error/20 text-error",
                 icon: AlertTriangle,
@@ -857,14 +870,14 @@ export default function Dashboard() {
         }
         if (source.has_data) {
             return {
-                label: "正常",
+                label: t("dashboard.status.normal"),
                 variant: "success" as const,
                 colorClass: "bg-success/20 text-success",
                 icon: Database,
             };
         }
         return {
-            label: "等待",
+            label: t("dashboard.status.waiting"),
             variant: "secondary" as const,
             colorClass: "bg-muted/10 text-muted-foreground border-transparent",
             icon: Clock,
@@ -901,7 +914,11 @@ export default function Dashboard() {
         : null;
     const errorSourceData = errorSource ? dataMap[errorSource.id] : null;
     const errorSummary = errorSource
-        ? getSourceErrorSummary(errorSource, errorSourceData)
+        ? getSourceErrorSummary(
+              errorSource,
+              getErrorMessageByCode,
+              errorSourceData,
+          )
         : "";
     const errorDetails = errorSource
         ? getSourceErrorDetails(errorSource, errorSourceData)
@@ -919,7 +936,7 @@ export default function Dashboard() {
                             <>
                                 <Database className="w-4 h-4 text-muted-foreground" />
                                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex-1 whitespace-nowrap">
-                                    数据源状态
+                                    {t("dashboard.sidebar.title")}
                                 </h2>
                             </>
                         )}
@@ -937,7 +954,9 @@ export default function Dashboard() {
                                 </button>
                             </TooltipTrigger>
                             <TooltipContent side="right">
-                                {sidebarCollapsed ? "展开" : "收起"}
+                                {sidebarCollapsed
+                                    ? t("common.expand")
+                                    : t("common.collapse")}
                             </TooltipContent>
                         </Tooltip>
                     </div>
@@ -955,14 +974,14 @@ export default function Dashboard() {
                                         className="flex-1 h-8 bg-transparent border-border/50 text-muted-foreground hover:bg-foreground hover:text-background hover:border-foreground transition-all duration-200"
                                     >
                                         <Plus className="h-3.5 w-3.5 mr-1.5" />
-                                        新建
+                                        {t("dashboard.button.create")}
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent
                                     side="bottom"
                                     className="text-xs"
                                 >
-                                    添加数据源
+                                    {t("dashboard.tooltip.add_source")}
                                 </TooltipContent>
                             </Tooltip>
                             <Tooltip>
@@ -974,14 +993,14 @@ export default function Dashboard() {
                                         className="flex-1 h-8 bg-transparent border-border/50 text-muted-foreground hover:bg-foreground hover:text-background hover:border-foreground transition-all duration-200"
                                     >
                                         <Play className="h-3.5 w-3.5 mr-1.5" />
-                                        运行
+                                        {t("dashboard.button.run")}
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent
                                     side="bottom"
                                     className="text-xs"
                                 >
-                                    重新获取所有数据源
+                                    {t("dashboard.tooltip.refresh_all")}
                                 </TooltipContent>
                             </Tooltip>
                         </div>
@@ -1004,7 +1023,7 @@ export default function Dashboard() {
                                     side="right"
                                     className="text-xs"
                                 >
-                                    运行 (获取数据源)
+                                    {t("dashboard.tooltip.run_sources")}
                                 </TooltipContent>
                             </Tooltip>
                             <Tooltip>
@@ -1017,7 +1036,9 @@ export default function Dashboard() {
                                     </div>
                                 </TooltipTrigger>
                                 <TooltipContent side="right">
-                                    正常: {statusCounts.normal}
+                                    {t("dashboard.label.normal_count", {
+                                        count: statusCounts.normal,
+                                    })}
                                 </TooltipContent>
                             </Tooltip>
                             {statusCounts.refreshing > 0 && (
@@ -1031,7 +1052,9 @@ export default function Dashboard() {
                                         </div>
                                     </TooltipTrigger>
                                     <TooltipContent side="right">
-                                        刷新中: {statusCounts.refreshing}
+                                        {t("dashboard.label.refreshing_count", {
+                                            count: statusCounts.refreshing,
+                                        })}
                                     </TooltipContent>
                                 </Tooltip>
                             )}
@@ -1046,7 +1069,9 @@ export default function Dashboard() {
                                         </div>
                                     </TooltipTrigger>
                                     <TooltipContent side="right">
-                                        错误: {statusCounts.error}
+                                        {t("dashboard.label.error_count", {
+                                            count: statusCounts.error,
+                                        })}
                                     </TooltipContent>
                                 </Tooltip>
                             )}
@@ -1061,7 +1086,9 @@ export default function Dashboard() {
                                         </div>
                                     </TooltipTrigger>
                                     <TooltipContent side="right">
-                                        需操作: {statusCounts.suspended}
+                                        {t("dashboard.label.suspended_count", {
+                                            count: statusCounts.suspended,
+                                        })}
                                     </TooltipContent>
                                 </Tooltip>
                             )}
@@ -1076,7 +1103,9 @@ export default function Dashboard() {
                                         </div>
                                     </TooltipTrigger>
                                     <TooltipContent side="right">
-                                        等待: {statusCounts.waiting}
+                                        {t("dashboard.label.waiting_count", {
+                                            count: statusCounts.waiting,
+                                        })}
                                     </TooltipContent>
                                 </Tooltip>
                             )}
@@ -1094,6 +1123,7 @@ export default function Dashboard() {
                                         hasActionableInteraction(source);
                                     const errorSummary = getSourceErrorSummary(
                                         source,
+                                        getErrorMessageByCode,
                                         sourceData,
                                     );
                                     const statusConfig =
@@ -1135,6 +1165,7 @@ export default function Dashboard() {
                                                         {getFreshnessText(
                                                             last_success_at,
                                                             nowSeconds,
+                                                            t,
                                                         )}
                                                     </div>
                                                 )}
@@ -1191,8 +1222,12 @@ export default function Dashboard() {
                                                                         <span>
                                                                             {source.status ===
                                                                             "error"
-                                                                                ? "需修复"
-                                                                                : "需操作"}
+                                                                                ? t(
+                                                                                      "dashboard.status.needs_fix",
+                                                                                  )
+                                                                                : t(
+                                                                                      "dashboard.status.suspended",
+                                                                                  )}
                                                                         </span>
                                                                     </button>
                                                                 </TooltipTrigger>
@@ -1200,13 +1235,19 @@ export default function Dashboard() {
                                                                     <p>
                                                                         {source.status ===
                                                                         "error"
-                                                                            ? "更新无效凭证"
+                                                                            ? t(
+                                                                                  "dashboard.tooltip.fix_invalid_credentials",
+                                                                              )
                                                                             : source
                                                                                     .interaction
                                                                                     ?.type ===
                                                                                 "webview_scrape"
-                                                                              ? "前台手动启动"
-                                                                              : "解决问题"}
+                                                                              ? t(
+                                                                                    "dashboard.tooltip.manual_foreground",
+                                                                                )
+                                                                              : t(
+                                                                                    "dashboard.tooltip.resolve_issue",
+                                                                                )}
                                                                     </p>
                                                                 </TooltipContent>
                                                             </Tooltip>
@@ -1233,7 +1274,7 @@ export default function Dashboard() {
                                                             >
                                                                 <AlertTriangle className="h-3 w-3" />
                                                                 <span>
-                                                                    错误
+                                                                    {t("dashboard.action.error")}
                                                                 </span>
                                                             </button>
                                                         ) : (
@@ -1272,20 +1313,19 @@ export default function Dashboard() {
                                                                 >
                                                                     <Play className="mr-2 h-4 w-4" />
                                                                     <span>
-                                                                        刷新
+                                                                        {t("dashboard.action.refresh")}
                                                                     </span>
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuSub>
                                                                     <DropdownMenuSubTrigger>
                                                                         <Clock className="mr-2 h-4 w-4" />
                                                                         <span>
-                                                                            自动刷新
+                                                                            {t("dashboard.action.auto_refresh")}
                                                                         </span>
                                                                     </DropdownMenuSubTrigger>
                                                                     <DropdownMenuSubContent>
                                                                         <DropdownMenuLabel>
-                                                                            source
-                                                                            级间隔
+                                                                            {t("dashboard.action.source_interval")}
                                                                         </DropdownMenuLabel>
                                                                         <DropdownMenuRadioGroup
                                                                             value={
@@ -1313,19 +1353,22 @@ export default function Dashboard() {
                                                                             }}
                                                                         >
                                                                             <DropdownMenuRadioItem value="inherit">
-                                                                                跟随默认
+                                                                                {t("common.inherit")}
                                                                                 (
                                                                                 {formatRefreshInterval(
                                                                                     inheritedInterval,
+                                                                                    t,
                                                                                 )}{" "}
                                                                                 ·{" "}
                                                                                 {
-                                                                                    inheritedSourceLabel
+                                                                                    t(
+                                                                                        `common.${inheritedSourceLabel}`,
+                                                                                    )
                                                                                 }
 
                                                                                 )
                                                                             </DropdownMenuRadioItem>
-                                                                            {REFRESH_INTERVAL_OPTIONS.map(
+                                                                            {refreshIntervalOptions.map(
                                                                                 (
                                                                                     option,
                                                                                 ) => (
@@ -1357,7 +1400,7 @@ export default function Dashboard() {
                                                                 >
                                                                     <Trash2 className="mr-2 h-4 w-4" />
                                                                     <span>
-                                                                        删除
+                                                                        {t("dashboard.action.delete")}
                                                                     </span>
                                                                 </DropdownMenuItem>
                                                             </DropdownMenuContent>
@@ -1378,10 +1421,11 @@ export default function Dashboard() {
                             >
                                 <DialogContent>
                                     <DialogHeader>
-                                        <DialogTitle>确认删除</DialogTitle>
+                                        <DialogTitle>
+                                            {t("dashboard.delete_dialog.title")}
+                                        </DialogTitle>
                                         <DialogDescription>
-                                            确定要删除此数据源吗？该 source_id
-                                            的本地数据、密钥和绑定视图组件将被一并清理，此操作不可撤销。
+                                            {t("dashboard.delete_dialog.description")}
                                         </DialogDescription>
                                     </DialogHeader>
                                     <DialogFooter>
@@ -1391,7 +1435,7 @@ export default function Dashboard() {
                                                 setDeletingSourceId(null)
                                             }
                                         >
-                                            取消
+                                            {t("common.cancel")}
                                         </Button>
                                         <Button
                                             variant="destructive"
@@ -1402,7 +1446,7 @@ export default function Dashboard() {
                                                 )
                                             }
                                         >
-                                            确认删除
+                                            {t("common.confirmDelete")}
                                         </Button>
                                     </DialogFooter>
                                 </DialogContent>
@@ -1413,7 +1457,9 @@ export default function Dashboard() {
 
                 <main className="flex-1 p-4 overflow-y-auto">
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-semibold">监控视图</h2>
+                        <h2 className="text-lg font-semibold">
+                            {t("dashboard.view.title")}
+                        </h2>
                         <div className="flex gap-2">
                             {/* TODO: Re-enable density toggle after fixing spacing issues
                             <Tooltip>
@@ -1436,7 +1482,7 @@ export default function Dashboard() {
                                 onClick={() => setIsAddDialogOpen(true)}
                             >
                                 <Plus className="w-4 h-4" />
-                                添加小组件
+                                {t("dashboard.action.add_widget")}
                             </button>
                         </div>
                     </div>
@@ -1446,9 +1492,9 @@ export default function Dashboard() {
                             icon={
                                 <Database className="h-8 w-8 text-muted-foreground" />
                             }
-                            title="当前视图还没有任何组件"
-                            description="添加组件以监控您的数据源。"
-                            actionLabel="添加第一个组件"
+                            title={t("dashboard.empty.title")}
+                            description={t("dashboard.empty.description")}
+                            actionLabel={t("dashboard.empty.action")}
                             onAction={() => setIsAddDialogOpen(true)}
                             className="border border-dashed rounded-lg bg-surface/30 mx-4 mb-4"
                         />
@@ -1570,12 +1616,15 @@ export default function Dashboard() {
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <AlertTriangle className="h-4 w-4 text-error" />
-                            执行错误
+                            {t("dashboard.error_dialog.title")}
                         </DialogTitle>
                         <DialogDescription>
                             {errorSource
-                                ? `${errorSource.name} 的执行在运行期间失败。`
-                                : "执行发生错误。"}
+                                ? t(
+                                      "dashboard.error_dialog.description_with_name",
+                                      { name: errorSource.name },
+                                  )
+                                : t("dashboard.error_dialog.description_default")}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-3">
@@ -1591,8 +1640,8 @@ export default function Dashboard() {
                                 }
                             >
                                 {showErrorDetails
-                                    ? "隐藏详细堆栈"
-                                    : "显示详细堆栈"}
+                                    ? t("dashboard.error_dialog.hide_details")
+                                    : t("dashboard.error_dialog.show_details")}
                             </button>
                         )}
                         {showErrorDetails && canShowDetails && (
@@ -1609,7 +1658,7 @@ export default function Dashboard() {
                                 setShowErrorDetails(false);
                             }}
                         >
-                            关闭
+                            {t("dashboard.action.close")}
                         </Button>
                         {errorSource && (
                             <Button
@@ -1619,7 +1668,7 @@ export default function Dashboard() {
                                     void handleRefreshSource(errorSource.id);
                                 }}
                             >
-                                重新执行
+                                {t("dashboard.action.retry")}
                             </Button>
                         )}
                     </DialogFooter>

@@ -162,11 +162,182 @@ class StepType(str, Enum):
     HTTP = "http"
     OAUTH = "oauth"
     API_KEY = "api_key"
+    FORM = "form"
     CURL = "curl"
     EXTRACT = "extract"
     SCRIPT = "script"
     LOG = "log"
     WEBVIEW = "webview"
+
+
+def _schema_optional_type(type_name: str) -> Dict[str, Any]:
+    return {
+        "anyOf": [
+            {"type": type_name},
+            {"type": "null"},
+        ],
+        "default": None,
+    }
+
+
+# Step args schemas are declared next to StepType so adding/modifying a step
+# updates runtime step definition and schema contract in one place.
+STEP_ARGS_SCHEMAS_BY_USE: Dict[str, Dict[str, Any]] = {
+    StepType.HTTP.value: {
+        "type": "object",
+        "properties": {
+            "url": {"type": "string", "minLength": 1},
+            "method": {"type": "string"},
+            "headers": {"type": "object", "additionalProperties": True},
+            "timeout": {"type": "number"},
+            "retries": {"type": "integer", "minimum": 0},
+            "retry_backoff_seconds": {"type": "number", "minimum": 0},
+        },
+        "required": ["url"],
+        "additionalProperties": True,
+    },
+    StepType.OAUTH.value: {
+        "type": "object",
+        "properties": {
+            "auth_url": {"type": "string"},
+            "token_url": {"type": "string"},
+            "client_id": {"type": "string"},
+            "client_secret": {"type": "string"},
+            "doc_url": {"type": "string"},
+            "scope": {
+                "anyOf": [
+                    {"type": "string"},
+                    {"type": "array", "items": {"type": "string"}},
+                ]
+            },
+            "scopes": {"type": "array", "items": {"type": "string"}},
+            "oauth_flow": {"type": "string"},
+            "flow_type": {"type": "string"},
+            "grant_type": {"type": "string"},
+            "redirect_uri": {"type": "string"},
+            "device_authorization_url": {"type": "string"},
+            "device_authorization_endpoint": {"type": "string"},
+            "token_endpoint_auth_method": {"type": "string"},
+            "supports_pkce": {"type": "boolean"},
+            "code_challenge_method": {"type": "string"},
+            "response_type": {"type": "string"},
+            "token_request_type": {"type": "string"},
+            "token_field": {"type": "string"},
+            "token_type_field": {"type": "string"},
+            "expires_in_field": {"type": "string"},
+            "refresh_token_field": {"type": "string"},
+            "scope_field": {"type": "string"},
+            "redirect_param": {"type": "string"},
+            "authorization_code_field": {"type": "string"},
+            "authorization_state_field": {"type": "string"},
+            "implicit_access_token_field": {"type": "string"},
+            "implicit_token_type_field": {"type": "string"},
+            "implicit_expires_in_field": {"type": "string"},
+            "implicit_scope_field": {"type": "string"},
+            "implicit_state_field": {"type": "string"},
+            "device_code_field": {"type": "string"},
+            "device_user_code_field": {"type": "string"},
+            "device_verification_uri_field": {"type": "string"},
+            "device_verification_uri_complete_field": {"type": "string"},
+            "device_interval_field": {"type": "string"},
+            "device_expires_in_field": {"type": "string"},
+            "oauth_error_field": {"type": "string"},
+            "oauth_error_description_field": {"type": "string"},
+            "device_poll_interval": {"type": "integer", "minimum": 1},
+            "device_poll_timeout": {"type": "integer", "minimum": 1},
+        },
+        "additionalProperties": True,
+    },
+    StepType.API_KEY.value: {
+        "type": "object",
+        "properties": {
+            "label": {"type": "string"},
+            "description": {"type": "string"},
+            "message": {"type": "string"},
+        },
+        "additionalProperties": True,
+    },
+    StepType.FORM.value: {
+        "type": "object",
+        "properties": {
+            "title": {"type": "string"},
+            "description": {"type": "string"},
+            "fields": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "key": {"type": "string", "minLength": 1},
+                        "label": {"type": "string"},
+                        "type": {"type": "string"},
+                        "description": {"type": "string"},
+                        "placeholder": {"type": "string"},
+                        "required": {"type": "boolean"},
+                        "default": {},
+                    },
+                    "required": ["key"],
+                    "additionalProperties": True,
+                },
+            },
+            "key": {"type": "string", "minLength": 1},
+            "label": {"type": "string"},
+            "type": {"type": "string"},
+            "required": {"type": "boolean"},
+            "default": {},
+            "defaults": {"type": "object", "additionalProperties": True},
+            "message": {"type": "string"},
+            "warning_message": {"type": "string"},
+        },
+        "additionalProperties": True,
+    },
+    StepType.CURL.value: {
+        "type": "object",
+        "properties": {
+            "label": {"type": "string"},
+            "description": {"type": "string"},
+            "message": {"type": "string"},
+            "warning_message": {"type": "string"},
+        },
+        "additionalProperties": True,
+    },
+    StepType.EXTRACT.value: {
+        "type": "object",
+        "properties": {
+            "source": {},
+            "type": {"type": "string", "enum": ["jsonpath", "key"]},
+        },
+        "required": ["source"],
+        "additionalProperties": True,
+    },
+    StepType.SCRIPT.value: {
+        "type": "object",
+        "properties": {
+            "code": {"type": "string", "minLength": 1},
+        },
+        "required": ["code"],
+        "additionalProperties": True,
+    },
+    StepType.LOG.value: {
+        "type": "object",
+        "properties": {
+            "message": {"type": "string"},
+        },
+        "additionalProperties": True,
+    },
+    StepType.WEBVIEW.value: {
+        "type": "object",
+        "properties": {
+            "url": {"type": "string", "minLength": 1},
+            "script": _schema_optional_type("string"),
+            "intercept_api": _schema_optional_type("string"),
+        },
+        "required": ["url"],
+        "additionalProperties": True,
+    },
+}
+
 
 class StepConfig(BaseModel):
     id: str

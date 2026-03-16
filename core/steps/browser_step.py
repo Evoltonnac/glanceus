@@ -76,6 +76,7 @@ async def execute_browser_step(
         
         raise RequiredSecretMissing(
             source_id=source.id,
+            step_id=step.id,
             interaction_type=InteractionType.WEBVIEW_SCRAPE,
             fields=[],
             message=f"System background scraping required for {source.id}",

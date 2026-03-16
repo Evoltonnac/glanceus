@@ -52,7 +52,7 @@ Always update in this strict order:
 
 - Before writing YAML, check required prerequisites:
   - target platform and API entrypoint
-  - auth strategy (api_key, oauth, webview)
+  - auth strategy (api_key, form, oauth, webview)
   - expected outputs/metrics/signals
   - target UI card intent
 - If prerequisites are missing, ask concise clarifying questions first.
@@ -80,8 +80,9 @@ Always update in this strict order:
 1. Confirm mode (`create mode` or `edit mode`).
 2. Use `references/flow-patterns.md` and `references/sdui-components.md` as domain constraints.
 3. Confirm prerequisites; ask for missing fields before generating YAML.
-4. Produce or update YAML deterministically, respecting mode scope.
-5. Apply fallback disclosure and optional-final validation status in the final response.
+4. Choose step semantics explicitly: use `api_key` for credential-focused auth inputs, use `form` for generic multi-field input collection.
+5. Produce or update YAML deterministically, respecting mode scope.
+6. Apply fallback disclosure and optional-final validation status in the final response.
 
 ## Simple Complete YAML Example
 

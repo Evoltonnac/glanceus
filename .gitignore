@@ -17,7 +17,7 @@ data/*.json
 data/tokens/
 
 # Config (contains sensitive API keys)
-config/config.yaml
+config/integrations/*.local.yaml
 
 # IDE
 .idea/
@@ -51,3 +51,4 @@ ui-react/.tmp-schema-test/
 .claude/
 .claude.coverage
 *.backup
+*.skill

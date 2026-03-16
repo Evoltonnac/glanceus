@@ -33,7 +33,7 @@ Use consistent terminology:
 
 Before writing YAML, confirm required inputs:
 - target platform and endpoint scope
-- auth strategy (`api_key`, `oauth`, `curl`, `webview`)
+- auth strategy (`api_key`, `form`, `oauth`, `curl`, `webview`)
 - required outputs (Metric/Signal/Integration Data)
 - template intent for Bento Card rendering
 
@@ -66,11 +66,16 @@ Supported `use` values:
 - `http`
 - `oauth`
 - `api_key`
+- `form`
 - `curl`
 - `extract`
 - `script`
 - `log`
 - `webview`
+
+Guidance:
+- `api_key` is credential-focused auth input (usually secret + password field).
+- `form` is generic input collection (single or multiple fields), with persistence decided by `secrets`/`outputs`/`context` mapping.
 
 ### Output Channels
 
@@ -94,7 +99,7 @@ Avoid ambiguous variable naming across channels.
 
 ### Interaction/Resume Notes
 
-Blocking steps (`api_key`, `oauth`, `curl`, `webview`) may suspend execution.
+Blocking steps (`api_key`, `form`, `oauth`, `curl`, `webview`) may suspend execution.
 Design for resume safety:
 - keep pre-interaction steps idempotent
 - do not rely on `context` surviving long suspension

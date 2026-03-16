@@ -4,6 +4,7 @@
 
 Flow is the integration execution pipeline. It is responsible for:
 - Authentication and credential recovery (`api_key` / `oauth` / `curl` / `webview`)
+- Generic runtime input collection (`form`)
 - Data fetching and parsing (`http` / `extract` / `script`)
 - Blocking interactions and resume execution (`NeedsInteraction -> user action -> resume`)
 
@@ -56,7 +57,7 @@ When a step requires user input and no valid credentials are available:
 3. User submits interaction data
 4. Flow resumes from the interruption point
 
-This model applies to `api_key`, `oauth`, `curl`, and `webview`.
+This model applies to `api_key`, `form`, `oauth`, `curl`, and `webview`.
 
 ## 5. Boundary with SDUI and WebView
 

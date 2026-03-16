@@ -301,7 +301,7 @@ class Executor:
                     execute_script_step
                 )
 
-                if step.use in (StepType.API_KEY, StepType.CURL, StepType.OAUTH):
+                if step.use in (StepType.API_KEY, StepType.FORM, StepType.CURL, StepType.OAUTH):
                     output = await execute_auth_step(step, source, args, context, step_inputs, self)
                 elif step.use == StepType.HTTP:
                     output = await execute_http_step(step, source, args, context, step_inputs, self)
@@ -593,6 +593,7 @@ class Executor:
         recovery_types = {
             StepType.OAUTH,
             StepType.API_KEY,
+            StepType.FORM,
             StepType.CURL,
             StepType.WEBVIEW,
         }
@@ -761,6 +762,23 @@ class Executor:
                         "recovery_step_id": step.id,
                     },
                 )
+            if step.use == StepType.FORM:
+                return InteractionRequest(
+                    type=InteractionType.INPUT_TEXT,
+                    step_id=step.id,
+                    source_id=source.id,
+                    title="Input Invalid",
+                    message=(step.args or {}).get(
+                        "message",
+                        "Provided form values appear invalid. Please update and retry.",
+                    ),
+                    fields=self._build_form_recovery_fields(step),
+                    warning_message=(step.args or {}).get("warning_message"),
+                    data={
+                        "failed_step_id": error.step_id,
+                        "recovery_step_id": step.id,
+                    },
+                )
             if step.use == StepType.CURL:
                 curl_key = step.secrets.get("curl_command", "curl_command") if step.secrets else "curl_command"
                 return InteractionRequest(
@@ -816,13 +834,71 @@ class Executor:
             data={"failed_step_id": error.step_id},
         )
 
+    def _resolve_step_secret_name(self, step: StepConfig, source_key: str) -> str:
+        if not step.secrets:
+            return source_key
+        for secret_name, mapped_path in step.secrets.items():
+            if mapped_path == source_key:
+                return secret_name
+        return source_key
+
+    def _build_form_recovery_fields(self, step: StepConfig) -> list[InteractionField]:
+        args = step.args or {}
+        raw_fields = args.get("fields")
+        if raw_fields is None:
+            raw_fields = [
+                {
+                    "key": args.get("key", "value"),
+                    "label": args.get("label"),
+                    "type": args.get("type"),
+                    "description": args.get("description"),
+                    "required": args.get("required"),
+                    "default": args.get("default"),
+                }
+            ]
+
+        if not isinstance(raw_fields, list) or not raw_fields:
+            raw_fields = [{"key": "value"}]
+
+        defaults = args.get("defaults") if isinstance(args.get("defaults"), dict) else {}
+        fields: list[InteractionField] = []
+        for raw_field in raw_fields:
+            if not isinstance(raw_field, dict):
+                continue
+            source_key = raw_field.get("key")
+            if not isinstance(source_key, str) or not source_key.strip():
+                continue
+            source_key = source_key.strip()
+
+            label = raw_field.get("label")
+            field_type = raw_field.get("type")
+            description = raw_field.get("description")
+            required = raw_field.get("required")
+            has_default = "default" in raw_field
+            default = raw_field.get("default") if has_default else defaults.get(source_key)
+
+            fields.append(
+                InteractionField(
+                    key=self._resolve_step_secret_name(step, source_key),
+                    label=label if isinstance(label, str) and label.strip() else source_key,
+                    type=field_type if isinstance(field_type, str) and field_type.strip() else "text",
+                    description=description if isinstance(description, str) else None,
+                    required=True if required is None else bool(required),
+                    default=default,
+                )
+            )
+
+        if fields:
+            return fields
+        return [InteractionField(key="value", label="Value", type="text")]
+
     def _exception_to_interaction(self, source: SourceConfig, error: Exception) -> InteractionRequest | None:
         """Build interaction request from exception type."""
         
         if isinstance(error, RequiredSecretMissing):
             return InteractionRequest(
                 type=error.interaction_type,
-                step_id="auth_check", # TODO: dynamic step id
+                step_id=error.step_id or "auth_check",
                 source_id=error.source_id,
                 title="Authentication Required",
                 message=error.message,
@@ -882,8 +958,18 @@ class Executor:
 
 class RequiredSecretMissing(Exception):
     """Custom exception: required credential is missing."""
-    def __init__(self, source_id: str, interaction_type: InteractionType, fields: list[InteractionField], message: str, data: dict = None, warning_message: str = None):
+    def __init__(
+        self,
+        source_id: str,
+        interaction_type: InteractionType,
+        fields: list[InteractionField],
+        message: str,
+        data: dict = None,
+        warning_message: str = None,
+        step_id: str | None = None,
+    ):
         self.source_id = source_id
+        self.step_id = step_id
         self.interaction_type = interaction_type
         self.fields = fields
         self.message = message

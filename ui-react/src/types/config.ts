@@ -6,6 +6,7 @@ export type StepType =
     | "http"
     | "oauth"
     | "api_key"
+    | "form"
     | "curl"
     | "extract"
     | "script"

@@ -66,6 +66,55 @@ export function FlowHandler({
         setFormData((prev) => ({ ...prev, [key]: value }));
     };
 
+    const hasEffectiveValue = useCallback((value: unknown): boolean => {
+        if (value === null || value === undefined) {
+            return false;
+        }
+        if (typeof value === "string") {
+            return value.trim().length > 0;
+        }
+        return true;
+    }, []);
+
+    const getMissingRequiredFieldLabels = useCallback(
+        (fields: Array<{ key: string; label: string; required: boolean; default?: unknown }>) =>
+            fields
+                .filter((field) => {
+                    if (!field.required) {
+                        return false;
+                    }
+                    if (hasEffectiveValue(formData[field.key])) {
+                        return false;
+                    }
+                    return !hasEffectiveValue(field.default);
+                })
+                .map((field) => field.label || field.key),
+        [formData, hasEffectiveValue],
+    );
+
+    const buildInteractionPayload = useCallback(
+        (fields: Array<{ key: string }>) => {
+            const payload: Record<string, string> = {};
+            fields.forEach((field) => {
+                const raw = formData[field.key];
+                if (typeof raw !== "string") {
+                    return;
+                }
+                const normalized = raw.trim();
+                if (!normalized) {
+                    return;
+                }
+                payload[field.key] = normalized;
+            });
+            return payload;
+        },
+        [formData],
+    );
+    const missingRequiredFieldLabels = interaction
+        ? getMissingRequiredFieldLabels(interaction.fields)
+        : [];
+    const hasMissingRequiredFields = missingRequiredFieldLabels.length > 0;
+
     const resetFlowState = useCallback(() => {
         setError(null);
         setLoading(false);
@@ -254,11 +303,20 @@ export function FlowHandler({
     }, [handleClose, interaction?.type, isOpen, onInteractSuccess, sourceId]);
 
     const handleSubmit = async () => {
-        if (!source) return;
+        if (!source || !interaction) return;
+        const missingRequiredLabels = getMissingRequiredFieldLabels(
+            interaction.fields,
+        );
+        if (missingRequiredLabels.length > 0) {
+            setError(`Please fill required fields: ${missingRequiredLabels.join(", ")}`);
+            return;
+        }
+
         setLoading(true);
         setError(null);
         try {
-            await api.interact(source.id, formData);
+            const payload = buildInteractionPayload(interaction.fields);
+            await api.interact(source.id, payload);
             onInteractSuccess?.();
             handleClose();
         } catch (err: any) {
@@ -313,7 +371,15 @@ export function FlowHandler({
     }, [handleClose, onInteractSuccess, sourceId, verifying]);
 
     const handleOAuthStart = useCallback(async () => {
-        if (!source || !sourceId) return;
+        if (!source || !sourceId || !interaction) return;
+        const missingRequiredLabels = getMissingRequiredFieldLabels(
+            interaction.fields,
+        );
+        if (missingRequiredLabels.length > 0) {
+            setError(`Please fill required fields: ${missingRequiredLabels.join(", ")}`);
+            return;
+        }
+
         setLoading(true);
         setError(null);
 
@@ -331,11 +397,12 @@ export function FlowHandler({
         };
 
         try {
+            const credentialPayload = buildInteractionPayload(interaction.fields);
             // 2. If user entered client_id/client_secret, save them first
             // This ensures the credentials are stored before getting the authorize URL
-            const hasCredentials = formData.client_id || formData.client_secret;
+            const hasCredentials = Object.keys(credentialPayload).length > 0;
             if (hasCredentials) {
-                await api.interact(source.id, formData);
+                await api.interact(source.id, credentialPayload);
             }
 
             // 3. Get Authorize URL
@@ -386,7 +453,17 @@ export function FlowHandler({
             setLoading(false);
             channel.close();
         }
-    }, [formData, handleClose, inTauri, onInteractSuccess, resolveOAuthRedirectUri, source, sourceId]);
+    }, [
+        buildInteractionPayload,
+        getMissingRequiredFieldLabels,
+        handleClose,
+        inTauri,
+        interaction,
+        onInteractSuccess,
+        resolveOAuthRedirectUri,
+        source,
+        sourceId,
+    ]);
 
     const renderContent = () => {
         if (!source || !interaction) {
@@ -407,6 +484,7 @@ export function FlowHandler({
                                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                 >
                                     {field.label}
+                                    {field.required ? " *" : ""}
                                 </label>
                                 <Input
                                     id={field.key}
@@ -419,6 +497,7 @@ export function FlowHandler({
                                             e.target.value,
                                         )
                                     }
+                                    required={field.required}
                                     disabled={loading}
                                     className="bg-surface focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:ring-offset-2 transition-all hover:border-brand/50"
                                 />
@@ -443,6 +522,9 @@ export function FlowHandler({
                                             className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                         >
                                             {field.label}
+                                            {field.required
+                                                ? " *"
+                                                : ""}
                                         </label>
                                         <Input
                                             id={field.key}
@@ -457,6 +539,7 @@ export function FlowHandler({
                                                     e.target.value,
                                                 )
                                             }
+                                            required={field.required}
                                             disabled={loading}
                                             className="bg-surface focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:ring-offset-2 transition-all hover:border-brand/50"
                                         />
@@ -482,7 +565,7 @@ export function FlowHandler({
 
                         <Button
                             onClick={handleOAuthStart}
-                            disabled={loading}
+                            disabled={loading || hasMissingRequiredFields}
                             className="w-full relative"
                         >
                             {loading ? (
@@ -658,7 +741,10 @@ export function FlowHandler({
                     {interaction.type !== "oauth_start" &&
                         interaction.type !== "oauth_device_flow" &&
                         interaction.type !== "webview_scrape" && (
-                            <Button onClick={handleSubmit} disabled={loading}>
+                            <Button
+                                onClick={handleSubmit}
+                                disabled={loading || hasMissingRequiredFields}
+                            >
                                 {loading ? "Submitting..." : "Submit"}
                             </Button>
                         )}

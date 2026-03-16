@@ -1,15 +1,22 @@
 """
 Auth Step Module.
 
-This module handles the execution of authentication-related steps: API_KEY, CURL, and OAUTH.
-It interacts with the secrets manager to retrieve credentials and, if absent, triggers
-an InteractionRequest for user input or OAuth flow authorization.
+This module handles interactive/auth-like steps: API_KEY, FORM, CURL, and OAUTH.
+It interacts with the secrets manager to retrieve persisted values and, if absent,
+triggers a runtime InteractionRequest.
 
 Args Schema:
     API_KEY:
         - label (str, optional): UI label for the key input.
         - description (str, optional): UI placeholder/help text.
         - message (str, optional): Contextual message for the request.
+    FORM:
+        - fields (list[dict], optional): list of form field definitions.
+          each item supports: key, label, type, description, required, default.
+        - key/label/type/description/required/default (optional): single-field shorthand.
+        - defaults (dict, optional): fallback defaults by field key.
+        - message (str, optional): prompt message.
+        - warning_message (str, optional): warning text.
     CURL:
         - label (str, optional): UI label.
         - description (str, optional): UI description.
@@ -45,6 +52,64 @@ def _secret_name_for_source(step: "StepConfig", source_path: str, default: str) 
     return default
 
 
+def _is_missing_required_value(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str) and not value.strip():
+        return True
+    return False
+
+
+def _build_form_field_specs(step: "StepConfig", args: Dict[str, Any]) -> list[Dict[str, Any]]:
+    defaults = args.get("defaults") if isinstance(args.get("defaults"), dict) else {}
+    raw_fields = args.get("fields")
+
+    if raw_fields is None:
+        raw_fields = [
+            {
+                "key": args.get("key", "value"),
+                "label": args.get("label"),
+                "type": args.get("type"),
+                "description": args.get("description"),
+                "required": args.get("required"),
+                "default": args.get("default"),
+            }
+        ]
+
+    if not isinstance(raw_fields, list) or not raw_fields:
+        raise ValueError(f"Form step '{step.id}' requires a non-empty 'fields' list")
+
+    specs: list[Dict[str, Any]] = []
+    for idx, raw_field in enumerate(raw_fields):
+        if not isinstance(raw_field, dict):
+            raise ValueError(f"Form step '{step.id}' field index {idx} must be an object")
+
+        key = raw_field.get("key")
+        if not isinstance(key, str) or not key.strip():
+            raise ValueError(f"Form step '{step.id}' field index {idx} requires a non-empty 'key'")
+        key = key.strip()
+        label = raw_field.get("label")
+        field_type = raw_field.get("type")
+        description = raw_field.get("description")
+        required = raw_field.get("required")
+        has_default = "default" in raw_field
+        default = raw_field.get("default") if has_default else defaults.get(key)
+
+        specs.append(
+            {
+                "source_key": key,
+                "secret_key": _secret_name_for_source(step, key, key),
+                "label": label if isinstance(label, str) and label.strip() else key,
+                "type": field_type if isinstance(field_type, str) and field_type.strip() else "text",
+                "description": description if isinstance(description, str) else None,
+                "required": True if required is None else bool(required),
+                "default": default,
+            }
+        )
+
+    return specs
+
+
 async def execute_auth_step(
     step: "StepConfig",
     source: "SourceConfig",
@@ -54,7 +119,7 @@ async def execute_auth_step(
     executor: "Executor",
 ) -> Dict[str, Any]:
     """
-    Executes an authentication step (API_KEY, CURL, or OAUTH).
+    Executes an interactive/auth step (API_KEY, FORM, CURL, or OAUTH).
     
     Returns:
         Dict[str, Any]: output dictionary with keys like api_key, oauth_secrets, etc.
@@ -66,9 +131,10 @@ async def execute_auth_step(
         secret_key = _secret_name_for_source(step, "api_key", "api_key")
         api_key = executor._secrets.get_secret(source.id, secret_key)
 
-        if not api_key:
+        if _is_missing_required_value(api_key):
             raise RequiredSecretMissing(
                 source_id=source.id,
+                step_id=step.id,
                 interaction_type=InteractionType.INPUT_TEXT,
                 fields=[
                     InteractionField(
@@ -83,6 +149,44 @@ async def execute_auth_step(
 
         return {"api_key": api_key}
 
+    elif step.use == StepType.FORM:
+        field_specs = _build_form_field_specs(step, args)
+        resolved_values: Dict[str, Any] = {}
+        interaction_fields = []
+
+        for spec in field_specs:
+            value = executor._secrets.get_secret(source.id, spec["secret_key"])
+            if _is_missing_required_value(value) and spec["default"] is not None:
+                value = spec["default"]
+
+            if _is_missing_required_value(value) and spec["required"]:
+                interaction_fields.append(
+                    InteractionField(
+                        key=spec["secret_key"],
+                        label=spec["label"],
+                        type=spec["type"],
+                        description=spec["description"],
+                        required=True,
+                        default=spec["default"],
+                    )
+                )
+                continue
+
+            if not _is_missing_required_value(value):
+                resolved_values[spec["source_key"]] = value
+
+        if interaction_fields:
+            raise RequiredSecretMissing(
+                source_id=source.id,
+                step_id=step.id,
+                interaction_type=InteractionType.INPUT_TEXT,
+                fields=interaction_fields,
+                message=args.get("message", f"Missing required form values for {source.name}"),
+                warning_message=args.get("warning_message"),
+            )
+
+        return resolved_values
+
     elif step.use == StepType.CURL:
         secret_key = _secret_name_for_source(step, "curl_command", "curl_command")
         curl_command = executor._secrets.get_secret(source.id, secret_key)
@@ -90,6 +194,7 @@ async def execute_auth_step(
         if not curl_command:
             raise RequiredSecretMissing(
                 source_id=source.id,
+                step_id=step.id,
                 interaction_type=InteractionType.INPUT_TEXT,
                 fields=[
                     InteractionField(
@@ -175,6 +280,7 @@ async def execute_auth_step(
             msg = f"Authorization required for step {step.id}. " + ("Please provide client credentials." if interaction_fields else "Click to authorize.")
             raise RequiredSecretMissing(
                 source_id=source.id,
+                step_id=step.id,
                 interaction_type=interaction_type,
                 fields=interaction_fields,
                 message=msg,

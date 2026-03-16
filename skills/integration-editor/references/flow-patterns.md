@@ -22,6 +22,7 @@ Current `use` values:
 - `http`
 - `oauth`
 - `api_key`
+- `form`
 - `curl`
 - `extract`
 - `script`
@@ -32,7 +33,8 @@ Current `use` values:
 
 | Step | Purpose | Typical Notes |
 | --- | --- | --- |
-| `api_key` | Collect API token from user interaction | Persist token in `secrets` |
+| `api_key` | Collect API token from user interaction | Credential-focused auth input; persist token in `secrets` |
+| `form` | Collect generic user-provided fields | Supports multi-field input; persistence depends on mapping (`secrets`/`outputs`/`context`) |
 | `oauth` | Run OAuth flow and persist token bundle | Use `oauth_secrets.access_token` in downstream HTTP headers |
 | `curl` | Collect browser-captured cURL input | Use when API auth is not straightforward |
 | `webview` | Desktop-assisted browser interception | Use for platforms without stable public API |
@@ -126,7 +128,35 @@ flow:
       profile_payload: "http_response"
 ```
 
-### Pattern C: WebView interception -> Extract
+### Pattern C: Form -> HTTP (non-token runtime input)
+
+```yaml
+flow:
+  - id: collect_query_form
+    use: form
+    args:
+      fields:
+        - key: account_id
+          label: "Account ID"
+          type: "text"
+        - key: region
+          label: "Region"
+          default: "us"
+    secrets:
+      provider_account_id: "account_id"
+    context:
+      region: "region"
+
+  - id: fetch_profile
+    use: http
+    args:
+      url: "https://api.example.com/v1/accounts/{provider_account_id}?region={region}"
+      method: "GET"
+    outputs:
+      profile_payload: "http_response"
+```
+
+### Pattern D: WebView interception -> Extract
 
 ```yaml
 flow:
@@ -148,7 +178,7 @@ flow:
       currency: "$.billing.currency"
 ```
 
-### Pattern D: Script summarization
+### Pattern E: Script summarization
 
 ```yaml
 flow:
@@ -166,7 +196,7 @@ flow:
 
 ## 7. Interaction and Resume Notes
 
-`api_key`, `oauth`, `curl`, and `webview` can suspend execution with an interaction state.
+`api_key`, `form`, `oauth`, `curl`, and `webview` can suspend execution with an interaction state.
 
 Design implications:
 - Keep pre-interaction steps idempotent.
@@ -178,6 +208,7 @@ Design implications:
 - Storing tokens in `outputs`.
 - Flat token naming when token bundle exists (`access_token` instead of `oauth_secrets.access_token`).
 - Overloading `outputs` with temporary-only values.
+- Treating `form` as an auth-only step (prefer `api_key` when intent is credential authentication).
 - Using unsupported `use` step names.
 - Mixing template-layer logic into flow (flow fetches/parses; SDUI renders).
 

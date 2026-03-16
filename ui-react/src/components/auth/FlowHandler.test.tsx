@@ -197,6 +197,57 @@ describe("FlowHandler", () => {
         expect(apiMock.getDeviceFlowStatus).toHaveBeenCalledWith("source-1");
     });
 
+    it("renders input form fields and blocks submit until required values are present", async () => {
+        const onClose = vi.fn();
+        const onInteractSuccess = vi.fn();
+
+        render(
+            <FlowHandler
+                source={buildSource({
+                    type: "input_text",
+                    message: "Fill credentials",
+                    fields: [
+                        {
+                            key: "api_key",
+                            label: "API Key",
+                            type: "password",
+                            required: true,
+                        },
+                        {
+                            key: "region",
+                            label: "Region",
+                            type: "text",
+                            required: true,
+                            default: "us",
+                        },
+                    ],
+                })}
+                isOpen={true}
+                onClose={onClose}
+                onInteractSuccess={onInteractSuccess}
+            />,
+        );
+
+        const submitButton = screen.getByRole("button", { name: "Submit" });
+        expect(submitButton).toBeDisabled();
+
+        fireEvent.change(screen.getByLabelText("API Key *"), {
+            target: { value: "  sk-test-123  " },
+        });
+        expect(submitButton).not.toBeDisabled();
+
+        fireEvent.click(submitButton);
+        await act(async () => {
+            await Promise.resolve();
+        });
+
+        expect(apiMock.interact).toHaveBeenCalledWith("source-1", {
+            api_key: "sk-test-123",
+        });
+        expect(onInteractSuccess).toHaveBeenCalledTimes(1);
+        expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
     it("polls auth status while oauth window is open and closes when authorized", async () => {
         vi.useFakeTimers();
         apiMock.getSources.mockResolvedValue([

@@ -25,7 +25,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from core.config_loader import StepConfig, ViewComponent
+from core.config_loader import (
+    STEP_ARGS_SCHEMAS_BY_USE,
+    StepConfig,
+    ViewComponent,
+)
 
 CONFIG_SCHEMA_ROOT = REPO_ROOT / "config" / "schemas"
 REACT_SDUI_GENERATOR = REPO_ROOT / "scripts" / "generate_react_sdui_schema.mjs"
@@ -46,6 +50,86 @@ class IntegrationFileSchema(IntegrationYamlConfig):
     """Top-level schema for integration YAML files."""
 
 
+def _build_step_variant_schema(
+    *,
+    use_value: str,
+    args_schema: dict[str, Any],
+    base_properties: dict[str, Any],
+) -> dict[str, Any]:
+    shared_properties = deepcopy(base_properties)
+    shared_properties["use"] = {
+        "type": "string",
+        "const": use_value,
+        "title": "Use",
+    }
+    shared_properties["args"] = args_schema
+
+    return {
+        "type": "object",
+        "properties": shared_properties,
+        "required": ["id", "use"],
+        "additionalProperties": False,
+    }
+
+
+def apply_step_variants_schema(schema: dict[str, Any]) -> dict[str, Any]:
+    defs = schema.get("$defs")
+    if not isinstance(defs, dict):
+        return schema
+
+    step_config_schema = defs.get("StepConfig")
+    step_type_schema = defs.get("StepType")
+    if not isinstance(step_config_schema, dict) or not isinstance(step_type_schema, dict):
+        return schema
+
+    step_properties = step_config_schema.get("properties")
+    if not isinstance(step_properties, dict):
+        return schema
+
+    base_properties: dict[str, Any] = {}
+    for key in ("id", "run", "outputs", "context", "secrets"):
+        value = step_properties.get(key)
+        if value is not None:
+            base_properties[key] = deepcopy(value)
+
+    enum_values = step_type_schema.get("enum")
+    if not isinstance(enum_values, list):
+        return schema
+
+    args_schemas = STEP_ARGS_SCHEMAS_BY_USE
+    missing_declared_schemas = [
+        use_value
+        for use_value in enum_values
+        if isinstance(use_value, str) and use_value not in args_schemas
+    ]
+    if missing_declared_schemas:
+        missing = ", ".join(sorted(missing_declared_schemas))
+        raise ValueError(
+            f"Missing step args schema declarations in core.config_loader.STEP_ARGS_SCHEMAS_BY_USE: {missing}"
+        )
+    variant_refs: list[dict[str, Any]] = []
+
+    for use_value in enum_values:
+        if not isinstance(use_value, str):
+            continue
+        variant_name = f"StepConfig_{use_value}"
+        args_schema = deepcopy(args_schemas[use_value])
+        defs[variant_name] = _build_step_variant_schema(
+            use_value=use_value,
+            args_schema=args_schema,
+            base_properties=base_properties,
+        )
+        variant_refs.append({"$ref": f"#/$defs/{variant_name}"})
+
+    if variant_refs:
+        defs["StepConfig"] = {
+            "title": "StepConfig",
+            "oneOf": variant_refs,
+        }
+
+    return schema
+
+
 def write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -57,6 +141,7 @@ def write_json(path: Path, payload: dict) -> None:
 def generate_python_fragment() -> dict[str, Any]:
     """Generate the Python/Pydantic fragment."""
     schema = IntegrationFileSchema.model_json_schema(mode="serialization")
+    schema = apply_step_variants_schema(schema)
     schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
     schema["title"] = "Glancier Integration Configuration (Python Fragment)"
     schema["description"] = (

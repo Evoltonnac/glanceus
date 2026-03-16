@@ -16,10 +16,22 @@ const { apiMock } = vi.hoisted(() => ({
         reloadConfig: vi.fn(),
     },
 }));
+const { openExternalLinkMock } = vi.hoisted(() => ({
+    openExternalLinkMock: vi.fn(),
+}));
 
 vi.mock("../api/client", () => ({
     api: apiMock,
 }));
+vi.mock("../lib/utils", async () => {
+    const actual = await vi.importActual<typeof import("../lib/utils")>(
+        "../lib/utils",
+    );
+    return {
+        ...actual,
+        openExternalLink: openExternalLinkMock,
+    };
+});
 
 // Mock setup worker to avoid loading monaco worker/runtime paths in vitest.
 vi.mock("../components/editor/YamlEditorWorkerSetup", () => ({
@@ -46,6 +58,7 @@ vi.mock("@monaco-editor/react", () => ({
 import { render } from "../test/render";
 import IntegrationsPage from "./Integrations";
 import { useStore } from "../store";
+import { INTEGRATION_EDITOR_PROMPT } from "../constants/integrationSkillPrompt";
 
 function createReloadPayload(
     overrides: Partial<{
@@ -97,6 +110,8 @@ describe("Integrations page", () => {
         apiMock.createSourceFile.mockReset();
         apiMock.deleteSourceFile.mockReset();
         apiMock.reloadConfig.mockReset();
+        openExternalLinkMock.mockReset();
+        openExternalLinkMock.mockResolvedValue(undefined);
 
         apiMock.listIntegrationFiles.mockResolvedValue(["demo.yaml"]);
         apiMock.listIntegrationFileMetadata.mockResolvedValue([
@@ -168,6 +183,40 @@ describe("Integrations page", () => {
             expect(apiMock.reloadConfig).toHaveBeenCalledTimes(1);
         });
         expect(useStore.getState().toast?.message).toContain("仅视图改动");
+    });
+
+    it("switches to AI prompt helper modal and supports both actions", async () => {
+        const clipboardWrite = vi.fn().mockResolvedValue(undefined);
+        Object.assign(navigator, {
+            clipboard: { writeText: clipboardWrite },
+        });
+
+        render(<IntegrationsPage />);
+        expect(await screen.findByText("演示集成")).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole("button", { name: "新建" }));
+        fireEvent.click(
+            screen.getByRole("button", {
+                name: "Open AI prompt actions",
+            }),
+        );
+
+        expect(await screen.findByText("AI Prompt Helper")).toBeInTheDocument();
+        fireEvent.click(screen.getByRole("button", { name: "复制完整 Prompt" }));
+        await waitFor(() => {
+            expect(clipboardWrite).toHaveBeenCalledWith(
+                INTEGRATION_EDITOR_PROMPT,
+            );
+        });
+
+        fireEvent.click(
+            screen.getByRole("button", { name: "打开 GitHub skills 目录" }),
+        );
+        await waitFor(() => {
+            expect(openExternalLinkMock).toHaveBeenCalledWith(
+                "https://github.com/Evoltonnac/glancier/tree/main/skills",
+            );
+        });
     });
 
     it("shows single-step delete warning and deletes source", async () => {

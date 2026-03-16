@@ -50,6 +50,9 @@ import {
     Trash2,
     Save,
     MoreVertical,
+    Sparkles,
+    Copy,
+    ExternalLink,
     FileJson,
     Database,
     AlertCircle,
@@ -64,6 +67,7 @@ import {
 } from "lucide-react";
 import { Badge } from "../components/ui/badge";
 import { useTheme } from "../components/theme-provider";
+import { openExternalLink } from "../lib/utils";
 import {
     markersToDiagnostics,
     setupYamlWorker,
@@ -72,6 +76,7 @@ import {
 import { RouteInterceptor } from "../components/RouteInterceptor";
 import { EmptyState } from "../components/EmptyState";
 import { InlineError } from "../components/InlineError";
+import { INTEGRATION_EDITOR_PROMPT } from "../constants/integrationSkillPrompt";
 
 type ReloadConfigError = Error & {
     diagnostics?: ReloadConfigDiagnostic[];
@@ -108,6 +113,7 @@ const PRESET_ICON_BY_ID: Record<string, ComponentType<{ className?: string }>> =
     curl: Terminal,
     webscraper: Globe,
 };
+const SKILLS_GITHUB_URL = "https://github.com/Evoltonnac/glancier/tree/main/skills";
 
 function normalizePresetResponse(preset: IntegrationPresetResponse): IntegrationPreset {
     return {
@@ -279,6 +285,9 @@ export default function IntegrationsPage() {
     // Dialogs
     const [showNewIntegrationDialog, setShowNewIntegrationDialog] =
         useState(false);
+    const [newIntegrationDialogView, setNewIntegrationDialogView] = useState<
+        "create" | "ai-prompt"
+    >("create");
     const [showNewSourceDialog, setShowNewSourceDialog] = useState(false);
     const [newIntegrationError, setNewIntegrationError] = useState<
         string | null
@@ -719,11 +728,33 @@ export default function IntegrationsPage() {
 
     const handleNewIntegrationDialogChange = (open: boolean) => {
         setShowNewIntegrationDialog(open);
+        setNewIntegrationDialogView("create");
         setNewIntegrationError(null);
         if (!open) {
             setNewFilename("");
             setNewIntegrationName("");
             setSelectedPresetId(null);
+        }
+    };
+
+    const handleCopyIntegrationPrompt = async () => {
+        setNewIntegrationError(null);
+        try {
+            await navigator.clipboard.writeText(INTEGRATION_EDITOR_PROMPT);
+            showToast("已复制完整 Prompt。", "success");
+        } catch (error) {
+            console.error("Failed to copy integration prompt:", error);
+            setNewIntegrationError("复制失败，请检查浏览器剪贴板权限。");
+        }
+    };
+
+    const handleOpenSkillsGithub = async () => {
+        setNewIntegrationError(null);
+        try {
+            await openExternalLink(SKILLS_GITHUB_URL);
+        } catch (error) {
+            console.error("Failed to open skills GitHub folder:", error);
+            setNewIntegrationError("打开 GitHub 目录失败，请稍后重试。");
         }
     };
 
@@ -911,10 +942,36 @@ export default function IntegrationsPage() {
                                 }
                             >
                                 <DialogContent className="max-w-2xl">
+                                    {newIntegrationDialogView === "create" ? (
+                                        <>
                                         <DialogHeader>
-                                            <DialogTitle>
-                                                New Integration
-                                            </DialogTitle>
+                                            <div className="flex items-center justify-between gap-3">
+                                                <DialogTitle>
+                                                    New Integration
+                                                </DialogTitle>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <button
+                                                            type="button"
+                                                            aria-label="Open AI prompt actions"
+                                                            onClick={() =>
+                                                                setNewIntegrationDialogView(
+                                                                    "ai-prompt",
+                                                                )
+                                                            }
+                                                            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[linear-gradient(140deg,#ff7a18_0%,#ff3d81_45%,#ffbe0b_100%)] text-white shadow-[0_10px_24px_rgba(255,95,58,0.45)] transition-transform duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-2"
+                                                        >
+                                                            <Sparkles className="h-4 w-4" />
+                                                        </button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="left">
+                                                        AI Prompt
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </div>
+                                            <DialogDescription>
+                                                Create an integration YAML file and optionally start from a preset.
+                                            </DialogDescription>
                                         </DialogHeader>
                                         <div className="py-4 space-y-5">
                                             {/* ID (Filename) Input */}
@@ -1047,6 +1104,53 @@ export default function IntegrationsPage() {
                                                 Create
                                             </Button>
                                         </DialogFooter>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <DialogHeader>
+                                                <DialogTitle>AI Prompt Helper</DialogTitle>
+                                                <DialogDescription>
+                                                    选择一个操作，快速使用 integration-editor skill。
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <div className="py-4 space-y-3">
+                                                <Button
+                                                    variant="outline"
+                                                    className="h-auto w-full justify-start gap-3 border-brand/40 bg-brand/5 px-4 py-4 text-left hover:bg-brand/10"
+                                                    onClick={handleCopyIntegrationPrompt}
+                                                >
+                                                    <Copy className="h-4 w-4 text-brand" />
+                                                    复制完整 Prompt
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    className="h-auto w-full justify-start gap-3 border-warning/50 bg-warning/10 px-4 py-4 text-left hover:bg-warning/20"
+                                                    onClick={handleOpenSkillsGithub}
+                                                >
+                                                    <ExternalLink className="h-4 w-4 text-warning" />
+                                                    打开 GitHub skills 目录
+                                                </Button>
+                                                <InlineError message={newIntegrationError} />
+                                            </div>
+                                            <DialogFooter>
+                                                <Button
+                                                    variant="outline"
+                                                    onClick={() =>
+                                                        setNewIntegrationDialogView("create")
+                                                    }
+                                                >
+                                                    返回创建
+                                                </Button>
+                                                <Button
+                                                    onClick={() =>
+                                                        handleNewIntegrationDialogChange(false)
+                                                    }
+                                                >
+                                                    关闭
+                                                </Button>
+                                            </DialogFooter>
+                                        </>
+                                    )}
                                     </DialogContent>
                                 </Dialog>
                             <Tooltip>

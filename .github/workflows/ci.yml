@@ -170,44 +170,6 @@ jobs:
               run: |
                   npm run tauri build -- ${{ matrix.tauri_args }}
 
-            - name: Codesign App (Ad-Hoc, No Notarization)
-              if: matrix.platform == 'macos-15' || matrix.platform == 'macos-15-intel'
-              run: |
-                  APP_BUNDLE_DIR="ui-react/src-tauri/target/${{ matrix.rust_target }}/release/bundle/macos"
-                  if [[ ! -d "$APP_BUNDLE_DIR" ]]; then
-                    echo "Missing macOS app bundle directory: $APP_BUNDLE_DIR"
-                    exit 1
-                  fi
-                  APP_PATH=$(find "$APP_BUNDLE_DIR" -name "*.app" -type d -print -quit)
-                  if [[ -z "$APP_PATH" ]]; then
-                    echo "Missing macOS app bundle."
-                    exit 1
-                  fi
-                  echo "Signing app at: $APP_PATH"
-
-                  codesign --force --deep -s - "$APP_PATH"
-                  codesign --verify --deep --strict "$APP_PATH"
-
-                  echo "Code signing complete"
-
-            - name: Validate and sign Tauri DMG (Ad-Hoc)
-              if: matrix.platform == 'macos-15' || matrix.platform == 'macos-15-intel'
-              run: |
-                  DMG_DIR="ui-react/src-tauri/target/${{ matrix.rust_target }}/release/bundle/dmg"
-                  if [[ ! -d "$DMG_DIR" ]]; then
-                    echo "Missing DMG output directory: $DMG_DIR"
-                    exit 1
-                  fi
-                  DMG_PATH=$(find "$DMG_DIR" -name "*.dmg" -type f -print -quit)
-                  if [[ -z "$DMG_PATH" ]]; then
-                    echo "Missing Tauri-generated DMG artifact."
-                    exit 1
-                  fi
-
-                  codesign --force -s - "$DMG_PATH"
-                  codesign --verify --strict "$DMG_PATH"
-
-                  echo "DMG ready at: $DMG_PATH"
 
             - name: Upload Release Asset
               if: matrix.platform == 'macos-15' || matrix.platform == 'macos-15-intel'

@@ -107,6 +107,8 @@ jobs:
 
             - name: Create GitHub Release
               if: matrix.platform == 'macos-15'
+              env:
+                  GH_TOKEN: ${{ github.token }}
               run: |
                   gh release create "v${{ steps.get_version.outputs.VERSION }}" \
                       --title "Glanceus v${{ steps.get_version.outputs.VERSION }}" \

@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from core.config_loader import StepType
-from core.executor import InvalidCredentialsError
+from core.executor import InvalidCredentialsError, NetworkTimeoutError
 from core.source_state import InteractionType, SourceStatus
 from tests.factories import build_source_config, build_step
 
@@ -242,6 +242,49 @@ async def test_oauth_invalid_credentials_refresh_success_retries_without_interac
     assert state.status == SourceStatus.ACTIVE
     assert state.interaction is None
     data_controller.upsert.assert_called_once_with(source.id, {"result": "ok"})
+
+
+@pytest.mark.asyncio
+async def test_network_timeout_persists_runtime_timeout_error_code(
+    executor,
+    data_controller,
+    monkeypatch,
+):
+    source = build_source_config(
+        source_id="network-timeout",
+        name="Network Timeout Source",
+        flow=[
+            build_step(
+                step_id="fetch_data",
+                use=StepType.HTTP,
+                args={"url": "https://example.com/data"},
+            ),
+        ],
+    )
+
+    async def raise_network_timeout(_source):
+        raise NetworkTimeoutError(
+            source_id=source.id,
+            step_id="fetch_data",
+            message="connect timeout",
+        )
+
+    monkeypatch.setattr(executor, "_run_flow", raise_network_timeout)
+
+    await executor.fetch_source(source)
+
+    state = executor.get_source_state(source.id)
+    assert state.status == SourceStatus.ERROR
+    assert state.interaction is None
+
+    error_calls = [
+        call.kwargs
+        for call in data_controller.set_state.call_args_list
+        if call.kwargs.get("status") == SourceStatus.ERROR.value
+    ]
+    assert error_calls
+    assert error_calls[-1]["error_code"] == "runtime.network_timeout"
+
 
 @pytest.mark.asyncio
 async def test_missing_config_maps_to_suspended(executor):

@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 from core.config_loader import StepType
+from core.executor import NetworkTimeoutError
 from core.steps.http_step import execute_http_step
 from tests.factories import build_source_config, build_step
 
@@ -59,6 +60,7 @@ async def test_http_step_retries_connect_error(monkeypatch: pytest.MonkeyPatch):
     executor = SimpleNamespace(
         _get_proxy_url=lambda: "http://127.0.0.1:7890",
         _classify_http_status_error=lambda source, step, error: error,
+        _classify_http_network_error=lambda source, step, error: error,
     )
 
     result = await execute_http_step(
@@ -113,11 +115,14 @@ async def test_http_step_raises_after_retry_exhausted(monkeypatch: pytest.Monkey
     executor = SimpleNamespace(
         _get_proxy_url=lambda: None,
         _classify_http_status_error=lambda source, step, error: error,
+        _classify_http_network_error=lambda source, step, error: NetworkTimeoutError(
+            source_id=source.id,
+            step_id=step.id,
+            message=str(error),
+        ),
     )
 
-    import httpx
-
-    with pytest.raises(httpx.ConnectTimeout):
+    with pytest.raises(NetworkTimeoutError) as exc_info:
         await execute_http_step(
             step,
             source,
@@ -132,3 +137,4 @@ async def test_http_step_raises_after_retry_exhausted(monkeypatch: pytest.Monkey
             {},
             executor,
         )
+    assert exc_info.value.code == "runtime.network_timeout"

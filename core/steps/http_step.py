@@ -97,8 +97,13 @@ async def execute_http_step(
                     "raw_data": response.text,
                     "headers": dict(response.headers),
                 }
-            except _RETRYABLE_NETWORK_ERRORS:
+            except _RETRYABLE_NETWORK_ERRORS as network_error:
                 if attempt >= retries:
-                    raise
+                    classified_error = executor._classify_http_network_error(
+                        source=source,
+                        step=step,
+                        error=network_error,
+                    )
+                    raise classified_error from network_error
                 if backoff_seconds > 0:
                     await asyncio.sleep(backoff_seconds * (2**attempt))

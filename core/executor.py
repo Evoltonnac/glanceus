@@ -365,6 +365,7 @@ class Executor:
                     (
                         RequiredSecretMissing,
                         InvalidCredentialsError,
+                        NetworkTimeoutError,
                         WebScraperBlockedError,
                     ),
                 ):
@@ -539,7 +540,15 @@ class Executor:
         source: SourceConfig,
         error: Exception,
     ) -> Exception:
-        if isinstance(error, (RequiredSecretMissing, InvalidCredentialsError, WebScraperBlockedError)):
+        if isinstance(
+            error,
+            (
+                RequiredSecretMissing,
+                InvalidCredentialsError,
+                NetworkTimeoutError,
+                WebScraperBlockedError,
+            ),
+        ):
             return error
 
         if isinstance(error, httpx.HTTPStatusError):
@@ -584,6 +593,26 @@ class Executor:
                 status_code=status_code,
             )
 
+        return error
+
+    def _classify_http_network_error(
+        self,
+        source: SourceConfig,
+        step: StepConfig | None,
+        error: Exception,
+    ) -> Exception:
+        timeout_errors = (
+            httpx.ConnectTimeout,
+            httpx.ReadTimeout,
+            httpx.WriteTimeout,
+            httpx.PoolTimeout,
+        )
+        if isinstance(error, timeout_errors):
+            return NetworkTimeoutError(
+                source_id=source.id,
+                step_id=step.id if step else None,
+                message=str(error) or "Network request timed out",
+            )
         return error
 
     def _interaction_status_for_error(self, error: Exception) -> SourceStatus:
@@ -1004,6 +1033,23 @@ class InvalidCredentialsError(Exception):
         self.step_id = step_id
         self.message = message
         self.status_code = status_code
+        self.code = code
+        super().__init__(message)
+
+
+class NetworkTimeoutError(Exception):
+    """Custom exception: HTTP request timed out after retries."""
+
+    def __init__(
+        self,
+        source_id: str,
+        step_id: str | None,
+        message: str,
+        code: str = "runtime.network_timeout",
+    ):
+        self.source_id = source_id
+        self.step_id = step_id
+        self.message = message
         self.code = code
         super().__init__(message)
 

@@ -7,6 +7,7 @@ import { TopNav } from "./components/TopNav";
 import { Button } from "./components/ui/button";
 import { Toast } from "./components/ui/toast";
 import logoMark from "./assets/logo.svg";
+import { useI18n } from "./i18n";
 
 const OAuthCallback = lazy(() =>
     import("./components/auth/OAuthCallback").then((module) => ({
@@ -26,6 +27,7 @@ function StartupGate({
     onRetry: () => void;
     progress: number;
 }) {
+    const { t } = useI18n();
     return (
         <div className="relative flex h-screen items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top,_hsl(var(--brand)/0.18),_transparent_55%),linear-gradient(160deg,hsl(var(--background))_0%,hsl(var(--surface))_100%)] px-4">
             <div className="absolute -top-16 right-[-72px] h-60 w-60 rounded-full bg-brand/10 blur-3xl" />
@@ -47,7 +49,7 @@ function StartupGate({
                             Glanceus
                         </p>
                         <p className="text-xs text-muted-foreground">
-                            正在启动本地引擎
+                            {t("app.startup.starting")}
                         </p>
                     </div>
                 </div>
@@ -55,17 +57,17 @@ function StartupGate({
                 {error ? (
                     <div className="space-y-4">
                         <div className="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm text-error">
-                            启动后端失败：{error}
+                            {t("app.startup.failed", { error })}
                         </div>
                         <Button onClick={onRetry} className="w-full">
-                            重试启动
+                            {t("app.startup.retry")}
                         </Button>
                     </div>
                 ) : (
                     <div className="space-y-3">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <RefreshCw className="h-4 w-4 animate-spin text-brand" />
-                            等待服务就绪，首次启动可能需要几秒
+                            {t("app.startup.waiting")}
                         </div>
                         <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                             <div

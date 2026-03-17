@@ -4,6 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { api } from "../api/client";
 import { isTauri } from "../lib/utils";
 import { useStore } from "../store";
+import { useI18n } from "../i18n";
 import type { SourceSummary } from "../types/config";
 
 const SCRAPER_LOG_LIMIT = 300;
@@ -62,6 +63,7 @@ function mergeScraperLogs(
 }
 
 export function useScraper() {
+    const { t } = useI18n();
     const scraperEnabled = isTauri();
     const sources = useStore((state) => state.sources);
     const setSources = useStore((state) => state.setSources);
@@ -178,7 +180,7 @@ export function useScraper() {
     const handlePushToQueue = useCallback(
         (source: SourceSummary, options?: { foreground?: boolean }): boolean => {
             if (!scraperEnabled) {
-                showToast("Web 抓取仅在 Tauri 客户端环境生效。", "error");
+                showToast(t("scraper.toast.unavailable"), "error");
                 return false;
             }
 
@@ -199,14 +201,14 @@ export function useScraper() {
                     return true;
                 }
                 showToast(
-                    "已请求后台重试抓取，任务启动后可在悬浮条中打开浏览器窗口。",
+                    t("scraper.toast.retryQueued"),
                     "info",
                 );
             }
 
             void api.refreshSource(source.id).catch((error) => {
                 console.error(`Failed to request scraper retry for ${source.id}:`, error);
-                showToast("请求重试失败，请稍后再试。", "error");
+                showToast(t("scraper.toast.retryFailed"), "error");
             });
             return true;
         },

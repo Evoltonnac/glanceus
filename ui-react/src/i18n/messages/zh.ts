@@ -13,6 +13,15 @@ const zhMessages = {
   "common.source": "source",
   "common.integration": "integration",
   "common.global": "global",
+  "common.loadDataFailed": "加载数据失败",
+  "common.retryLater": "请稍后再试",
+  "common.backgroundRetryQueued": "已请求后台重试抓取，任务启动后可在悬浮条中打开浏览器窗口。",
+
+  "app.startup.starting": "正在启动本地引擎",
+  "app.startup.failed": "启动后端失败：{error}",
+  "app.startup.retry": "重试启动",
+  "app.startup.waiting": "等待服务就绪，首次启动可能需要几秒",
+
   "topnav.dashboard": "全部看板",
   "topnav.integrations": "集成管理",
   "topnav.settings": "系统设置",
@@ -138,6 +147,7 @@ const zhMessages = {
   "dashboard.refresh.off": "关闭自动刷新",
   "dashboard.refresh.just_now": "刚刚",
   "dashboard.widget.fallback_unavailable": "组件暂不可用（已静默降级）",
+  "dashboard.noData": "暂无数据",
   "dashboard.action.delete_widget": "删除",
 
   "integrations.title": "集成",
@@ -227,6 +237,9 @@ const zhMessages = {
   "scraper.banner.status.none": "无任务",
   "scraper.banner.remaining": "剩余 {count}",
   "scraper.banner.web_unavailable": "Web 端暂不支持网页抓取",
+  "scraper.toast.unavailable": "Web 抓取仅在 Tauri 客户端环境生效。",
+  "scraper.toast.retryQueued": "已请求后台重试抓取，任务启动后可在悬浮条中打开浏览器窗口。",
+  "scraper.toast.retryFailed": "请求重试失败，请稍后再试。",
   "scraper.banner.actions.logs": "日志",
   "scraper.banner.actions.browser": "浏览器",
   "scraper.banner.actions.skip": "跳过",

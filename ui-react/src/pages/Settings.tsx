@@ -411,7 +411,7 @@ export default function SettingsPage() {
                         defaultValue="general"
                         className="flex-1 flex flex-col overflow-hidden"
                     >
-                        {/* Tab 切换栏 - 背景撑满页面，内容与内容区对齐 */}
+                        {/* Tab bar - full width background, content aligned with content area */}
                         <div className="w-full px-6 pt-6 pb-2 bg-transparent">
                             <div className="max-w-4xl mx-auto">
                                 <TabsList className="w-full h-12 bg-secondary/30 p-1 rounded-full border border-border/50">
@@ -439,7 +439,7 @@ export default function SettingsPage() {
 
                         <main className="flex-1 overflow-y-auto p-6">
                             <div className="max-w-4xl mx-auto w-full">
-                                {/* ── 通用 (General) ── */}
+                                {/* -- General -- */}
                                 <TabsContent
                                     value="general"
                                     className="space-y-6 animate-in fade-in duration-300 mt-0"
@@ -681,12 +681,12 @@ export default function SettingsPage() {
                                     </div>
                                 </TabsContent>
 
-                                {/* ── 高级 (Advanced) ── */}
+                                {/* -- Advanced -- */}
                                 <TabsContent
                                     value="advanced"
                                     className="animate-in fade-in duration-300 flex flex-col mt-0 space-y-6"
                                 >
-                                    {/* ── 代理设置 ── */}
+                                    {/* -- Proxy Settings -- */}
                                     <section className="space-y-4">
                                         <div className="flex items-center gap-2 text-base font-semibold">
                                             <Network className="w-4 h-4 text-brand" />
@@ -724,7 +724,7 @@ export default function SettingsPage() {
 
                                     <Separator className="opacity-50" />
 
-                                    {/* ── 抓取设置 ── */}
+                                    {/* -- Scraper Settings -- */}
                                     <section className="space-y-4">
                                         <div className="flex items-center gap-2 text-base font-semibold">
                                             <MonitorPlay className="w-4 h-4 text-brand" />
@@ -778,7 +778,7 @@ export default function SettingsPage() {
 
                                     <Separator className="opacity-50" />
 
-                                    {/* ── 调试日志 ── */}
+                                    {/* -- Debug Logging -- */}
                                     <section className="space-y-4">
                                         <div className="flex items-center gap-2 text-base font-semibold">
                                             <Info className="w-4 h-4 text-brand" />
@@ -852,7 +852,7 @@ export default function SettingsPage() {
 
                                     <Separator className="opacity-50" />
 
-                                    {/* ── 端口占用 ── */}
+                                    {/* -- Network Ports -- */}
                                     <section className="space-y-4">
                                         <div className="flex items-center gap-2 text-base font-semibold">
                                             <Network className="w-4 h-4 text-brand" />
@@ -882,7 +882,7 @@ export default function SettingsPage() {
 
                                     <Separator className="opacity-50" />
 
-                                    {/* ── 密钥加密 ── */}
+                                    {/* -- Encryption -- */}
                                     <section className="space-y-4 pb-8">
                                         <div className="flex items-center gap-2 text-base font-semibold">
                                             <Shield className="w-4 h-4 text-brand" />
@@ -1008,7 +1008,7 @@ export default function SettingsPage() {
                                     </section>
                                 </TabsContent>
 
-                                {/* ── 关于 (About) ── */}
+                                {/* -- About -- */}
                                 <TabsContent
                                     value="about"
                                     className="animate-in fade-in duration-300 mt-0"
@@ -1067,7 +1067,7 @@ export default function SettingsPage() {
                             </div>
                         </main>
 
-                        {/* 保存按钮 - 固定底部，撑满宽度（仅高级tab显示） */}
+                        {/* Save button - fixed at bottom, full width (only shown in Advanced tab) */}
                         <TabsContent
                             value="advanced"
                             className="mt-0 flex-shrink-0"

@@ -155,7 +155,7 @@ export const useStore = create<AppState>((set, get) => ({
                 loading: false,
             });
         } catch (error) {
-            console.error("加载数据失败:", error);
+            console.error("Failed to load data:", error);
             set({ loading: false });
         }
     },

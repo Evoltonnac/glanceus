@@ -48,7 +48,8 @@ Data and runtime:
   - Function length target: <= 50 lines when practical.
   - File length target: <= 300 lines when practical.
 - Any behavior change in core paths must include regression tests or updated tests.
-- Keep comments concise and meaningful; use English for code comments.
+- English is the primary language for the project. All code comments, error messages, logs, and documentation must be written in English.
+- Keep comments concise and meaningful.
 - Do not add placeholder logic for real execution paths.
 - Keep frontend business logic out of view components when backend/API should own it.
 - Follow i18n standards for user-facing copy:
@@ -66,8 +67,6 @@ Data and runtime:
 
 ## 6. Documentation Rules
 
-- Documents without an explicit language requirement must be written in English.
-- This rule includes `README.md` and `AGENTS.md`.
 - When architecture or command entrypoints change, sync relevant docs in the same delivery.
 - `.planning/` is owned by GSD workflows. Do not manually change planning document structure or content unless explicitly requested through GSD operations.
 

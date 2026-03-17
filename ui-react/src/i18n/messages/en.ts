@@ -13,6 +13,15 @@ const enMessages = {
   "common.source": "source",
   "common.integration": "integration",
   "common.global": "global",
+  "common.loadDataFailed": "Failed to load data",
+  "common.retryLater": "Please retry later",
+  "common.backgroundRetryQueued": "Background retry requested. You can open the browser window from the floating bar once the task starts.",
+
+  "app.startup.starting": "Starting local engine",
+  "app.startup.failed": "Backend failed to start: {error}",
+  "app.startup.retry": "Retry",
+  "app.startup.waiting": "Waiting for service ready, first start may take a few seconds",
+
   "topnav.dashboard": "All Dashboards",
   "topnav.integrations": "Integrations",
   "topnav.settings": "Settings",
@@ -138,6 +147,7 @@ const enMessages = {
   "dashboard.refresh.off": "Disable auto refresh",
   "dashboard.refresh.just_now": "just now",
   "dashboard.widget.fallback_unavailable": "Widget temporarily unavailable (degraded mode)",
+  "dashboard.noData": "No data available",
   "dashboard.action.delete_widget": "Delete",
 
   "integrations.title": "Integrations",
@@ -227,6 +237,9 @@ const enMessages = {
   "scraper.banner.status.none": "No task",
   "scraper.banner.remaining": "{count} left",
   "scraper.banner.web_unavailable": "Web mode does not support web scraping",
+  "scraper.toast.unavailable": "Web scraping is only available in Tauri client environment.",
+  "scraper.toast.retryQueued": "Background retry requested. You can open the browser window from the floating bar once the task starts.",
+  "scraper.toast.retryFailed": "Retry request failed. Please try again later.",
   "scraper.banner.actions.logs": "Logs",
   "scraper.banner.actions.browser": "Browser",
   "scraper.banner.actions.skip": "Skip",

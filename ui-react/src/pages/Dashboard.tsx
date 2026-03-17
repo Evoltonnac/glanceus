@@ -192,7 +192,7 @@ class WidgetFallbackBoundary extends Component<
         if (this.state.hasError) {
             return (
                 <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
-                    组件暂不可用（已静默降级）
+                    Widget temporarily unavailable (degraded mode)
                 </div>
             );
         }
@@ -210,7 +210,7 @@ function DeleteBtn({ onDelete }: { onDelete?: () => void }) {
                 e.stopPropagation();
                 onDelete();
             }}
-            title="删除"
+            title="Delete"
         >
             <Trash2 className="h-3.5 w-3.5" />
         </button>
@@ -763,7 +763,7 @@ export default function Dashboard() {
             try {
                 await api.refreshSource(sourceId);
             } catch (error) {
-                console.error(`刷新数据源 ${sourceId} 失败:`, error);
+                console.error(`Failed to refresh source ${sourceId}:`, error);
                 // Rollback by re-fetching
                 invalidateSources();
             }
@@ -780,7 +780,7 @@ export default function Dashboard() {
                 );
                 await invalidateSources();
             } catch (error) {
-                console.error(`更新 ${sourceId} 自动刷新间隔失败:`, error);
+                console.error(`Failed to update auto-refresh interval for ${sourceId}:`, error);
             }
         },
         [],
@@ -796,7 +796,7 @@ export default function Dashboard() {
             // Refresh views in background
             invalidateViews();
         } catch (error) {
-            console.error(`删除数据源 ${sourceId} 失败:`, error);
+            console.error(`Failed to delete source ${sourceId}:`, error);
             // Rollback by re-fetching data
             invalidateSources();
         }
@@ -806,7 +806,7 @@ export default function Dashboard() {
         try {
             await runGlobalRefresh();
         } catch (error) {
-            console.error("刷新失败:", error);
+            console.error("Failed to refresh:", error);
         }
     };
 
@@ -1472,7 +1472,7 @@ export default function Dashboard() {
                                     </button>
                                 </TooltipTrigger>
                                 <TooltipContent side="bottom">
-                                    点击切换密度: 紧凑 → 普通 → 宽松
+                                    Click to toggle density: Compact → Normal → Comfortable
                                 </TooltipContent>
                             </Tooltip>
                             */}

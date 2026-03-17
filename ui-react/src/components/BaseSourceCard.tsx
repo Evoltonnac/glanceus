@@ -1,4 +1,5 @@
 import { Card } from "./ui/card";
+import { useI18n } from "../i18n";
 import type {
     ViewComponent,
     SourceSummary,
@@ -28,6 +29,7 @@ export function BaseSourceCard({
     sourceSummary,
     sourceData,
 }: BaseSourceCardProps) {
+    const { t } = useI18n();
     const ui = component.ui || {
         title: component.label || "Untitled",
         icon: undefined,
@@ -102,7 +104,7 @@ export function BaseSourceCard({
 
                 {hasNoData && (
                     <div className="flex items-center justify-center flex-1 text-sm text-muted-foreground">
-                        暂无数据
+                        {t("dashboard.noData")}
                     </div>
                 )}
             </div>

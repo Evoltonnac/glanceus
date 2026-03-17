@@ -27,4 +27,4 @@ GitHub folder URL:
 
 - Keep `integration-editor/` as the canonical skill source.
 - Update `PROMPT.md` when skill behavior or references change.
-- Keep client prompt bundle (`ui-react/src/constants/integrationSkillPrompt.ts`) synchronized with `PROMPT.md`.
+- Frontend bundles `PROMPT.md` directly via raw import (`ui-react/src/constants/integrationSkillPrompt.ts`), so no prompt text copy should be maintained in code.

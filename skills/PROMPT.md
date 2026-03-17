@@ -38,34 +38,37 @@ For `config/integrations/*.yaml`, valid top-level fields are:
 - optional `flow`
 - optional `templates` (defaults to empty list)
 
-`id` must not be authored inline for integration files. Runtime `id` is derived from filename:
+Do not author `id` inline for integration files. Runtime `id` is derived from filename:
 - `config/integrations/openai.yaml` -> `id = openai`
 - If inline `id` exists, it is ignored and replaced by filename id
 
 ## Prerequisite Gate
 
 Before writing YAML, confirm required inputs:
-- target platform and endpoint scope
-- auth strategy (`api_key`, `form`, `oauth`, `curl`, `webview`)
-- required outputs (Metric/Signal/Integration Data)
+- target platform and API entrypoint/scope
+- auth strategy (`api_key`, `form`, `oauth`, `webview`)
+- expected outputs (Metric/Signal/Integration Data)
 - template intent for Bento Card rendering
 
 If required inputs are missing, ask concise clarification questions first.
 Do not invent undocumented endpoints, scopes, credentials, or capabilities.
 
-## Core Behavior Rules
+## Fallback Policy
 
-1. Local-first reasoning: use available local/project context first.
-2. Fallback only when necessary.
-3. If fallback is used, always disclose:
+1. Use local/project context first.
+2. Use external fallback only when local context is insufficient.
+3. If fallback is used, disclose:
    - why fallback was needed
    - source category used
    - known limitations and confidence
 4. Never present assumptions as verified facts.
-5. Validation is optional-final:
-   - if executable, run impacted checks
-   - if not executable, provide exact commands and expected pass signal
-   - clearly state `validated` vs `not executed`
+
+## Validation Policy
+
+Validation is optional-final:
+- If executable, run impacted checks.
+- If execution is not possible, provide exact commands and expected pass signals.
+- Clearly state `validated` vs `not executed`.
 
 ## Flow Authoring Reference
 
@@ -87,8 +90,8 @@ Supported `use` values:
 - `webview`
 
 Guidance:
-- `api_key` is credential-focused auth input (usually secret + password field).
-- `form` is generic input collection (single or multiple fields), with persistence decided by `secrets`/`outputs`/`context` mapping.
+- `api_key`: credential-focused auth input.
+- `form`: generic input collection (single/multi-field), persistence decided by `secrets`/`outputs`/`context` mapping.
 
 ### Output Channels
 
@@ -110,13 +113,81 @@ When resolving `{var}` in step arguments:
 
 Avoid ambiguous variable naming across channels.
 
-### Interaction/Resume Notes
+### Blocking/Resume Notes
 
 Blocking steps (`api_key`, `form`, `oauth`, `curl`, `webview`) may suspend execution.
 Design for resume safety:
 - keep pre-interaction steps idempotent
 - do not rely on `context` surviving long suspension
 - persist resume-critical values in `secrets` or `outputs`
+
+### Step-Specific Guidance
+
+#### `api_key`
+
+- Purpose: collect one credential value (API key/token)
+- Common args: `label`, `description`, `message`
+- Runtime output envelope: `api_key`
+- Typical mapping: `secrets: { api_key: "api_key" }`
+
+#### `form`
+
+- Purpose: collect generic user inputs (single or multi-field)
+- Common args:
+  - single-field shorthand: `key`, `label`, `type`, `description`, `required`, `default`
+  - multi-field mode: `fields` (each supports `key`, `label`, `type`, `description`, `placeholder`, `required`, `default`)
+  - extras: `defaults`, `message`, `warning_message`
+- Runtime output envelope: one key/value per collected field
+
+#### `oauth`
+
+- Purpose: run OAuth interaction and expose token bundle for downstream requests
+- Core args: `oauth_flow`, `auth_url`, `token_url`, `client_id`, `client_secret`, `scope/scopes`, `redirect_uri`, `doc_url`
+- Runtime output envelope: `oauth_secrets` dictionary
+- Typical mapping: `secrets: { oauth_secrets: "oauth_secrets" }`
+- Downstream usage: `{oauth_secrets.access_token}`
+
+#### `curl`
+
+- Purpose: collect user-pasted browser cURL and parse request headers
+- Common args: `label`, `description`, `message`, `warning_message`
+- Runtime output envelope: `curl_command`, `headers` dictionary, and flattened header keys
+
+#### `webview`
+
+- Purpose: start desktop webview scraping when API auth cannot be completed directly
+- Args: `url` (required), `script` (optional), `intercept_api` (optional)
+- Runtime output envelope: `webview_data` (plus flattened top-level keys when object-like)
+
+#### `http`
+
+- Purpose: execute an HTTP request
+- Args: `url` (required), `method` (default `GET`), `headers`, `timeout` (default `30`), `retries` (default `2`), `retry_backoff_seconds` (default `0.5`)
+- Runtime output envelope:
+  - `http_response` (JSON object/array, or `null` for non-JSON)
+  - `raw_data` (always available response text)
+  - `headers` (response headers)
+
+#### `extract`
+
+- Purpose: extract fields from a structured object
+- Args: `source` (required), `type` (`jsonpath` or `key`, default `jsonpath`)
+- Define extraction expressions in `outputs` (`target: expression`)
+
+#### `script`
+
+- Purpose: run lightweight Python transformation logic
+- Args: `code` (required)
+- Runtime behavior:
+  - local variables are seeded from current flow variables
+  - only fields mapped in `outputs`/`context` are emitted
+- Keep scripts deterministic; prefer `http` + `extract` when possible
+
+#### `log`
+
+- Purpose: reserved step type for explicit logging intent
+- Args: `message`
+- Runtime status: schema-defined; no dedicated executor branch currently wired
 
 ### Canonical Flow Patterns
 
@@ -298,7 +369,7 @@ Do not use legacy enum values.
 
 ## Simple Complete YAML Example
 
-Use this as a minimal but complete baseline configuration:
+Use this as a minimal but end-to-end baseline (auth -> fetch -> parse -> render):
 
 ```yaml
 name: "Example API Snapshot"

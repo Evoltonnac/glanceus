@@ -10,6 +10,9 @@ export default defineConfig({
     },
   },
   server: {
+    fs: {
+      allow: [path.resolve(__dirname, "..")],
+    },
     host: '0.0.0.0',
     port: 3000,
     proxy: {

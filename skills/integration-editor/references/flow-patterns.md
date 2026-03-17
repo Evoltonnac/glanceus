@@ -1,235 +1,151 @@
-# Glanceus Flow Patterns (Current)
+# Glanceus Flow Patterns
 
-This reference defines practical Flow authoring patterns for integration YAML in Glanceus.
+Integration YAML authoring reference. Use `config/schemas/integration.schema.json` as source of truth.
+Detailed runtime step behavior is documented in `docs/flow/02_step_reference.md`.
 
-## 1. Source of Truth
+## Top-Level
 
-Use these in priority order:
-1. Code and schemas (`config/schemas/integration.schema.json`)
-2. Flow docs (`docs/flow/01_architecture_and_orchestration.md`, `docs/flow/02_step_reference.md`, `docs/flow/03_step_oauth.md`)
-3. Working integration examples (`config/integrations/*.yaml`)
+`config/integrations/*.yaml` fields: `name`, `description`, `default_refresh_interval_minutes`, `flow`, `templates`. Runtime `id` from filename, not inline.
 
-If examples conflict with docs, prefer current code/schema behavior.
+## Step Contract
 
-## 2. Integration Top-Level Contract
+Required: `id`, `use`. Optional: `args`, `outputs`, `context`, `secrets`, `run`.
 
-For `config/integrations/*.yaml`, valid top-level fields are:
-- optional `name`
-- optional `description`
-- optional `default_refresh_interval_minutes` (integer >= 0; `0` disables auto refresh)
-- optional `flow`
-- optional `templates` (defaults to empty list)
+Current `use`: `http`, `oauth`, `api_key`, `form`, `curl`, `extract`, `script`, `log`, `webview`.
 
-Do not author `id` inline. Runtime integration id is always derived from filename:
-- `config/integrations/openai.yaml` -> `id = openai`
-- Inline `id` (if present) is ignored and replaced by filename id
+## Output Channels
 
-## 3. Minimum Step Contract
+- `secrets`: persistent + encrypted (credentials, tokens)
+- `outputs`: persistent + plaintext (UI data)
+- `context`: in-memory only (intermediates)
 
-Each flow step should include:
-- `id` (required)
-- `use` (required)
-- optional `args`, `outputs`, `context`, `secrets`, `run`
+## Variable Resolution
 
-Current `use` values:
-- `http`
-- `oauth`
-- `api_key`
-- `form`
-- `curl`
-- `extract`
-- `script`
-- `log`
-- `webview`
+`{var}` resolves: runtime context → secrets → outputs.
 
-## 4. Step Roles
+## Blocking Steps
 
-| Step | Purpose | Typical Notes |
-| --- | --- | --- |
-| `api_key` | Collect API token from user interaction | Credential-focused auth input; persist token in `secrets` |
-| `form` | Collect generic user-provided fields | Supports multi-field input; persistence depends on mapping (`secrets`/`outputs`/`context`) |
-| `oauth` | Run OAuth flow and persist token bundle | Use `oauth_secrets.access_token` in downstream HTTP headers |
-| `curl` | Collect browser-captured cURL input | Use when API auth is not straightforward |
-| `webview` | Desktop-assisted browser interception | Use for platforms without stable public API |
-| `http` | Fetch data from remote endpoint | Map response into `outputs`/`context` |
-| `extract` | Pull fields from structured payloads | `type` often `jsonpath` or `key` |
-| `script` | Lightweight transformation/aggregation | Keep deterministic and bounded |
-| `log` | Emit debugging breadcrumbs | Useful in investigation or migrations |
+`api_key`, `form`, `oauth`, `curl`, `webview` suspend execution. Keep pre-steps idempotent. Persist resume-critical values.
 
-## 5. Output Channels and Persistence
+---
 
-Each step may map values into three channels:
+# Step Reference
 
-| Field | Persistence | Security | Use |
-| --- | --- | --- | --- |
-| `secrets` | Persistent | Encrypted | Credentials, token bundles, sensitive session state |
-| `outputs` | Persistent | Plaintext | Display-facing data for templates/widgets |
-| `context` | In-memory only | Plaintext | Intermediate values for downstream steps |
+## `api_key`
+- Purpose: collect one credential value (API key/token).
+- Common args: `label`, `description`, `message`.
+- Runtime output envelope: `api_key`.
+- Typical mapping: `secrets: { api_key: "api_key" }`.
 
-Rules:
-- Always map credentials/tokens to `secrets`.
-- Use `outputs` only for values needed in UI or durable data snapshots.
-- Use `context` for temporary intermediate values.
+## `form`
+- Purpose: collect generic user inputs (single or multi-field).
+- Common args:
+  - single-field shorthand: `key`, `label`, `type`, `description`, `required`, `default`
+  - multi-field mode: `fields` (list; each item supports `key`, `label`, `type`, `description`, `placeholder`, `required`, `default`)
+  - extras: `defaults`, `message`, `warning_message`
+- Runtime output envelope: one key/value per collected field.
+- Typical mapping: route each field via `context`, `outputs`, or `secrets` depending on persistence/security needs.
 
-## 6. Variable Resolution Priority
+## `oauth`
+- Purpose: run OAuth interaction and expose token bundle for downstream requests.
+- Core args: `oauth_flow`, `auth_url`, `token_url`, `client_id`, `client_secret`, `scope/scopes`, `redirect_uri`, `doc_url`.
+- Runtime output envelope: `oauth_secrets` dictionary.
+- Typical mapping: `secrets: { oauth_secrets: "oauth_secrets" }`.
+- Downstream usage: `{oauth_secrets.access_token}`.
 
-When resolving `{var}` in step args:
-1. Flow runtime context
-2. Persisted secrets
-3. Previously mapped outputs
+## `curl`
+- Purpose: collect user-pasted browser cURL and parse request headers.
+- Common args: `label`, `description`, `message`, `warning_message`.
+- Runtime output envelope: `curl_command`, `headers` dictionary, plus flattened header keys (for example `Authorization`).
+- Typical mapping: `secrets: { curl_command: "curl_command" }`.
 
-Design expressions so this precedence does not create ambiguous names.
+## `webview`
+- Purpose: start desktop webview scraping when API auth cannot be completed directly.
+- Args: `url` (required), `script` (optional), `intercept_api` (optional).
+- Runtime output envelope: `webview_data`; if object-like, top-level keys are also flattened into the output envelope.
+- Typical mapping: `outputs: { payload: "webview_data" }`.
 
-## 7. Canonical Patterns
+## `http`
+- Purpose: execute an HTTP request.
+- Args: `url` (required), `method` (default `GET`), `headers`, `timeout` (default `30`), `retries` (default `2`), `retry_backoff_seconds` (default `0.5`).
+- Runtime output envelope:
+  - `http_response` (JSON object/array, or `null` if response is not JSON)
+  - `raw_data` (always available response text)
+  - `headers` (response headers)
+- Guidance: use `http_response` for JSON APIs; use `raw_data` for plain text/HTML responses.
 
-### Pattern A: API Key -> HTTP -> Extract
+## `extract`
+- Purpose: extract fields from a structured object.
+- Args: `source` (required), `type` (`jsonpath` or `key`, default `jsonpath`).
+- Extraction expressions are declared in `outputs` (`target: expression`).
+- Supports multiple mappings in a single step.
+
+## `script`
+- Purpose: run lightweight Python transformation logic.
+- Args: `code` (required).
+- Runtime behavior:
+  - local variables are seeded from current flow variables
+  - only fields explicitly mapped in `outputs`/`context` are emitted
+- Guidance: keep scripts deterministic; prefer `http` + `extract` when possible.
+
+## `log`
+- Purpose: reserved step type for explicit logging intent.
+- Args: `message`.
+- Runtime status: schema-defined, but no dedicated executor branch is currently wired.
+
+---
+
+# Examples
+
+## JSON API Flow
 
 ```yaml
 flow:
-  - id: collect_api_key
+  - id: collect_key
     use: api_key
     args:
       label: "API Key"
-      description: "Enter your API token"
     secrets:
       api_key: "api_key"
 
-  - id: fetch_metrics
+  - id: fetch_data
     use: http
     args:
-      url: "https://api.example.com/v1/metrics"
-      method: "GET"
+      url: "https://api.example.com/v1/data"
       headers:
         Authorization: "Bearer {api_key}"
-        Accept: "application/json"
     outputs:
-      metrics_payload: "http_response"
+      data: "http_response"
 
-  - id: parse_metrics
+  - id: parse_data
     use: extract
     args:
-      source: "{metrics_payload}"
+      source: "{data}"
       type: "jsonpath"
     outputs:
-      total_value: "$.total"
-      trend_label: "$.trend"
+      value: "$.items[0].value"
 ```
 
-### Pattern B: OAuth -> HTTP with token bundle
+## Non-JSON / Plain Text Flow
 
 ```yaml
 flow:
-  - id: authorize
-    use: oauth
-    args:
-      oauth_flow: "device"
-      device_authorization_url: "https://provider.example.com/oauth/device/code"
-      token_url: "https://provider.example.com/oauth/token"
-      scopes: ["read"]
-      client_id: "REPLACE_ME"
-    secrets:
-      oauth_secrets: "oauth_secrets"
-
-  - id: fetch_profile
+  - id: fetch_file
     use: http
     args:
-      url: "https://provider.example.com/api/profile"
-      method: "GET"
+      url: "https://example.com/config"
       headers:
-        Authorization: "Bearer {oauth_secrets.access_token}"
+        User-Agent: "App/1.0"
     outputs:
-      profile_payload: "http_response"
-```
+      content: "raw_data"
 
-### Pattern C: Form -> HTTP (non-token runtime input)
-
-```yaml
-flow:
-  - id: collect_query_form
-    use: form
-    args:
-      fields:
-        - key: account_id
-          label: "Account ID"
-          type: "text"
-        - key: region
-          label: "Region"
-          default: "us"
-    secrets:
-      provider_account_id: "account_id"
-    context:
-      region: "region"
-
-  - id: fetch_profile
-    use: http
-    args:
-      url: "https://api.example.com/v1/accounts/{provider_account_id}?region={region}"
-      method: "GET"
-    outputs:
-      profile_payload: "http_response"
-```
-
-### Pattern D: WebView interception -> Extract
-
-```yaml
-flow:
-  - id: webview_fetch
-    use: webview
-    args:
-      url: "https://console.example.com"
-      intercept_api: "/dashboard"
-    outputs:
-      dashboard_payload: "webview_data"
-
-  - id: parse_dashboard
-    use: extract
-    args:
-      source: "{dashboard_payload}"
-      type: "jsonpath"
-    outputs:
-      balance: "$.billing.available_balance"
-      currency: "$.billing.currency"
-```
-
-### Pattern E: Script summarization
-
-```yaml
-flow:
-  - id: summarize
+  - id: parse_file
     use: script
     args:
       code: |
-        # Keep script deterministic and bounded.
-        item_count = len(items or [])
-        healthy = item_count > 0
+        import re
+        m = re.search(r"traffic:\s*([0-9.]+)", content)
+        value = m.group(1) if m else "unknown"
     outputs:
-      item_count: "item_count"
-      healthy: "healthy"
+      traffic: "value"
 ```
-
-## 8. Interaction and Resume Notes
-
-`api_key`, `form`, `oauth`, `curl`, and `webview` can suspend execution with an interaction state.
-
-Design implications:
-- Keep pre-interaction steps idempotent.
-- Do not depend on `context` surviving long suspensions.
-- Persist required cross-resume values in `secrets` or `outputs`.
-
-## 9. Common Errors to Avoid
-
-- Storing tokens in `outputs`.
-- Flat token naming when token bundle exists (`access_token` instead of `oauth_secrets.access_token`).
-- Overloading `outputs` with temporary-only values.
-- Treating `form` as an auth-only step (prefer `api_key` when intent is credential authentication).
-- Using unsupported `use` step names.
-- Mixing template-layer logic into flow (flow fetches/parses; SDUI renders).
-
-## 10. Authoring Checklist
-
-- [ ] Step `id` and `use` are present for every step.
-- [ ] Sensitive values map to `secrets` only.
-- [ ] UI-facing fields map to `outputs`.
-- [ ] Temporary-only fields stay in `context`.
-- [ ] OAuth references use `oauth_secrets.*` dotted paths.
-- [ ] Blocking steps are idempotent/resume-safe.

@@ -46,7 +46,7 @@
         "startMenuFolder": "Glanceus",
         "installerIcon": "icons/icon.ico",
         "displayLanguageSelector": false,
-        "shortcuts": ["startMenu", "desktop"]
+        "installMode": "currentUser"
       }
     },
     "macOS": {

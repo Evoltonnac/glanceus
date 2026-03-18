@@ -132,6 +132,9 @@ export default function SettingsPage() {
     const [openingLogFolder, setOpeningLogFolder] = useState(false);
     const [runtimePortInfo, setRuntimePortInfo] =
         useState<RuntimePortInfo | null>(null);
+    const [appVersion, setAppVersion] = useState(
+        import.meta.env.VITE_APP_VERSION,
+    );
     const { theme, setTheme } = useTheme();
     const { t, setLocale } = useI18n();
     const refreshIntervalOptions: Array<{ value: number; label: string }> = [
@@ -194,6 +197,27 @@ export default function SettingsPage() {
                 }
             })
             .catch(console.error);
+    }, [tauriRuntime]);
+
+    useEffect(() => {
+        if (!tauriRuntime) return;
+
+        let active = true;
+        (async () => {
+            try {
+                const { getVersion } = await import("@tauri-apps/api/app");
+                const runtimeVersion = await getVersion();
+                if (active && runtimeVersion) {
+                    setAppVersion(runtimeVersion);
+                }
+            } catch (error) {
+                console.warn("Failed to load runtime app version:", error);
+            }
+        })();
+
+        return () => {
+            active = false;
+        };
     }, [tauriRuntime]);
 
     // Sync SWR data to state
@@ -353,7 +377,6 @@ export default function SettingsPage() {
         runtimePortInfo?.web_mode_port != null
             ? String(runtimePortInfo.web_mode_port)
             : currentPagePort;
-    const appVersion = "0.1.0"; // Consider fetching from Tauri API in the future
 
     return (
         <TooltipProvider>

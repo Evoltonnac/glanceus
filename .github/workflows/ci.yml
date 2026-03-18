@@ -208,3 +208,23 @@ jobs:
                   echo "NSIS path: $NSIS_PATH"
 
                   gh release upload "${{ needs.create-release.outputs.tag }}" "$NSIS_PATH" --clobber --repo "${{ github.repository }}"
+
+            - name: Upload Updater Manifest
+              if: matrix.platform == 'macos-15'
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  BUNDLE_DIR="ui-react/src-tauri/target/${{ matrix.rust_target }}/release/bundle"
+                  if [[ ! -d "$BUNDLE_DIR" ]]; then
+                    echo "Missing release bundle directory: $BUNDLE_DIR"
+                    exit 1
+                  fi
+
+                  LATEST_JSON_PATH=$(find "$BUNDLE_DIR" -name "latest.json" -type f -print -quit)
+                  if [[ -z "$LATEST_JSON_PATH" ]]; then
+                    echo "Missing updater manifest latest.json under $BUNDLE_DIR"
+                    exit 1
+                  fi
+                  echo "latest.json path: $LATEST_JSON_PATH"
+
+                  gh release upload "${{ needs.create-release.outputs.tag }}" "$LATEST_JSON_PATH#latest.json" --clobber --repo "${{ github.repository }}"

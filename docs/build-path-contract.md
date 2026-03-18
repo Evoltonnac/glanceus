@@ -90,6 +90,7 @@ The GitHub Actions release job is defined in `.github/workflows/ci.yml` as `rele
   - `windows-latest` -> `x86_64-pc-windows-msvc` -> `--bundles nsis`
 - Prebuild policy: run `bash scripts/build.sh --prepare-only` with `SKIP_TAURI_BUILD=1` before `tauri-action`, so sidecar archives are staged under `ui-react/src-tauri/binaries/`.
 - Updater policy: `createUpdaterArtifacts` is `true`; updater metadata/artifacts are generated and signed for release distribution.
+- Release upload policy: upload `latest.json` from `ui-react/src-tauri/target/<target>/release/bundle/**/latest.json` as the `latest.json` release asset.
 - Signing inputs: set `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` in GitHub repository secrets before running `release-tauri`.
 
 ## Script and npm Command Audit (2026-03-09)

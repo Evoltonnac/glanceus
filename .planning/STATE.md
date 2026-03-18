@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: "**Phase 02 Complete** — All plans completed (2026-03-16)"
-last_updated: "2026-03-18T02:30:00Z"
-last_activity: "2026-03-18 - Completed quick task 260318-eax: Breaking change: remove master_key from settings API/storage, use keyring-only MasterKeyProvider with backend+frontend+tests updates"
+last_updated: "2026-03-18T13:50:41Z"
+last_activity: "2026-03-18 - Completed quick task 260318-u6b: 优化两个交互问题：Dashboard 轮询启动即请求；集成 default_refresh_interval_minutes 支持 120 分钟"
 progress:
   total_phases: 2
   completed_phases: 2
@@ -29,7 +29,8 @@ Phase 2 delivered standardized error envelopes, EN/ZH i18n foundation, and final
 ## Session Continuity
 
 Last session: 2026-03-15T16:21:25Z
-Last activity: 2026-03-18 - Completed quick task 260318-eax: Breaking change: remove master_key from settings API/storage, use keyring-only MasterKeyProvider with backend+frontend+tests updates
+Last activity: 2026-03-18 - Completed quick task 260318-u6b: 优化两个交互问题：Dashboard 轮询启动即请求；集成 default_refresh_interval_minutes 支持 120 分钟
+- 2026-03-18: Completed quick task `260318-u6b`; added immediate Dashboard polling request on start and fixed integration-level refresh interval to honor custom non-negative minutes (for example, 120).
 - 2026-03-18: Completed quick task `260318-eax`; removed plaintext master_key settings/API/UI paths and switched encryption to keyring-only MasterKeyProvider with capability checks.
 - 2026-03-17: Completed quick task `260317-uyq`; added backend timeout-specific error classification (`runtime.network_timeout`), regression tests, and EN/ZH i18n error copy.
 - 2026-03-16: Completed quick task `260317-0uf`; enabled Tauri updater detection, generated local updater signing keys, and wired release signing secrets.
@@ -72,6 +73,7 @@ Last activity: 2026-03-18 - Completed quick task 260318-eax: Breaking change: re
 | 260317-0uf | 开启tauri更新检测，包括创建密钥 | 2026-03-16 | 5e4f61e | [260317-0uf-tauri](./milestones/v1.0-quick/260317-0uf-tauri/) |
 | 260317-uyq | 处理网络超时错误码：后端新增专用异常并补齐前端i18n映射 | 2026-03-17 | 9769aa1 | [260317-uyq-i18n](./milestones/v1.0-quick/260317-uyq-i18n/) |
 | 260318-eax | Breaking change: remove master_key from settings API/storage, use keyring-only MasterKeyProvider with backend+frontend+tests updates | 2026-03-18 | c283103 | [260318-eax-breaking-change-remove-master-key-from-s](./milestones/v1.0-quick/260318-eax-breaking-change-remove-master-key-from-s/) |
+| 260318-u6b | 优化两个交互问题：Dashboard 轮询启动即请求；集成 default_refresh_interval_minutes 支持 120 分钟 | 2026-03-18 | f1090fe | [260318-u6b-dashboard-sources-default-refresh-interv](./quick/260318-u6b-dashboard-sources-default-refresh-interv/) |
 
 ## Pending Todos
 - [ ] [2026-03-10] global-state-chat-sidebar (Area: architecture, ui)

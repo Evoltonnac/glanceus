@@ -7,7 +7,8 @@ from pydantic import BaseModel, Field, field_validator
 
 from core.refresh_policy import (
     DEFAULT_GLOBAL_REFRESH_INTERVAL_MINUTES,
-    REFRESH_INTERVAL_OPTIONS_MINUTES,
+    MAX_REFRESH_INTERVAL_MINUTES,
+    MIN_REFRESH_INTERVAL_MINUTES,
     normalize_refresh_interval_minutes,
 )
 
@@ -38,8 +39,10 @@ class SystemSettings(BaseModel):
     def _validate_refresh_interval_minutes(cls, value):
         normalized = normalize_refresh_interval_minutes(value)
         if normalized is None:
-            options = ", ".join(str(option) for option in REFRESH_INTERVAL_OPTIONS_MINUTES)
-            raise ValueError(f"refresh_interval_minutes must be one of: {options}")
+            raise ValueError(
+                "refresh_interval_minutes must be 0 (disabled) or between "
+                f"{MIN_REFRESH_INTERVAL_MINUTES} and {MAX_REFRESH_INTERVAL_MINUTES} minutes",
+            )
         return normalized
 
 

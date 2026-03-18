@@ -157,3 +157,41 @@ def test_tick_uses_source_then_integration_then_global_priority():
     asyncio.run(scheduler.run_tick_once())
 
     assert scheduler._queued_ids == {"integration-default", "global-default"}
+
+
+def test_tick_supports_custom_integration_interval_minutes():
+    now = time.time()
+    sources = [
+        SimpleNamespace(
+            id="integration-custom-due",
+            integration_id="integration-custom",
+            config={},
+        ),
+        SimpleNamespace(
+            id="integration-custom-not-due",
+            integration_id="integration-custom",
+            config={},
+        ),
+    ]
+    latest = [
+        {
+            "source_id": "integration-custom-due",
+            "status": "active",
+            "last_success_at": now - 130 * 60,
+        },
+        {
+            "source_id": "integration-custom-not-due",
+            "status": "active",
+            "last_success_at": now - 100 * 60,
+        },
+    ]
+    scheduler = _build_scheduler(
+        latest_records=latest,
+        sources=sources,
+        integration_defaults={"integration-custom": 120},
+        global_interval=30,
+    )
+
+    asyncio.run(scheduler.run_tick_once())
+
+    assert scheduler._queued_ids == {"integration-custom-due"}

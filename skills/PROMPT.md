@@ -38,6 +38,10 @@ For `config/integrations/*.yaml`, valid top-level fields are:
 - optional `flow`
 - optional `templates` (defaults to empty list)
 
+Refresh interval behavior reference:
+- Source/global runtime intervals support `0` (disabled) or `1..10080` minutes.
+- UI preset options (`off`, `5m`, `30m`, `1h`, `1d`) are convenience choices, not the full runtime range.
+
 Do not author `id` inline for integration files. Runtime `id` is derived from filename:
 - `config/integrations/openai.yaml` -> `id = openai`
 - If inline `id` exists, it is ignored and replaced by filename id

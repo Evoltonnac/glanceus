@@ -64,7 +64,8 @@ const DEFAULT_SETTINGS: SystemSettings = {
 const SCRAPER_TIMEOUT_MIN_SECONDS = 1;
 const SCRAPER_TIMEOUT_MAX_SECONDS = 300;
 const DEFAULT_REFRESH_INTERVAL_MINUTES = 30;
-const REFRESH_INTERVAL_OPTIONS_MINUTES = [0, 5, 30, 60, 1440] as const;
+const MIN_REFRESH_INTERVAL_MINUTES = 1;
+const MAX_REFRESH_INTERVAL_MINUTES = 7 * 24 * 60;
 const BUG_REPORT_URL =
     "https://github.com/Evoltonnac/glanceus/issues/new/choose";
 const RELEASES_URL = "https://github.com/Evoltonnac/glanceus/releases";
@@ -89,11 +90,16 @@ function normalizeRefreshIntervalMinutes(value: number | undefined): number {
         return DEFAULT_REFRESH_INTERVAL_MINUTES;
     }
     const normalized = Math.floor(value);
-    return REFRESH_INTERVAL_OPTIONS_MINUTES.includes(
-        normalized as (typeof REFRESH_INTERVAL_OPTIONS_MINUTES)[number],
-    )
-        ? normalized
-        : DEFAULT_REFRESH_INTERVAL_MINUTES;
+    if (normalized === 0) {
+        return 0;
+    }
+    if (
+        normalized < MIN_REFRESH_INTERVAL_MINUTES ||
+        normalized > MAX_REFRESH_INTERVAL_MINUTES
+    ) {
+        return DEFAULT_REFRESH_INTERVAL_MINUTES;
+    }
+    return normalized;
 }
 
 function resolvePortFromUrl(rawUrl: string): string | null {

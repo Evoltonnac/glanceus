@@ -166,6 +166,39 @@ def test_list_sources_resolves_refresh_interval_priority():
     assert entries["src-global"]["last_success_at"] == 1200.0
 
 
+def test_list_sources_accepts_custom_integration_refresh_interval():
+    integrations = {
+        "with-custom-default": IntegrationConfig(
+            id="with-custom-default",
+            flow=[],
+            default_refresh_interval_minutes=120,
+        ),
+    }
+    sources = [
+        StoredSource(
+            id="src-custom-integration",
+            integration_id="with-custom-default",
+            name="src-custom-integration",
+            config={},
+            vars={},
+        ),
+    ]
+    client = _build_client(
+        sources=sources,
+        integrations=integrations,
+        latest_by_source={},
+        settings=SystemSettings(refresh_interval_minutes=30),
+    )
+
+    payload = client.get("/api/sources")
+    assert payload.status_code == 200
+
+    entry = payload.json()[0]
+    assert entry["integration_refresh_interval_minutes"] == 120
+    assert entry["effective_refresh_interval_minutes"] == 120
+    assert entry["effective_refresh_interval_source"] == "integration"
+
+
 def test_update_source_refresh_interval_endpoint():
     source = StoredSource(
         id="source-1",
@@ -222,9 +255,30 @@ def test_update_source_refresh_interval_rejects_invalid_value():
 
     response = client.put(
         "/api/sources/source-1/refresh-interval",
-        json={"interval_minutes": 7},
+        json={"interval_minutes": 10081},
     )
     assert response.status_code == 400
+
+
+def test_update_source_refresh_interval_accepts_custom_value():
+    source = StoredSource(
+        id="source-1",
+        integration_id="demo",
+        name="source-1",
+        config={},
+        vars={},
+    )
+    client = _build_client(
+        sources=[source],
+        integrations={"demo": IntegrationConfig(id="demo", flow=[])},
+    )
+
+    response = client.put(
+        "/api/sources/source-1/refresh-interval",
+        json={"interval_minutes": 7},
+    )
+    assert response.status_code == 200
+    assert response.json()["refresh_interval_minutes"] == 7
 
 
 def test_list_sources_includes_persisted_error_code():

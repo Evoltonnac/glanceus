@@ -385,6 +385,7 @@ export default function Dashboard() {
     const viewConfig: StoredView | null =
         swrViews.length > 0 ? swrViews[0] : storeViewConfig;
     const isDataLoading = swrLoading && storeSources.length === 0;
+    const pollingDataMapRef = useRef<Record<string, DataResponse>>(dataMap);
 
     // Density settings
     const { settings } = useSettings();
@@ -408,6 +409,10 @@ export default function Dashboard() {
         setSources(swrSources);
         setStoreDataMap(swrDataMap);
     }, [setSources, setStoreDataMap, swrDataMap, swrLoading, swrSources]);
+
+    useEffect(() => {
+        pollingDataMapRef.current = dataMap;
+    }, [dataMap]);
 
     const { sidebarCollapsed, toggleSidebar } = useSidebar();
     const {
@@ -648,18 +653,26 @@ export default function Dashboard() {
         gs.cellHeight(newGridRowHeight);
     }, [currentDensity]);
 
-    // Poll for status updates continuously when page is visible
+    // Poll for status updates continuously when page is visible.
+    // Trigger one request immediately when polling starts so dashboard data does not wait for the first interval tick.
     useEffect(() => {
-        const interval = setInterval(async () => {
-            // Skip API calls when page is hidden to save resources
-            if (document.hidden) return;
+        let stopped = false;
 
+        const pollSources = async () => {
+            if (stopped || document.hidden) {
+                return;
+            }
             try {
                 const updatedSources = await api.getSources();
+                if (stopped) {
+                    return;
+                }
+
+                const cachedDataMap = pollingDataMapRef.current;
 
                 // Optimization: fetch details only for sources with changed updated_at
                 const needsUpdate = (source: SourceSummary): boolean => {
-                    const cachedData = dataMap[source.id];
+                    const cachedData = cachedDataMap[source.id];
                     if (!cachedData) return true;
                     if (!source.updated_at) return true;
                     if (!cachedData.updated_at) return true;
@@ -688,8 +701,8 @@ export default function Dashboard() {
 
                 // Use cached data for sources that do not need updates
                 sourcesNeedingNoFetch.forEach((s) => {
-                    if (dataMap[s.id]) {
-                        newDataMap[s.id] = dataMap[s.id];
+                    if (cachedDataMap[s.id]) {
+                        newDataMap[s.id] = cachedDataMap[s.id];
                     }
                 });
 
@@ -705,10 +718,18 @@ export default function Dashboard() {
             } catch (error) {
                 console.error("Dashboard polling failed:", error);
             }
+        };
+
+        void pollSources();
+        const interval = window.setInterval(() => {
+            void pollSources();
         }, 3000);
 
-        return () => clearInterval(interval);
-    }, [sources, dataMap]);
+        return () => {
+            stopped = true;
+            window.clearInterval(interval);
+        };
+    }, []);
 
     const runGlobalRefresh = useCallback(async () => {
         const currentActiveScraper = useStore.getState().activeScraper;

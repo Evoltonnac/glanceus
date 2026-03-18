@@ -18,7 +18,9 @@ from core.master_key_provider import MasterKeyUnavailableError
 from core.source_state import SourceStatus, InteractionType, InteractionRequest
 from core.refresh_policy import (
     DEFAULT_GLOBAL_REFRESH_INTERVAL_MINUTES,
-    REFRESH_INTERVAL_OPTIONS_MINUTES,
+    MAX_REFRESH_INTERVAL_MINUTES,
+    MIN_REFRESH_INTERVAL_MINUTES,
+    normalize_integration_refresh_interval_minutes,
     normalize_refresh_interval_minutes,
     resolve_refresh_interval_minutes,
 )
@@ -287,7 +289,7 @@ async def list_sources() -> list[dict]:
                 elif step.use.value == "api_key":
                     summary["auth_type"] = "api_key"
                     break
-        integration_refresh_interval = normalize_refresh_interval_minutes(
+        integration_refresh_interval = normalize_integration_refresh_interval_minutes(
             getattr(integration, "default_refresh_interval_minutes", None)
             if integration
             else None,
@@ -1222,8 +1224,11 @@ async def update_source_refresh_interval(
 
     normalized_interval = normalize_refresh_interval_minutes(request.interval_minutes)
     if request.interval_minutes is not None and normalized_interval is None:
-        options = ", ".join(str(option) for option in REFRESH_INTERVAL_OPTIONS_MINUTES)
-        raise HTTPException(400, f"Invalid refresh interval. Supported values: {options}, or null")
+        raise HTTPException(
+            400,
+            "Invalid refresh interval. Supported values: null, 0 (disabled), or "
+            f"{MIN_REFRESH_INTERVAL_MINUTES}-{MAX_REFRESH_INTERVAL_MINUTES} minutes",
+        )
 
     config = dict(stored.config) if isinstance(stored.config, dict) else {}
     if normalized_interval is None:

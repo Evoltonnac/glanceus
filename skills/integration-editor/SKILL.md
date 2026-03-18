@@ -57,6 +57,10 @@ For `config/integrations/*.yaml`, use these top-level fields:
 - optional `flow`
 - optional `templates` (defaults to empty list)
 
+Refresh interval behavior reference:
+- Source/global runtime intervals support `0` (disabled) or `1..10080` minutes.
+- UI preset options (`off`, `5m`, `30m`, `1h`, `1d`) are convenience choices, not the full runtime range.
+
 Do not author `id` in integration YAML files. Runtime `id` comes from the filename:
 - `config/integrations/github.yaml` -> `id = github`
 - If inline `id` exists, it is ignored and replaced by filename id

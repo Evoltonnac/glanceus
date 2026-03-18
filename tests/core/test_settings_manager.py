@@ -53,13 +53,26 @@ def test_load_settings_invalid_language_falls_back_to_en(tmp_path):
 def test_load_settings_invalid_refresh_interval_falls_back_to_default(tmp_path):
     manager = SettingsManager(settings_dir=tmp_path)
     manager.settings_file.write_text(
-        '{"refresh_interval_minutes": 7, "encryption_enabled": true}',
+        '{"refresh_interval_minutes": 10081, "encryption_enabled": true}',
         encoding="utf-8",
     )
 
     loaded = manager.load_settings()
 
     assert loaded.refresh_interval_minutes == 30
+    assert loaded.encryption_enabled is True
+
+
+def test_load_settings_custom_refresh_interval_is_preserved(tmp_path):
+    manager = SettingsManager(settings_dir=tmp_path)
+    manager.settings_file.write_text(
+        '{"refresh_interval_minutes": 7, "encryption_enabled": true}',
+        encoding="utf-8",
+    )
+
+    loaded = manager.load_settings()
+
+    assert loaded.refresh_interval_minutes == 7
     assert loaded.encryption_enabled is True
 
 

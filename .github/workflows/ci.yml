@@ -108,7 +108,7 @@ jobs:
                 include:
                     - platform: macos-15
                       rust_target: aarch64-apple-darwin
-                      tauri_args: --bundles app,dmg,updater --target aarch64-apple-darwin
+                      tauri_args: --bundles app,dmg --target aarch64-apple-darwin
                       app_name: Glanceus
                     - platform: macos-15-intel
                       rust_target: x86_64-apple-darwin
@@ -220,10 +220,83 @@ jobs:
                     exit 1
                   fi
 
+                  UPDATER_ARCHIVE_PATH=$(find "$BUNDLE_DIR" -name "*.app.tar.gz" -type f -print -quit)
+                  if [[ -z "$UPDATER_ARCHIVE_PATH" ]]; then
+                    echo "Missing updater archive (*.app.tar.gz) under $BUNDLE_DIR"
+                    exit 1
+                  fi
+                  echo "updater archive path: $UPDATER_ARCHIVE_PATH"
+
+                  UPDATER_SIG_PATH="${UPDATER_ARCHIVE_PATH}.sig"
+                  if [[ ! -f "$UPDATER_SIG_PATH" ]]; then
+                    echo "Missing updater signature: $UPDATER_SIG_PATH"
+                    exit 1
+                  fi
+                  echo "updater signature path: $UPDATER_SIG_PATH"
+
+                  gh release upload "${{ needs.create-release.outputs.tag }}" "$UPDATER_ARCHIVE_PATH" "$UPDATER_SIG_PATH" --clobber --repo "${{ github.repository }}"
+
                   LATEST_JSON_PATH=$(find "$BUNDLE_DIR" -name "latest.json" -type f -print -quit)
                   if [[ -z "$LATEST_JSON_PATH" ]]; then
-                    echo "Missing updater manifest latest.json under $BUNDLE_DIR"
-                    exit 1
+                    GENERATED_LATEST_JSON_PATH="$RUNNER_TEMP/latest.json"
+                    UPDATER_ARCHIVE_BASENAME=$(basename "$UPDATER_ARCHIVE_PATH")
+                    UPDATER_TARGET="${{ matrix.rust_target }}"
+                    RELEASE_VERSION="${{ needs.create-release.outputs.version }}"
+                    RELEASE_TAG="${{ needs.create-release.outputs.tag }}"
+                    RELEASE_REPOSITORY="${{ github.repository }}"
+                    export GENERATED_LATEST_JSON_PATH
+                    export UPDATER_ARCHIVE_BASENAME
+                    export UPDATER_TARGET
+                    export RELEASE_VERSION
+                    export RELEASE_TAG
+                    export RELEASE_REPOSITORY
+                    export UPDATER_SIG_PATH
+
+                  python - <<'PY'
+                  import json
+                  import os
+                  from datetime import datetime, timezone
+
+                  target_to_platform = {
+                      "aarch64-apple-darwin": "darwin-aarch64",
+                      "x86_64-apple-darwin": "darwin-x86_64",
+                      "x86_64-pc-windows-msvc": "windows-x86_64",
+                      "aarch64-pc-windows-msvc": "windows-aarch64",
+                      "x86_64-unknown-linux-gnu": "linux-x86_64",
+                      "aarch64-unknown-linux-gnu": "linux-aarch64",
+                  }
+
+                  target = os.environ["UPDATER_TARGET"]
+                  platform = target_to_platform.get(target)
+                  if not platform:
+                      raise SystemExit(f"Unsupported updater target for manifest generation: {target}")
+
+                  version = os.environ["RELEASE_VERSION"]
+                  tag = os.environ["RELEASE_TAG"]
+                  repo = os.environ["RELEASE_REPOSITORY"]
+                  archive_name = os.environ["UPDATER_ARCHIVE_BASENAME"]
+                  sig_path = os.environ["UPDATER_SIG_PATH"]
+                  with open(sig_path, "r", encoding="utf-8") as f:
+                      signature = f.read().strip()
+
+                  latest_json = {
+                      "version": version,
+                      "notes": f"Automated release for Glanceus v{version}.",
+                      "pub_date": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+                      "platforms": {
+                          platform: {
+                              "signature": signature,
+                              "url": f"https://github.com/{repo}/releases/download/{tag}/{archive_name}",
+                          }
+                      },
+                  }
+
+                  with open(os.environ["GENERATED_LATEST_JSON_PATH"], "w", encoding="utf-8") as f:
+                      json.dump(latest_json, f, indent=2, ensure_ascii=False)
+                      f.write("\n")
+                  PY
+                    LATEST_JSON_PATH="$GENERATED_LATEST_JSON_PATH"
+                    echo "Generated updater manifest: $LATEST_JSON_PATH"
                   fi
                   echo "latest.json path: $LATEST_JSON_PATH"
 

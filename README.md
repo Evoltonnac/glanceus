@@ -84,6 +84,8 @@ npm --prefix ui-react install
   - Windows x64: `windows-latest` / `x86_64-pc-windows-msvc` / `.exe` (NSIS)
 - Prebuild stage runs `bash scripts/build.sh --prepare-only` to stage sidecar archives before Tauri bundling.
 - In-app updater artifacts are enabled (`createUpdaterArtifacts: true`) and signed during release build.
+- Release upload includes updater archive + signature (`*.app.tar.gz`, `*.app.tar.gz.sig`) for updater downloads.
+- `latest.json` is uploaded as updater metadata; if Tauri does not emit it directly, CI generates it from the produced updater archive/signature.
 - Required GitHub repository secrets for signed updater artifacts:
   - `TAURI_SIGNING_PRIVATE_KEY`
   - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`

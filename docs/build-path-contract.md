@@ -85,12 +85,13 @@ The GitHub Actions release job is defined in `.github/workflows/ci.yml` as `rele
 
 - Trigger policy: manual run only (`workflow_dispatch`).
 - Matrix policy:
-  - `macos-15` -> `aarch64-apple-darwin` -> `--bundles dmg`
-  - `macos-15-intel` -> `x86_64-apple-darwin` -> `--bundles dmg`
+  - `macos-15` -> `aarch64-apple-darwin` -> `--bundles app,dmg`
+  - `macos-15-intel` -> `x86_64-apple-darwin` -> `--bundles app,dmg`
   - `windows-latest` -> `x86_64-pc-windows-msvc` -> `--bundles nsis`
-- Prebuild policy: run `bash scripts/build.sh --prepare-only` with `SKIP_TAURI_BUILD=1` before `tauri-action`, so sidecar archives are staged under `ui-react/src-tauri/binaries/`.
-- Updater policy: `createUpdaterArtifacts` is `true`; updater metadata/artifacts are generated and signed for release distribution.
-- Release upload policy: upload `latest.json` from `ui-react/src-tauri/target/<target>/release/bundle/**/latest.json` as the `latest.json` release asset.
+- Prebuild policy: run `bash scripts/build.sh --prepare-only` with `SKIP_TAURI_BUILD=1` before `npm run tauri build`, so sidecar archives are staged under `ui-react/src-tauri/binaries/`.
+- Updater policy: `createUpdaterArtifacts` is `true`; updater archives and signatures are generated and signed for release distribution.
+- Release upload policy: upload updater archive/signature from `ui-react/src-tauri/target/<target>/release/bundle/**/*.app.tar.gz(.sig)`.
+- Manifest policy: upload `latest.json` as release asset `latest.json`; if Tauri does not output `latest.json`, CI generates it from the produced updater archive/signature and target mapping.
 - Signing inputs: set `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` in GitHub repository secrets before running `release-tauri`.
 
 ## Script and npm Command Audit (2026-03-09)

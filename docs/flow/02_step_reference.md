@@ -261,6 +261,9 @@ Runtime behavior:
 - Script local environment is seeded by merged `context` and mapped previous-step values.
 - Only variables referenced by `outputs` and `context` mappings are emitted.
 - `print()` and stderr streams are captured into runtime logs.
+- Script runtime enforces `script_timeout_seconds` from system settings (default `10` seconds) and fails with `script_timeout_exceeded` when exceeded.
+- Optional lightweight sandbox mode (`script_sandbox_enabled`, **Beta**) is disabled by default for compatibility; when enabled it blocks high-risk builtins/imports and fails with `script_sandbox_blocked`.
+- Sandbox mode intentionally favors compatibility over full isolation; integrations that need blocked capabilities should keep sandbox disabled.
 
 Typical mapping:
 

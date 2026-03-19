@@ -28,6 +28,10 @@ class SystemSettings(BaseModel):
     # Timeout for a single webview scraper task in seconds.
     # Timed-out tasks are skipped so queue can continue.
     scraper_timeout_seconds: int = Field(default=10, ge=1, le=300)
+    # Opt-in Beta guard for script step execution risk.
+    script_sandbox_enabled: bool = False
+    # Script step timeout in seconds.
+    script_timeout_seconds: int = Field(default=10, ge=1, le=120)
     theme: str = "system" # can be 'light', 'dark', or 'system'
     # UI density: 'compact', 'normal', or 'relaxed'
     density: str = "normal"
@@ -88,6 +92,17 @@ class SettingsManager:
                     data["refresh_interval_minutes"] = normalized_refresh
                 if data.get("language") not in {"en", "zh"}:
                     data["language"] = "en"
+                raw_script_timeout = data.get("script_timeout_seconds")
+                if "script_timeout_seconds" not in data:
+                    data["script_timeout_seconds"] = 10
+                else:
+                    try:
+                        script_timeout = int(raw_script_timeout)
+                    except (TypeError, ValueError):
+                        script_timeout = 10
+                    if script_timeout < 1 or script_timeout > 120:
+                        script_timeout = 10
+                    data["script_timeout_seconds"] = script_timeout
                 settings = SystemSettings.model_validate(data)
                 if had_legacy_master_key:
                     # Strip deprecated plaintext master key from settings.json.

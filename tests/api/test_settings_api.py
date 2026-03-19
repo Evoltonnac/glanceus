@@ -145,3 +145,32 @@ def test_update_settings_runs_decrypt_migration_on_disable():
     assert response.status_code == 200
     assert response.json()["encryption_enabled"] is False
     assert secrets.calls == ["decrypt"]
+
+
+def test_get_settings_includes_script_sandbox_and_timeout_defaults():
+    settings_manager = _MockSettingsManager(SystemSettings())
+    client = _build_client(settings_manager)
+
+    response = client.get("/api/settings")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["script_sandbox_enabled"] is False
+    assert payload["script_timeout_seconds"] == 10
+
+
+def test_update_settings_persists_script_sandbox_and_timeout():
+    settings_manager = _MockSettingsManager(SystemSettings())
+    client = _build_client(settings_manager)
+
+    payload = settings_manager.load_settings().model_dump()
+    payload["script_sandbox_enabled"] = True
+    payload["script_timeout_seconds"] = 25
+    response = client.put("/api/settings", json=payload)
+
+    assert response.status_code == 200
+    updated = response.json()
+    assert updated["script_sandbox_enabled"] is True
+    assert updated["script_timeout_seconds"] == 25
+    assert settings_manager.saved[-1].script_sandbox_enabled is True
+    assert settings_manager.saved[-1].script_timeout_seconds == 25

@@ -663,6 +663,8 @@ export interface SystemSettings {
   debug_logging_enabled: boolean;
   refresh_interval_minutes: number;
   scraper_timeout_seconds: number;
+  script_sandbox_enabled: boolean;
+  script_timeout_seconds: number;
   theme?: string;
   density?: string;
   language?: "en" | "zh";

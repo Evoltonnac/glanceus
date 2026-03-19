@@ -1,16 +1,18 @@
 import { useEffect, useState, useRef } from "react";
 import { api } from "../../api/client";
+import { useI18n } from "../../i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 
-const OAUTH_PENDING_SOURCE_ID_KEY = "oauth_pending_source_id";
-
 export function OAuthCallback() {
+  const { t } = useI18n();
   const [status, setStatus] = useState<"loading" | "success" | "error">(
     "loading",
   );
-  const [message, setMessage] = useState("Authenticating...");
+  const [message, setMessage] = useState(() =>
+    t("oauth_callback.status.authenticating"),
+  );
 
   // Prevent StrictMode double invocation
   const callbackRef = useRef(false);
@@ -26,48 +28,64 @@ export function OAuthCallback() {
       const hashPayload = Object.fromEntries(hash.entries());
       const code = params.get("code");
       const error = params.get("error");
+      const queryState = params.get("state");
+      const interactionType = params.get("interaction_type")?.trim().toLowerCase();
       const accessToken = hash.get("access_token");
       const tokenType = hash.get("token_type");
       const expiresIn = hash.get("expires_in");
       const scope = hash.get("scope");
       const hashState = hash.get("state");
-      const pendingSourceId = (() => {
-        try {
-          return window.localStorage.getItem(OAUTH_PENDING_SOURCE_ID_KEY) || undefined;
-        } catch (_e) {
-          return undefined;
-        }
-      })();
+      const hasQueryPayload = Object.keys(queryPayload).length > 0;
+      const hasHashPayload = Object.keys(hashPayload).length > 0;
+      const isCodeExchange =
+        interactionType === "oauth_code_exchange" ||
+        (!!code || (hasQueryPayload && !hasHashPayload));
+      const hasCodeExchangeCredential =
+        (!!code && code.trim().length > 0) ||
+        Object.entries(queryPayload).some(([key, value]) => {
+          if (key === "state" || key === "interaction_type") {
+            return false;
+          }
+          return typeof value === "string" && value.trim().length > 0;
+        });
 
       if (error) {
         setStatus("error");
-        setMessage(`Authorization failed: ${error}`);
+        setMessage(
+          t("oauth_callback.error.authorization_failed", { reason: error }),
+        );
+        return;
+      }
+
+      if (!hasQueryPayload && !hasHashPayload) {
+        setStatus("error");
+        setMessage(t("oauth_callback.error.missing_payload"));
         return;
       }
 
       if (
-        !code &&
-        Object.keys(queryPayload).length === 0 &&
-        Object.keys(hashPayload).length === 0
+        isCodeExchange &&
+        (!queryState || !queryState.trim() || !hasCodeExchangeCredential)
       ) {
         setStatus("error");
-        setMessage("Missing authorization payload");
+        setMessage(t("oauth_callback.error.missing_code_exchange_params"));
         return;
       }
 
       try {
         // Determine redirect_uri (current URL without query)
         const redirectUri = window.location.origin + window.location.pathname;
-        const payload =
-          code || Object.keys(queryPayload).length > 0
+        const payload = isCodeExchange
             ? {
                 type: "oauth_code_exchange",
+                interaction_type: "oauth_code_exchange",
                 ...queryPayload,
                 code: code ?? undefined,
                 redirect_uri: redirectUri,
               }
             : {
                 type: "oauth_implicit_token",
+                interaction_type: "oauth_implicit_token",
                 oauth_payload: hashPayload,
                 access_token: accessToken ?? undefined,
                 token_type: tokenType ?? "Bearer",
@@ -77,20 +95,13 @@ export function OAuthCallback() {
               };
 
         const result = await api.oauthCallbackInteract(payload);
-        const sourceId = result.source_id || pendingSourceId;
+        const sourceId = result.source_id;
         if (!sourceId) {
-          throw new Error("OAuth callback did not return source ID");
-        }
-        if (pendingSourceId) {
-          try {
-            window.localStorage.removeItem(OAUTH_PENDING_SOURCE_ID_KEY);
-          } catch (_e) {
-            // Ignore localStorage errors.
-          }
+          throw new Error(t("oauth_callback.error.missing_source_id"));
         }
 
         setStatus("success");
-        setMessage("Authorization successful! You can close this window.");
+        setMessage(t("oauth_callback.status.success"));
 
         // Notify parent window via BroadcastChannel
         const channel = new BroadcastChannel("oauth_channel");
@@ -103,7 +114,7 @@ export function OAuthCallback() {
         }, 2000);
       } catch (err: any) {
         setStatus("error");
-        setMessage(err.message || "Failed to exchange token");
+        setMessage(err?.message || t("oauth_callback.error.exchange_failed"));
       }
     };
 
@@ -124,7 +135,7 @@ export function OAuthCallback() {
               <CheckCircle className="h-6 w-6 text-green-500" />
             )}
             {status === "error" && <XCircle className="h-6 w-6 text-red-500" />}
-            OAuth Authorization
+            {t("oauth_callback.title")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -135,7 +146,7 @@ export function OAuthCallback() {
               onClick={() => window.close()}
               variant={status === "error" ? "destructive" : "default"}
             >
-              Close Window
+              {t("oauth_callback.action.close_window")}
             </Button>
           )}
         </CardContent>

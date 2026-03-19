@@ -251,6 +251,16 @@ const zhMessages = {
   "add_widget.cancel": "取消",
   "add_widget.confirm": "添加到视图",
 
+  "oauth_callback.title": "OAuth 授权",
+  "oauth_callback.status.authenticating": "正在验证授权...",
+  "oauth_callback.status.success": "授权成功！你可以关闭此窗口。",
+  "oauth_callback.error.authorization_failed": "授权失败：{reason}",
+  "oauth_callback.error.missing_payload": "缺少授权回调参数。",
+  "oauth_callback.error.missing_code_exchange_params": "OAuth 授权码交换缺少必要回调参数。",
+  "oauth_callback.error.missing_source_id": "OAuth 回调未返回可验证的数据源。",
+  "oauth_callback.error.exchange_failed": "令牌交换失败。",
+  "oauth_callback.action.close_window": "关闭窗口",
+
   "flow.dialog.close": "关闭",
   "flow.dialog.submit": "提交",
   "flow.dialog.submitting": "提交中...",

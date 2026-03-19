@@ -251,6 +251,16 @@ const enMessages = {
   "add_widget.cancel": "Cancel",
   "add_widget.confirm": "Add to Dashboard",
 
+  "oauth_callback.title": "OAuth Authorization",
+  "oauth_callback.status.authenticating": "Authenticating...",
+  "oauth_callback.status.success": "Authorization successful! You can close this window.",
+  "oauth_callback.error.authorization_failed": "Authorization failed: {reason}",
+  "oauth_callback.error.missing_payload": "Missing authorization payload.",
+  "oauth_callback.error.missing_code_exchange_params": "Missing required OAuth callback parameters for code exchange.",
+  "oauth_callback.error.missing_source_id": "OAuth callback did not return a validated source.",
+  "oauth_callback.error.exchange_failed": "Failed to exchange token.",
+  "oauth_callback.action.close_window": "Close Window",
+
   "flow.dialog.close": "Close",
   "flow.dialog.submit": "Submit",
   "flow.dialog.submitting": "Submitting...",

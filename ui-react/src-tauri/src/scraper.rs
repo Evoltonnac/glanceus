@@ -465,11 +465,17 @@ fn backend_post_json<TReq: Serialize, TResp: DeserializeOwned>(
     let body = serde_json::to_string(payload).map_err(|e| e.to_string())?;
     let mut stream = TcpStream::connect(("127.0.0.1", port))
         .map_err(|e| format!("failed to connect backend api {port}: {e}"))?;
-    let request = format!(
-        "POST {path} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-        body.len(),
-        body
+    let mut request = format!(
+        "POST {path} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n",
+        body.len()
     );
+    if let Some(internal_auth_token) = crate::get_internal_auth_token(app) {
+        request.push_str("X-Glanceus-Internal-Token: ");
+        request.push_str(&internal_auth_token);
+        request.push_str("\r\n");
+    }
+    request.push_str("\r\n");
+    request.push_str(&body);
     stream
         .write_all(request.as_bytes())
         .map_err(|e| format!("failed to write backend request: {e}"))?;

@@ -90,6 +90,7 @@ struct AppLifecycleState {
 struct RuntimeState {
     api_target_port: RwLock<u16>,
     web_mode_port: RwLock<Option<u16>>,
+    internal_auth_token: RwLock<Option<String>>,
     #[cfg(not(debug_assertions))]
     backend_child: Mutex<Option<Child>>,
 }
@@ -291,6 +292,107 @@ fn set_api_target_port(app: &tauri::AppHandle, port: u16) {
         if let Ok(mut guard) = state.api_target_port.write() {
             *guard = port;
         }
+    }
+}
+
+fn set_internal_auth_token(app: &tauri::AppHandle, token: Option<String>) {
+    if let Some(state) = app.try_state::<RuntimeState>() {
+        if let Ok(mut guard) = state.internal_auth_token.write() {
+            *guard = token;
+        }
+    }
+}
+
+pub(crate) fn get_internal_auth_token(app: &tauri::AppHandle) -> Option<String> {
+    let state = app.try_state::<RuntimeState>()?;
+    let guard = state.internal_auth_token.read().ok()?;
+    guard.clone()
+}
+
+fn sanitize_internal_auth_token(raw: &str) -> Option<String> {
+    let token = raw.trim();
+    if token.is_empty() || token.contains('\r') || token.contains('\n') {
+        return None;
+    }
+    Some(token.to_string())
+}
+
+#[cfg(not(debug_assertions))]
+fn hex_encode(bytes: &[u8]) -> String {
+    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+#[cfg(all(not(debug_assertions), unix))]
+fn fill_secure_random_bytes(bytes: &mut [u8]) -> bool {
+    fs::File::open("/dev/urandom")
+        .and_then(|mut file| file.read_exact(bytes))
+        .is_ok()
+}
+
+#[cfg(all(not(debug_assertions), target_os = "windows"))]
+fn fill_secure_random_bytes(bytes: &mut [u8]) -> bool {
+    use std::ffi::c_uint;
+
+    unsafe extern "C" {
+        fn rand_s(random_value: *mut c_uint) -> i32;
+    }
+
+    let mut offset = 0usize;
+    while offset < bytes.len() {
+        let mut chunk: c_uint = 0;
+        if unsafe { rand_s(&mut chunk as *mut c_uint) } != 0 {
+            return false;
+        }
+        for byte in chunk.to_le_bytes() {
+            if offset >= bytes.len() {
+                break;
+            }
+            bytes[offset] = byte;
+            offset += 1;
+        }
+    }
+    true
+}
+
+#[cfg(all(not(debug_assertions), not(any(unix, target_os = "windows"))))]
+fn fill_secure_random_bytes(_bytes: &mut [u8]) -> bool {
+    false
+}
+
+#[cfg(not(debug_assertions))]
+fn generate_runtime_internal_auth_token() -> String {
+    let mut bytes = [0_u8; 32];
+    if fill_secure_random_bytes(&mut bytes) {
+        return hex_encode(&bytes);
+    }
+
+    // Fallback for unexpected platform RNG failures.
+    let fallback = format!(
+        "{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|value| value.as_nanos())
+            .unwrap_or_default()
+    );
+    hex_encode(fallback.as_bytes())
+}
+
+fn resolve_internal_auth_token() -> Option<String> {
+    if let Ok(raw) = env::var("GLANCEUS_INTERNAL_TOKEN") {
+        if let Some(token) = sanitize_internal_auth_token(&raw) {
+            return Some(token);
+        }
+    }
+
+    #[cfg(not(debug_assertions))]
+    {
+        return Some(generate_runtime_internal_auth_token());
+    }
+
+    #[cfg(debug_assertions)]
+    {
+        None
     }
 }
 
@@ -501,6 +603,9 @@ fn spawn_backend_process(
             .current_dir(root);
     } else {
         command.current_dir(&bundle_dir);
+    }
+    if let Some(internal_auth_token) = get_internal_auth_token(app) {
+        command.env("GLANCEUS_INTERNAL_TOKEN", internal_auth_token);
     }
 
     #[cfg(target_os = "windows")]
@@ -1067,7 +1172,8 @@ fn create_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let app = tauri::Builder::default()
+    #[allow(unused_mut)]
+    let mut builder = tauri::Builder::default()
         .manage(AppLifecycleState::default())
         .manage(RuntimeState::default())
         .manage(scraper::ScraperState::default())
@@ -1090,10 +1196,18 @@ pub fn run() {
             get_runtime_port_info
         ])
         .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+        .plugin(tauri_plugin_updater::Builder::new().build());
+
+    // Only enable single instance plugin in release builds
+    // This allows dev mode to run multiple instances simultaneously
+    #[cfg(not(debug_assertions))]
+    {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             let _ = show_main_window(app, None);
-        }))
+        }));
+    }
+
+    let app = builder
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
             None,
@@ -1130,6 +1244,14 @@ pub fn run() {
             let debug_logging_enabled =
                 cfg!(debug_assertions) || read_debug_logging_enabled(data_root.as_ref());
             init_log_plugin(&app.handle(), debug_logging_enabled, &log_dir)?;
+            let internal_auth_token = resolve_internal_auth_token();
+            set_internal_auth_token(&app.handle(), internal_auth_token.clone());
+            #[cfg(debug_assertions)]
+            if internal_auth_token.is_none() {
+                log::warn!(
+                    "GLANCEUS_INTERNAL_TOKEN is not set in dev mode; internal scraper APIs may return 403 internal_auth_required."
+                );
+            }
 
             #[cfg(debug_assertions)]
             {

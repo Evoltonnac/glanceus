@@ -368,7 +368,10 @@ class Executor:
                         NetworkTimeoutError,
                         WebScraperBlockedError,
                     ),
-                ):
+                ) or getattr(step_error, "code", None) in {
+                    "script_timeout_exceeded",
+                    "script_sandbox_blocked",
+                }:
                     raise
                 logger.error(f"Step {step.id} failed: {step_error}")
                 flow_error = self._build_flow_step_error(

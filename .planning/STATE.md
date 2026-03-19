@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Security Audit Remediation
-status: planning
-last_updated: "2026-03-19T10:15:44Z"
-last_activity: 2026-03-19 — Completed 03-02 runtime boundary hardening (HTTP target policy + script step inline-only contract; removed unused parser module)
+status: executing
+last_updated: "2026-03-19T12:42:59.280Z"
+last_activity: 2026-03-19 — Completed 03-03 confidentiality and internal endpoint hardening with passing impacted and backend tests
 progress:
   total_phases: 1
   completed_phases: 0
-  total_plans: 4
-  completed_plans: 2
+  total_plans: 5
+  completed_plans: 3
 ---
 
 # Project State
@@ -22,13 +22,15 @@ See: .planning/PROJECT.md (Updated for v1.1)
 
 ## Current Position
 Phase: 3
-Plan: 03 next (`03-03-PLAN.md`)
-Status: Phase 3 in progress; 03-01 and 03-02 completed
-Last activity: 2026-03-19 — Completed 03-02 HTTP/parser/script hardening plan with passing impacted and backend tests
+Plan: 04 next (`03-04-PLAN.md`)
+Status: Phase 3 in progress; 03-01 through 03-03 completed
+Last activity: 2026-03-19 — Completed 03-03 confidentiality and internal endpoint hardening with passing impacted and backend tests
 
 ## Session Continuity
 - v1.0 has shipped and Phase 1/2 follow-up work is completed and retained in historical context.
 - This milestone starts from Phase 3, scoped to critical security-audit remediation in core modules.
+- 2026-03-19T11:57:10Z: Session resumed via `$gsd-resume-work`; reviewed Script Step sandbox tradeoffs and mapped compatibility impact before proceeding to Plan 03-03.
+- 2026-03-19T12:18:25Z: Added `03-05-PLAN.md` to phase roadmap for opt-in lightweight sandbox (Beta) plus default script timeout controls.
 
 ## Accumulated Context
 
@@ -40,6 +42,8 @@ Last activity: 2026-03-19 — Completed 03-02 HTTP/parser/script hardening plan 
 - 2026-03-19: Started milestone v1.1 and consolidated completed Phase 1/2 history into v1.0 context.
 - 2026-03-19: Completed Plan 03-01 with atomic task commits and summary documentation.
 - 2026-03-19: Completed Plan 03-02 with deterministic HTTP URL policy guards and script-step hardening; removed unused parser module from runtime codebase.
+- 2026-03-19: Added Plan 03-05 for optional script-sandbox controls and timeout defaults.
+- 2026-03-19: Completed Plan 03-03 with centralized log redaction, authenticated internal scraper endpoints, and logical integration file response hardening.
 
 ### Decisions
 - 2026-03-19: OAuth code exchange now requires single-use server state bound to `source_id` and `redirect_uri`.
@@ -47,6 +51,9 @@ Last activity: 2026-03-19 — Completed 03-02 HTTP/parser/script hardening plan 
 - 2026-03-19: HTTP step rejects private/link-local/loopback and unsupported scheme targets preflight with `http_target_blocked_private` / `http_target_blocked_scheme`.
 - 2026-03-19: Script step remains inline `args.code` only; undocumented file-path loading behavior removed.
 - 2026-03-19: Removed `core/parser.py` and parser-specific tests because parser step is not in the runtime execution chain.
+- [Phase 03]: Internal scraper APIs now require X-Glanceus-Internal-Token via constant-time validation and still enforce localhost as a secondary gate.
+- [Phase 03]: Integration file API responses now serialize logical identifiers (filename/integration_id) and no longer expose absolute paths.
+- [Phase 03]: Sensitive token/secret/code/device fields are centrally redacted with deterministic [REDACTED] across API, OAuth, and script-step logging.
 
 ### Pending Todos
 

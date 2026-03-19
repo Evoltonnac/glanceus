@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from core import api as api_module
+from core.source_state import InteractionType
 from tests.helpers.mock_runtime import (
     make_api_runtime,
     make_integration_config,
@@ -17,11 +18,16 @@ from tests.helpers.mock_runtime import (
 class _MockOAuthInteractionHandler:
     def __init__(self) -> None:
         self.config = SimpleNamespace(authorization_code_field="auth_code")
-        self.exchange_calls: list[tuple[str, str | None]] = []
+        self.exchange_calls: list[tuple[str, str | None, str | None]] = []
         self.saved_implicit_tokens: list[dict] = []
 
-    async def exchange_code(self, code: str, redirect_uri: str | None = None) -> None:
-        self.exchange_calls.append((code, redirect_uri))
+    async def exchange_code(
+        self,
+        code: str,
+        redirect_uri: str | None = None,
+        state: str | None = None,
+    ) -> None:
+        self.exchange_calls.append((code, redirect_uri, state))
 
     def build_implicit_token_payload(self, data: dict) -> dict:
         payload_data = data.get("oauth_payload")
@@ -61,7 +67,13 @@ def test_interact_oauth_code_exchange_supports_custom_code_field():
         oauth_handlers={"oauth-source": handler},
     )
     runtime["executor"] = SimpleNamespace(
-        get_source_state=lambda _source_id: SimpleNamespace(interaction=None),
+        get_source_state=lambda _source_id: SimpleNamespace(
+            interaction=SimpleNamespace(
+                type=InteractionType.OAUTH_START,
+                source_id="oauth-source",
+                fields=[],
+            ),
+        ),
         _update_state=MagicMock(),
         fetch_source=MagicMock(),
     )
@@ -72,13 +84,14 @@ def test_interact_oauth_code_exchange_supports_custom_code_field():
         json={
             "type": "oauth_code_exchange",
             "auth_code": "code-xyz",
+            "state": "state-xyz",
             "redirect_uri": "http://localhost:5173/oauth/callback/oauth-source",
         },
     )
 
     assert response.status_code == 200
     assert handler.exchange_calls == [
-        ("code-xyz", "http://localhost:5173/oauth/callback/oauth-source")
+        ("code-xyz", "http://localhost:5173/oauth/callback/oauth-source", "state-xyz")
     ]
     runtime["executor"].fetch_source.assert_called_once()
 
@@ -93,7 +106,13 @@ def test_interact_oauth_implicit_token_supports_payload_builder_without_access_t
         oauth_handlers={"oauth-source": handler},
     )
     runtime["executor"] = SimpleNamespace(
-        get_source_state=lambda _source_id: SimpleNamespace(interaction=None),
+        get_source_state=lambda _source_id: SimpleNamespace(
+            interaction=SimpleNamespace(
+                type=InteractionType.OAUTH_START,
+                source_id="oauth-source",
+                fields=[],
+            ),
+        ),
         _update_state=MagicMock(),
         fetch_source=MagicMock(),
     )
@@ -115,3 +134,77 @@ def test_interact_oauth_implicit_token_supports_payload_builder_without_access_t
     assert handler.saved_implicit_tokens
     assert handler.saved_implicit_tokens[0]["access_token"] == "tok-xyz"
     runtime["executor"].fetch_source.assert_called_once()
+
+
+def test_interact_source_mismatch_rejects_body_source_override():
+    source = make_stored_source("oauth-source", integration_id="oauth-integration")
+    integration = make_integration_config("oauth-integration", "oauth")
+    handler = _MockOAuthInteractionHandler()
+    runtime = make_api_runtime(
+        sources=[source],
+        integrations={"oauth-integration": integration},
+        oauth_handlers={"oauth-source": handler},
+    )
+    runtime["secrets_controller"] = SimpleNamespace(set_secrets=MagicMock())
+    runtime["executor"] = SimpleNamespace(
+        get_source_state=lambda _source_id: SimpleNamespace(
+            interaction=SimpleNamespace(
+                type=InteractionType.INPUT_TEXT,
+                source_id="oauth-source",
+                fields=[SimpleNamespace(key="api_key")],
+            ),
+        ),
+        _update_state=MagicMock(),
+        fetch_source=MagicMock(),
+    )
+    client = _build_client(runtime)
+
+    response = client.post(
+        "/api/sources/oauth-source/interact",
+        json={
+            "type": "input_text",
+            "source_id": "another-source",
+            "api_key": "sk-test",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "interaction_source_mismatch"
+    runtime["secrets_controller"].set_secrets.assert_not_called()
+
+
+def test_interact_interaction_payload_invalid_rejects_extra_keys():
+    source = make_stored_source("oauth-source", integration_id="oauth-integration")
+    integration = make_integration_config("oauth-integration", "oauth")
+    handler = _MockOAuthInteractionHandler()
+    runtime = make_api_runtime(
+        sources=[source],
+        integrations={"oauth-integration": integration},
+        oauth_handlers={"oauth-source": handler},
+    )
+    runtime["secrets_controller"] = SimpleNamespace(set_secrets=MagicMock())
+    runtime["executor"] = SimpleNamespace(
+        get_source_state=lambda _source_id: SimpleNamespace(
+            interaction=SimpleNamespace(
+                type=InteractionType.INPUT_TEXT,
+                source_id="oauth-source",
+                fields=[SimpleNamespace(key="api_key")],
+            ),
+        ),
+        _update_state=MagicMock(),
+        fetch_source=MagicMock(),
+    )
+    client = _build_client(runtime)
+
+    response = client.post(
+        "/api/sources/oauth-source/interact",
+        json={
+            "type": "input_text",
+            "api_key": "sk-test",
+            "unexpected_key": "boom",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "interaction_payload_invalid"
+    runtime["secrets_controller"].set_secrets.assert_not_called()

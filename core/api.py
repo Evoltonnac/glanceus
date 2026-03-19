@@ -451,6 +451,60 @@ def _resume_source_after_oauth(source_id: str, background_tasks: BackgroundTasks
         background_tasks.add_task(_executor.fetch_source, source)
 
 
+def _normalize_interaction_type(value: Any) -> str:
+    if isinstance(value, InteractionType):
+        return value.value
+    if isinstance(value, str):
+        return value.strip().lower()
+    return ""
+
+
+def _validate_interaction_source_binding(
+    route_source_id: str,
+    interaction: InteractionRequest | Any | None,
+    *,
+    expected_interaction_types: set[str],
+    request_interaction_type: str,
+    request_source_id: str | None,
+) -> InteractionRequest | Any:
+    if request_source_id is not None and request_source_id != route_source_id:
+        raise HTTPException(400, "interaction_source_mismatch")
+    if interaction is None:
+        raise HTTPException(400, "interaction_source_mismatch")
+
+    pending_source_id = getattr(interaction, "source_id", None) or route_source_id
+    pending_interaction_type = _normalize_interaction_type(getattr(interaction, "type", None))
+
+    if pending_source_id != route_source_id:
+        raise HTTPException(400, "interaction_source_mismatch")
+    if pending_interaction_type not in expected_interaction_types:
+        raise HTTPException(400, "interaction_source_mismatch")
+    if request_interaction_type:
+        expected_request_types = {item.value for item in InteractionType}
+        if request_interaction_type in expected_request_types and request_interaction_type not in expected_interaction_types:
+            raise HTTPException(400, "interaction_source_mismatch")
+
+    return interaction
+
+
+def _validate_interaction_payload_keys(
+    payload: dict[str, Any],
+    interaction: InteractionRequest | Any,
+    *,
+    allowed_protocol_keys: set[str],
+) -> None:
+    interaction_fields = getattr(interaction, "fields", None) or []
+    allowed_fields = {
+        getattr(field, "key", None)
+        for field in interaction_fields
+        if getattr(field, "key", None)
+    }
+    allowed_keys = allowed_fields | allowed_protocol_keys
+    extra_keys = set(payload.keys()) - allowed_keys
+    if extra_keys:
+        raise HTTPException(400, "interaction_payload_invalid")
+
+
 def create_stored_source_record(
     source: StoredSource,
     resource_manager,
@@ -1019,29 +1073,60 @@ async def interact_source(source_id: str, data: dict[str, Any], background_tasks
         raise HTTPException(500, f"无法解析数据源 '{source_id}'")
 
     state = _executor.get_source_state(source_id)
-    
+    pending_interaction = getattr(state, "interaction", None) if state else None
+
     # Special Handling: OAuth Code Exchange (Client-Side Callback)
-    interaction_type = data.get("type")
+    interaction_type = (
+        _normalize_interaction_type(data.get("interaction_type"))
+        or _normalize_interaction_type(data.get("type"))
+    )
+    request_source_id = data.get("source_id")
 
     if interaction_type == "oauth_code_exchange":
+        binding = _validate_interaction_source_binding(
+            source_id,
+            pending_interaction,
+            expected_interaction_types={InteractionType.OAUTH_START.value},
+            request_interaction_type=interaction_type,
+            request_source_id=request_source_id,
+        )
         handler = _auth_manager.get_oauth_handler(source_id)
         if not handler:
             _auth_manager.register_source(source)
             handler = _auth_manager.get_oauth_handler(source_id)
         
         if not handler:
-             raise HTTPException(400, "Source is not OAuth type")
-        
+            raise HTTPException(400, "Source is not OAuth type")
+
         code_field = getattr(getattr(handler, "config", None), "authorization_code_field", "code") or "code"
+        state_field = getattr(getattr(handler, "config", None), "authorization_state_field", "state") or "state"
+        _validate_interaction_payload_keys(
+            data,
+            binding,
+            allowed_protocol_keys={
+                "type",
+                "interaction_type",
+                "source_id",
+                "code",
+                code_field,
+                "state",
+                state_field,
+                "redirect_uri",
+            },
+        )
+
         code = data.get("code")
         if not code and code_field != "code":
             code = data.get(code_field)
+        exchange_state = data.get("state")
+        if exchange_state is None and state_field != "state":
+            exchange_state = data.get(state_field)
         redirect_uri = data.get("redirect_uri")
         if not code:
             raise HTTPException(400, f"Missing OAuth authorization code in interaction data (field: {code_field})")
             
         try:
-            await handler.exchange_code(code, redirect_uri=redirect_uri)
+            await handler.exchange_code(code, redirect_uri=redirect_uri, state=exchange_state)
         except Exception as e:
             logger.error(f"[{source_id}] OAuth Exchange Failed: {e}")
             raise HTTPException(400, f"授权失败: {str(e)}")
@@ -1050,6 +1135,13 @@ async def interact_source(source_id: str, data: dict[str, Any], background_tasks
         return {"message": "OAuth 授权成功", "source_id": source_id}
 
     if interaction_type == "oauth_implicit_token":
+        binding = _validate_interaction_source_binding(
+            source_id,
+            pending_interaction,
+            expected_interaction_types={InteractionType.OAUTH_START.value},
+            request_interaction_type=interaction_type,
+            request_source_id=request_source_id,
+        )
         handler = _auth_manager.get_oauth_handler(source_id)
         if not handler:
             _auth_manager.register_source(source)
@@ -1058,6 +1150,22 @@ async def interact_source(source_id: str, data: dict[str, Any], background_tasks
         if not handler:
             raise HTTPException(400, "Source is not OAuth type")
 
+        _validate_interaction_payload_keys(
+            data,
+            binding,
+            allowed_protocol_keys={
+                "type",
+                "interaction_type",
+                "source_id",
+                "oauth_payload",
+                "access_token",
+                "token_type",
+                "expires_in",
+                "scope",
+                "state",
+                "redirect_uri",
+            },
+        )
         token_payload = handler.build_implicit_token_payload(data)
         access_token = token_payload.get("access_token")
         if not access_token:
@@ -1072,27 +1180,39 @@ async def interact_source(source_id: str, data: dict[str, Any], background_tasks
         background_tasks.add_task(_executor.fetch_source, source)
         return {"message": "OAuth Token 已保存", "source_id": source_id}
     
-    # Check pending interaction request.
-    if not state.interaction:
-        # If there is no explicit pending request, treat as generic update.
-        logger.warning(f"[{source_id}] Received interaction but no pending interaction request found.")
-    
-    # Resolve source_id (prefer pending interaction source_id).
-    target_source_id = state.interaction.source_id if state.interaction else None
+    binding = _validate_interaction_source_binding(
+        source_id,
+        pending_interaction,
+        expected_interaction_types={
+            InteractionType.INPUT_TEXT.value,
+            InteractionType.COOKIES_REFRESH.value,
+            InteractionType.CAPTCHA.value,
+            InteractionType.CONFIRM.value,
+            InteractionType.RETRY.value,
+            InteractionType.WEBVIEW_SCRAPE.value,
+        },
+        request_interaction_type=interaction_type,
+        request_source_id=request_source_id,
+    )
+    _validate_interaction_payload_keys(
+        data,
+        binding,
+        allowed_protocol_keys={
+            "type",
+            "interaction_type",
+            "source_id",
+            "code",
+            "state",
+            "redirect_uri",
+        },
+    )
+    payload_data = {key: value for key, value in data.items() if key != "source_id"}
 
-    # Allow request payload source_id to override pending-state source_id.
-    if "source_id" in data:
-        target_source_id = data.pop("source_id")
-
-    # Fallback to route source_id when unresolved.
-    if not target_source_id:
-        target_source_id = source_id
-
-    if data:
+    if payload_data:
         # Save interaction data into Secrets keyed by source_id.
         # Assumes data is a flat dictionary.
-        _secrets.set_secrets(target_source_id, data)
-        logger.info(f"[{source_id}] Received interaction data for source '{target_source_id}'.")
+        _secrets.set_secrets(source_id, payload_data)
+        logger.info(f"[{source_id}] Received interaction data for source '{source_id}'.")
     
     # Update status to refreshing.
     _executor._update_state(source_id, SourceStatus.REFRESHING, "Processing interaction results...")

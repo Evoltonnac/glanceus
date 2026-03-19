@@ -4,10 +4,12 @@ import { Button } from "../ui/button";
 import { openExternalLink } from "../../lib/utils";
 
 export interface DeviceFlowData {
+    device_code?: string;
     user_code: string;
     verification_uri: string;
     verification_uri_complete?: string;
     expires_in: number;
+    expires_at?: number;
     interval: number;
 }
 
@@ -29,14 +31,35 @@ export function DeviceFlowModal({
     const [expiresAt, setExpiresAt] = useState<number | null>(null);
     const [now, setNow] = useState<number>(Date.now());
     const [copied, setCopied] = useState(false);
+    const [hasOpenedVerificationUrl, setHasOpenedVerificationUrl] = useState(false);
     const copiedTimerRef = useRef<number | null>(null);
+    const activeFlowKeyRef = useRef<string | null>(null);
 
     useEffect(() => {
         if (!flowData) {
             setExpiresAt(null);
+            setHasOpenedVerificationUrl(false);
+            activeFlowKeyRef.current = null;
             return;
         }
-        setExpiresAt(Date.now() + flowData.expires_in * 1000);
+
+        const flowKey = [
+            flowData.device_code ?? "",
+            flowData.user_code,
+            flowData.verification_uri,
+            flowData.verification_uri_complete ?? "",
+        ].join("|");
+        const hasSameFlow = activeFlowKeyRef.current === flowKey;
+        activeFlowKeyRef.current = flowKey;
+        if (!hasSameFlow) {
+            setHasOpenedVerificationUrl(false);
+        }
+
+        if (typeof flowData.expires_at === "number" && Number.isFinite(flowData.expires_at)) {
+            setExpiresAt(flowData.expires_at * 1000);
+        } else if (!hasSameFlow) {
+            setExpiresAt(Date.now() + flowData.expires_in * 1000);
+        }
         setNow(Date.now());
     }, [flowData]);
 
@@ -58,6 +81,11 @@ export function DeviceFlowModal({
     }, [expiresAt]);
 
     const verificationUrl = flowData?.verification_uri_complete || flowData?.verification_uri || "";
+
+    const handleOpenLink = async () => {
+        setHasOpenedVerificationUrl(true);
+        await openExternalLink(verificationUrl);
+    };
 
     const handleCopy = async () => {
         if (!flowData?.user_code) {
@@ -113,7 +141,7 @@ export function DeviceFlowModal({
                 <Button
                     variant="outline"
                     className="flex-1"
-                    onClick={() => openExternalLink(verificationUrl)}
+                    onClick={handleOpenLink}
                 >
                     <ExternalLink className="mr-2 h-4 w-4" />
                     Open Link
@@ -126,21 +154,26 @@ export function DeviceFlowModal({
             <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Expires in {secondsLeft}s</span>
             </div>
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Status: {status}</span>
-                <div className="flex items-center gap-1">
+            <div className="rounded-md border border-brand/30 bg-brand/5 p-3">
+                <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Status: {status}</span>
                     <Button variant="ghost" size="sm" onClick={onStart} disabled={loading}>
                         Restart
                     </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={onVerifyNow}
-                        disabled={loading}
-                    >
-                        Verify
-                    </Button>
                 </div>
+                <Button
+                    variant={hasOpenedVerificationUrl ? "brand" : "outline"}
+                    className={
+                        hasOpenedVerificationUrl
+                            ? "h-11 w-full font-semibold"
+                            : "h-11 w-full border-border/80 bg-muted text-muted-foreground hover:bg-muted/80 font-semibold"
+                    }
+                    onClick={onVerifyNow}
+                    disabled={loading}
+                >
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Verify
+                </Button>
             </div>
             {status === "authorized" && (
                 <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-2 text-sm text-emerald-700">

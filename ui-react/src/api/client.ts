@@ -354,9 +354,11 @@ class ApiClient {
         flow: "device";
         device: {
           user_code: string;
+          device_code?: string;
           verification_uri: string;
           verification_uri_complete?: string;
           expires_in: number;
+          expires_at?: number;
           interval: number;
         };
         message?: string;
@@ -380,9 +382,11 @@ class ApiClient {
     error_description?: string;
     device?: {
       user_code: string;
+      device_code?: string;
       verification_uri: string;
       verification_uri_complete?: string;
       expires_in: number;
+      expires_at?: number;
       interval: number;
     };
   }> {

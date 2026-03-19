@@ -3,6 +3,8 @@ FastAPI routes exposing REST APIs for frontend and external callers.
 """
 
 import logging
+import hmac
+import os
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Optional
@@ -143,6 +145,10 @@ def _require_local_request(request: Request) -> None:
     raise HTTPException(403, "Internal scraper endpoint is localhost-only")
 
 
+_INTERNAL_AUTH_HEADER = "X-Glanceus-Internal-Token"
+_INTERNAL_AUTH_TOKEN_ENV = "GLANCEUS_INTERNAL_TOKEN"
+
+
 _API_LOG_SENSITIVE_FIELDS = {
     "token",
     "access_token",
@@ -156,6 +162,22 @@ _API_LOG_SENSITIVE_FIELDS = {
 
 def _redact_log_payload(payload: Any) -> Any:
     return redact_sensitive_fields(payload, sensitive_fields=_API_LOG_SENSITIVE_FIELDS)
+
+
+def _resolve_internal_auth_token() -> str:
+    return os.getenv(_INTERNAL_AUTH_TOKEN_ENV, "").strip()
+
+
+def _verify_internal_request(request: Request) -> None:
+    expected_token = _resolve_internal_auth_token()
+    provided_token = (request.headers.get(_INTERNAL_AUTH_HEADER) or "").strip()
+    if (
+        not expected_token
+        or not provided_token
+        or not hmac.compare_digest(provided_token, expected_token)
+    ):
+        raise HTTPException(403, "internal_auth_required")
+    _require_local_request(request)
 
 
 def _build_webview_interaction_from_task(task: dict[str, Any], message: str) -> InteractionRequest:
@@ -785,12 +807,20 @@ def _serialize_scraper_task(task: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _to_logical_integration_file(filename: str) -> dict[str, str]:
+    normalized_filename = _integration_manager.normalize_filename(filename)
+    return {
+        "filename": normalized_filename,
+        "integration_id": Path(normalized_filename).stem,
+    }
+
+
 @router.post("/internal/scraper/claim")
 async def internal_claim_scraper_task(
     payload: ScraperTaskClaimRequest,
     request: Request,
 ) -> dict[str, Any]:
-    _require_local_request(request)
+    _verify_internal_request(request)
     if _scraper_task_store is None:
         raise HTTPException(503, "Scraper task store unavailable")
     task = _scraper_task_store.claim_next_task(
@@ -807,7 +837,7 @@ async def internal_heartbeat_scraper_task(
     payload: ScraperTaskHeartbeatRequest,
     request: Request,
 ) -> dict[str, Any]:
-    _require_local_request(request)
+    _verify_internal_request(request)
     if _scraper_task_store is None:
         raise HTTPException(503, "Scraper task store unavailable")
     task = _scraper_task_store.get_task(payload.task_id)
@@ -831,7 +861,7 @@ async def internal_complete_scraper_task(
     background_tasks: BackgroundTasks,
     request: Request,
 ) -> dict[str, Any]:
-    _require_local_request(request)
+    _verify_internal_request(request)
     if _scraper_task_store is None:
         raise HTTPException(503, "Scraper task store unavailable")
     task = _scraper_task_store.get_task(payload.task_id)
@@ -880,7 +910,7 @@ async def internal_fail_scraper_task(
     payload: ScraperTaskFailRequest,
     request: Request,
 ) -> dict[str, Any]:
-    _require_local_request(request)
+    _verify_internal_request(request)
     if _scraper_task_store is None:
         raise HTTPException(503, "Scraper task store unavailable")
     task = _scraper_task_store.get_task(payload.task_id)
@@ -922,7 +952,7 @@ async def internal_clear_scraper_tasks(
     payload: ScraperTaskClearRequest,
     request: Request,
 ) -> dict[str, Any]:
-    _require_local_request(request)
+    _verify_internal_request(request)
     if _scraper_task_store is None:
         raise HTTPException(503, "Scraper task store unavailable")
 
@@ -938,7 +968,7 @@ async def internal_list_scraper_tasks(
     payload: ScraperTaskListRequest,
     request: Request,
 ) -> dict[str, Any]:
-    _require_local_request(request)
+    _verify_internal_request(request)
     if _scraper_task_store is None:
         raise HTTPException(503, "Scraper task store unavailable")
     tasks = _scraper_task_store.list_active_tasks()
@@ -1632,12 +1662,12 @@ async def get_integration_file(filename: str) -> dict:
     content = _integration_manager.get_integration(filename)
     if content is None:
         raise HTTPException(404, f"Integration file {filename} not found")
+    logical_file = _to_logical_integration_file(filename)
     return {
-        "filename": filename,
+        **logical_file,
         "content": content,
-        "integration_ids": _integration_manager.get_integration_ids_in_file(filename),
+        "integration_ids": [logical_file["integration_id"]],
         "display_name": _integration_manager.get_integration_display_name(filename),
-        "resolved_path": _integration_manager.get_integration_path(filename),
     }
 
 
@@ -1656,7 +1686,11 @@ async def create_integration_file(filename: str, request: FileContentRequest) ->
     success = _integration_manager.create_integration(filename, request.content)
     if not success:
         raise HTTPException(500, f"Failed to create integration {normalized_filename}")
-    return {"message": f"Integration {normalized_filename} created", "filename": normalized_filename}
+    logical_file = _to_logical_integration_file(normalized_filename)
+    return {
+        "message": f"Integration {normalized_filename} created",
+        **logical_file,
+    }
 
 
 @router.put("/integrations/files/{filename}")
@@ -1738,7 +1772,8 @@ async def update_integration_file(filename: str, request: FileContentRequest) ->
     success = _integration_manager.save_integration(filename, request.content)
     if not success:
         raise HTTPException(404, f"Integration file {filename} not found")
-    return {"message": f"Integration {filename} saved", "filename": filename}
+    logical_file = _to_logical_integration_file(filename)
+    return {"message": f"Integration {filename} saved", **logical_file}
 
 
 @router.delete("/integrations/files/{filename}")
@@ -1747,7 +1782,8 @@ async def delete_integration_file(filename: str) -> dict:
     success = _integration_manager.delete_integration(filename)
     if not success:
         raise HTTPException(404, f"Integration file {filename} not found")
-    return {"message": f"Integration {filename} deleted", "filename": filename}
+    logical_file = _to_logical_integration_file(filename)
+    return {"message": f"Integration {filename} deleted", **logical_file}
 
 
 # ── Config Reload ─────────────────────────────────────────────────────

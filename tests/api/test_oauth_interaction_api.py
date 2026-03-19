@@ -208,3 +208,41 @@ def test_interact_interaction_payload_invalid_rejects_extra_keys():
     assert response.status_code == 400
     assert response.json()["detail"] == "interaction_payload_invalid"
     runtime["secrets_controller"].set_secrets.assert_not_called()
+
+
+def test_interact_same_source_input_text_still_succeeds():
+    source = make_stored_source("oauth-source", integration_id="oauth-integration")
+    integration = make_integration_config("oauth-integration", "oauth")
+    runtime = make_api_runtime(
+        sources=[source],
+        integrations={"oauth-integration": integration},
+    )
+    runtime["secrets_controller"] = SimpleNamespace(set_secrets=MagicMock())
+    runtime["executor"] = SimpleNamespace(
+        get_source_state=lambda _source_id: SimpleNamespace(
+            interaction=SimpleNamespace(
+                type=InteractionType.INPUT_TEXT,
+                source_id="oauth-source",
+                fields=[SimpleNamespace(key="api_key")],
+            ),
+        ),
+        _update_state=MagicMock(),
+        fetch_source=MagicMock(),
+    )
+    client = _build_client(runtime)
+
+    response = client.post(
+        "/api/sources/oauth-source/interact",
+        json={
+            "type": "input_text",
+            "api_key": "sk-test",
+        },
+    )
+
+    assert response.status_code == 200
+    runtime["secrets_controller"].set_secrets.assert_called_once_with(
+        "oauth-source",
+        {"type": "input_text", "api_key": "sk-test"},
+    )
+    runtime["executor"]._update_state.assert_called_once()
+    runtime["executor"].fetch_source.assert_called_once()

@@ -209,3 +209,26 @@ async def test_missing_credentials_interaction_persists_standard_error_code(
     assert suspended_calls[-1]["error_code"] == "auth.missing_credentials"
     # Keep legacy behavior for suspended state: no error summary field required.
     assert suspended_calls[-1].get("error") is None
+
+
+@pytest.mark.asyncio
+async def test_oauth_interaction_keeps_route_bound_source_id(executor):
+    source = build_source_config(
+        source_id="oauth-route-bound-source",
+        name="OAuth Route Bound Source",
+        flow=[
+            build_step(
+                step_id="oauth",
+                use=StepType.OAUTH,
+                args={"oauth_flow": "code", "client_id": "client-id", "supports_pkce": True},
+            )
+        ],
+    )
+
+    await executor.fetch_source(source)
+
+    state = executor.get_source_state(source.id)
+    assert state.status == SourceStatus.SUSPENDED
+    assert state.interaction is not None
+    assert state.interaction.type == InteractionType.OAUTH_START
+    assert state.interaction.source_id == source.id

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import time
+
 import pytest
 
 from authlib.integrations.httpx_client import AsyncOAuth2Client
@@ -99,3 +101,68 @@ async def test_exchange_code_uses_authlib_fetch_token_and_persists_token(
     assert captured["code"] == "auth-code"
     assert captured["code_verifier"] == "verifier-123"
     assert all_secrets["oauth_pkce"]["used_at"] is not None
+
+
+@pytest.mark.asyncio
+async def test_exchange_code_rejects_oauth_state_invalid_on_mismatch(
+    secrets_controller,
+):
+    handler = OAuthAuth(_build_auth_config(), "src", secrets_controller)
+    handler._save_pkce_state("verifier-123", "server-state", "http://localhost:5173/oauth/callback")
+
+    with pytest.raises(ValueError, match="oauth_state_invalid"):
+        await handler.exchange_code(
+            "auth-code",
+            "http://localhost:5173/oauth/callback",
+            state="wrong-state",
+        )
+
+
+@pytest.mark.asyncio
+async def test_exchange_code_rejects_oauth_state_expired(
+    secrets_controller,
+):
+    handler = OAuthAuth(_build_auth_config(), "src", secrets_controller)
+    handler._save_pkce_state("verifier-123", "server-state", "http://localhost:5173/oauth/callback")
+    pkce_state = secrets_controller.get_secrets("src")["oauth_pkce"]
+    pkce_state["created_at"] = time.time() - 601
+    secrets_controller.set_secrets("src", {"oauth_pkce": pkce_state})
+
+    with pytest.raises(ValueError, match="oauth_state_expired"):
+        await handler.exchange_code(
+            "auth-code",
+            "http://localhost:5173/oauth/callback",
+            state="server-state",
+        )
+
+
+@pytest.mark.asyncio
+async def test_exchange_code_rejects_reused_oauth_state_with_oauth_state_invalid(
+    secrets_controller,
+    monkeypatch,
+):
+    async def fake_fetch_token(self, **kwargs):
+        _ = self
+        _ = kwargs
+        return {
+            "access_token": "new-token",
+            "refresh_token": "new-refresh",
+            "expires_in": 3600,
+        }
+
+    monkeypatch.setattr(AsyncOAuth2Client, "fetch_token", fake_fetch_token)
+
+    handler = OAuthAuth(_build_auth_config(), "src", secrets_controller)
+    handler._save_pkce_state("verifier-123", "server-state", "http://localhost:5173/oauth/callback")
+    await handler.exchange_code(
+        "auth-code",
+        "http://localhost:5173/oauth/callback",
+        state="server-state",
+    )
+
+    with pytest.raises(ValueError, match="oauth_state_invalid"):
+        await handler.exchange_code(
+            "auth-code",
+            "http://localhost:5173/oauth/callback",
+            state="server-state",
+        )

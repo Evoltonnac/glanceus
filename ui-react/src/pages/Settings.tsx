@@ -55,6 +55,8 @@ const DEFAULT_SETTINGS: SystemSettings = {
     debug_logging_enabled: false,
     refresh_interval_minutes: 30,
     scraper_timeout_seconds: 10,
+    script_sandbox_enabled: false,
+    script_timeout_seconds: 10,
     encryption_available: true,
     theme: "system",
     density: "normal",
@@ -63,6 +65,8 @@ const DEFAULT_SETTINGS: SystemSettings = {
 
 const SCRAPER_TIMEOUT_MIN_SECONDS = 1;
 const SCRAPER_TIMEOUT_MAX_SECONDS = 300;
+const SCRIPT_TIMEOUT_MIN_SECONDS = 1;
+const SCRIPT_TIMEOUT_MAX_SECONDS = 120;
 const DEFAULT_REFRESH_INTERVAL_MINUTES = 30;
 const MIN_REFRESH_INTERVAL_MINUTES = 1;
 const MAX_REFRESH_INTERVAL_MINUTES = 7 * 24 * 60;
@@ -100,6 +104,16 @@ function normalizeRefreshIntervalMinutes(value: number | undefined): number {
         return DEFAULT_REFRESH_INTERVAL_MINUTES;
     }
     return normalized;
+}
+
+function normalizeScriptTimeoutSeconds(value: number | undefined): number {
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+        return 10;
+    }
+    return Math.min(
+        SCRIPT_TIMEOUT_MAX_SECONDS,
+        Math.max(SCRIPT_TIMEOUT_MIN_SECONDS, Math.floor(value)),
+    );
 }
 
 function resolvePortFromUrl(rawUrl: string): string | null {
@@ -241,6 +255,12 @@ export default function SettingsPage() {
                         : DEFAULT_REFRESH_INTERVAL_MINUTES,
                 scraper_timeout_seconds: normalizeScraperTimeoutSeconds(
                     swrSettings.scraper_timeout_seconds,
+                ),
+                script_sandbox_enabled: Boolean(
+                    swrSettings.script_sandbox_enabled,
+                ),
+                script_timeout_seconds: normalizeScriptTimeoutSeconds(
+                    swrSettings.script_timeout_seconds,
                 ),
             });
         }
@@ -781,6 +801,91 @@ export default function SettingsPage() {
                                                 />
                                             </div>
                                         </div>
+                                        </div>
+                                    </section>
+
+                                    <Separator className="opacity-50" />
+
+                                    {/* -- Script Runtime Security -- */}
+                                    <section className="space-y-4">
+                                        <div className="flex items-center gap-2 text-base font-semibold">
+                                            <Shield className="w-4 h-4 text-brand" />
+                                            {t("settings.section.script_runtime")}
+                                        </div>
+                                        <div className="rounded-xl border border-border px-5 py-4 bg-surface hover:border-foreground/20 hover:shadow-soft-elevation transition-all duration-150 space-y-4">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                <div className="space-y-1 flex-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <Label
+                                                            htmlFor="script-sandbox-enabled"
+                                                            className="text-sm font-medium"
+                                                        >
+                                                            {t("settings.script.sandbox.label")}
+                                                        </Label>
+                                                        <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+                                                            {t("settings.script.sandbox.beta")}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {t("settings.script.sandbox.description")}
+                                                    </p>
+                                                    <p className="text-[11px] text-muted-foreground">
+                                                        {t("settings.script.sandbox.note")}
+                                                    </p>
+                                                </div>
+                                                <Switch
+                                                    id="script-sandbox-enabled"
+                                                    checked={
+                                                        settings.script_sandbox_enabled
+                                                    }
+                                                    className="data-[state=checked]:bg-brand focus-visible:ring-2 focus-visible:ring-brand/50"
+                                                    onCheckedChange={(value) =>
+                                                        setSettings((s) => ({
+                                                            ...s,
+                                                            script_sandbox_enabled:
+                                                                value,
+                                                        }))
+                                                    }
+                                                />
+                                            </div>
+
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                <div className="space-y-1 flex-1">
+                                                    <Label
+                                                        htmlFor="script-timeout"
+                                                        className="text-sm font-medium"
+                                                    >
+                                                        {t("settings.script.timeout.label")}
+                                                    </Label>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {t("settings.script.timeout.description")}
+                                                    </p>
+                                                    <p className="text-[11px] text-muted-foreground">
+                                                        {t("settings.script.timeout.hint")}
+                                                    </p>
+                                                </div>
+                                                <Input
+                                                    id="script-timeout"
+                                                    type="number"
+                                                    min={SCRIPT_TIMEOUT_MIN_SECONDS}
+                                                    max={SCRIPT_TIMEOUT_MAX_SECONDS}
+                                                    step={1}
+                                                    value={settings.script_timeout_seconds}
+                                                    onChange={(e) => {
+                                                        const raw = Number(
+                                                            e.target.value,
+                                                        );
+                                                        setSettings((s) => ({
+                                                            ...s,
+                                                            script_timeout_seconds:
+                                                                normalizeScriptTimeoutSeconds(
+                                                                    raw,
+                                                                ),
+                                                        }));
+                                                    }}
+                                                    className="w-full sm:w-[120px] bg-background text-center font-mono"
+                                                />
+                                            </div>
                                         </div>
                                     </section>
 

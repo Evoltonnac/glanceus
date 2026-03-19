@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -11,6 +12,9 @@ from core.config_loader import IntegrationConfig
 from core.models import StoredSource
 from core.scraper_task_store import ScraperTaskStore
 from core.source_state import InteractionType, SourceStatus
+
+_INTERNAL_TOKEN_ENV = "GLANCEUS_INTERNAL_TOKEN"
+_INTERNAL_TOKEN = "internal-test-token"
 
 
 class _StubResourceManager:
@@ -41,6 +45,7 @@ class _StubSecrets:
 
 
 def _build_client(tmp_path):
+    os.environ[_INTERNAL_TOKEN_ENV] = _INTERNAL_TOKEN
     store = ScraperTaskStore(tmp_path / "scraper_tasks.json")
     source = StoredSource(
         id="source-1",
@@ -72,6 +77,31 @@ def _build_client(tmp_path):
     return TestClient(app, base_url="http://127.0.0.1"), store, executor, secrets
 
 
+def _internal_headers(token: str = _INTERNAL_TOKEN) -> dict[str, str]:
+    return {"X-Glanceus-Internal-Token": token}
+
+
+def test_internal_auth_required_when_token_missing(tmp_path):
+    client, _store, _executor, _secrets = _build_client(tmp_path)
+    response = client.post(
+        "/api/internal/scraper/claim",
+        json={"worker_id": "daemon-1", "lease_seconds": 20},
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "internal_auth_required"
+
+
+def test_internal_auth_required_when_token_invalid(tmp_path):
+    client, _store, _executor, _secrets = _build_client(tmp_path)
+    response = client.post(
+        "/api/internal/scraper/claim",
+        headers=_internal_headers(token="wrong-token"),
+        json={"worker_id": "daemon-1", "lease_seconds": 20},
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "internal_auth_required"
+
+
 def test_internal_claim_and_complete_is_idempotent(tmp_path):
     client, store, executor, secrets = _build_client(tmp_path)
     task = store.upsert_pending_task(
@@ -85,6 +115,7 @@ def test_internal_claim_and_complete_is_idempotent(tmp_path):
 
     claim = client.post(
         "/api/internal/scraper/claim",
+        headers=_internal_headers(),
         json={"worker_id": "daemon-1", "lease_seconds": 30},
     )
     assert claim.status_code == 200
@@ -94,6 +125,7 @@ def test_internal_claim_and_complete_is_idempotent(tmp_path):
 
     complete = client.post(
         "/api/internal/scraper/complete",
+        headers=_internal_headers(),
         json={
             "worker_id": "daemon-1",
             "source_id": "source-1",
@@ -110,6 +142,7 @@ def test_internal_claim_and_complete_is_idempotent(tmp_path):
 
     complete_again = client.post(
         "/api/internal/scraper/complete",
+        headers=_internal_headers(),
         json={
             "worker_id": "daemon-1",
             "source_id": "source-1",
@@ -139,6 +172,7 @@ def test_internal_fail_moves_source_to_suspended_with_webview_interaction(tmp_pa
 
     failed = client.post(
         "/api/internal/scraper/fail",
+        headers=_internal_headers(),
         json={
             "worker_id": "daemon-1",
             "source_id": "source-1",
@@ -177,6 +211,7 @@ def test_internal_complete_rejects_source_mismatch(tmp_path):
 
     response = client.post(
         "/api/internal/scraper/complete",
+        headers=_internal_headers(),
         json={
             "worker_id": "daemon-1",
             "source_id": "other-source",
@@ -197,6 +232,8 @@ def test_internal_claim_rejects_non_localhost_client(tmp_path):
     )
     response = remote_client.post(
         "/api/internal/scraper/claim",
+        headers=_internal_headers(),
         json={"worker_id": "daemon-1", "lease_seconds": 20},
     )
     assert response.status_code == 403
+    assert response.json()["detail"] == "Internal scraper endpoint is localhost-only"

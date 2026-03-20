@@ -57,6 +57,8 @@ Data and runtime:
   - Do not ship new hardcoded UI copy in pages/components; use translation keys from `ui-react/src/i18n/messages/*.ts`.
   - New translation keys must be added in both `en.ts` and `zh.ts` with the same key name.
   - Persist language preference through backend settings (`/api/settings`, `SystemSettings.language`), not ad-hoc frontend-only state.
+  - For deterministic backend failures, define and keep stable standardized `error_code` values.
+  - UI surfaces must preserve `error_code`-driven messaging/diagnostics; do not collapse to generic-only failure text.
 
 ## 5. Execution Boundaries
 

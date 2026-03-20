@@ -105,6 +105,9 @@ Scope: all user-facing copy in `ui-react/src/`.
 - Key naming should be stable and domain-oriented (`settings.*`, `integrations.*`, `source.error.*`), not component-file-specific names.
 - Language preference is backend-owned and persisted through `/api/settings` (`SystemSettings.language`).
 - Standardized backend `error_code` should be mapped to localized, user-friendly copy when showing source/runtime errors.
+- Do not collapse deterministic backend security/runtime codes into generic copy only.
+  - Example: show dedicated localized copy for `script_sandbox_blocked` and `script_timeout_exceeded`.
+  - Keep the stable code visible in diagnostics/details so users can report actionable failures.
 
 ## Documentation Policy
 

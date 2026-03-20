@@ -277,6 +277,35 @@ describe("FlowHandler", () => {
         expect(screen.queryByText("Raw backend message")).not.toBeInTheDocument();
     });
 
+    it("shows sandbox interception copy with explicit error code", async () => {
+        render(
+            <FlowHandler
+                source={{
+                    ...buildSource({
+                        type: "input_text",
+                        message: "Raw sandbox blocked message",
+                        fields: [],
+                    }),
+                    status: "error",
+                    error_code: "script_sandbox_blocked",
+                }}
+                isOpen={true}
+                onClose={vi.fn()}
+                onInteractSuccess={vi.fn()}
+            />,
+        );
+
+        expect(
+            await screen.findByText(/Script blocked by sandbox|脚本被沙箱拦截/),
+        ).toBeInTheDocument();
+        expect(
+            screen.getAllByText(/script_sandbox_blocked/).length,
+        ).toBeGreaterThan(0);
+        expect(
+            screen.queryByText("Raw sandbox blocked message"),
+        ).not.toBeInTheDocument();
+    });
+
     it("polls auth status while oauth window is open and closes when authorized", async () => {
         vi.useFakeTimers();
         apiMock.getSources.mockResolvedValue([

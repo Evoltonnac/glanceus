@@ -18,6 +18,7 @@
 - **Config-first execution model**: Move from auth to render through declarative steps instead of custom platform code.
 - **Declarative UI with SDUI**: Templates define cards and widgets, while backend owns workflow/auth/state boundaries.
 - **OAuth-first + API key compatible**: Supports Code + PKCE, Device Flow, and Client Credentials with pragmatic fallback options.
+- **Optional script sandbox (Beta)**: High-risk script behavior may be blocked by sandbox policy for safer execution.
 - **Local-first runtime**: Integration data, source configs, and secrets stay on your machine by default.
 - **Desktop scraping fallback**: WebView Scraper handles platforms without stable public APIs.
 - **Bento dashboard layout**: Flexible composition for Signals and Metrics in one glance.

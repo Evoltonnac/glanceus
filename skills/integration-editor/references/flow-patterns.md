@@ -86,6 +86,7 @@ Current `use`: `http`, `oauth`, `api_key`, `form`, `curl`, `extract`, `script`, 
 - Runtime behavior:
   - local variables are seeded from current flow variables
   - only fields explicitly mapped in `outputs`/`context` are emitted
+- High-risk script behavior may be blocked by optional sandbox policy.
 - Guidance: keep scripts deterministic; prefer `http` + `extract` when possible.
 
 ## `log`

@@ -185,6 +185,7 @@ Design for resume safety:
 - Runtime behavior:
   - local variables are seeded from current flow variables
   - only fields mapped in `outputs`/`context` are emitted
+- High-risk script behavior may be blocked by optional sandbox policy.
 - Keep scripts deterministic; prefer `http` + `extract` when possible
 
 #### `log`

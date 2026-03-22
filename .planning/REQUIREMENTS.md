@@ -1,7 +1,7 @@
-# Requirements: Glanceus v1.1 Security Audit Remediation
+# Requirements: Glanceus v1.1 Security and Stability Hardening
 
-**Defined:** 2026-03-19
-**Core Value:** Users can complete auth -> fetch -> parse -> render through config-only integrations without backend hardcoding, while keeping runtime and secrets safe.
+**Defined:** 2026-03-20
+**Core Value:** Users can complete auth -> fetch -> parse -> render through config-only integrations without backend hardcoding, with secure and stable runtime/storage behavior.
 
 ## v1 Requirements
 
@@ -29,12 +29,20 @@
 - [x] **PH4-04**: User can trigger explicit foreground/manual recovery actions without implicit fallback metadata forcing focus behavior.
 - [x] **PH4-05**: User can reference synchronized runtime/fallback contracts and regression inputs for manual-only fallback and retry behavior.
 
+### Storage Contract Refactor
+
+- [ ] **STOR-01**: User can persist runtime/resources/settings data through a unified storage contract with explicit schema versioning.
+- [ ] **STOR-02**: User can recover from interrupted writes without corrupting local Integration Data or losing last known-good state.
+- [ ] **STOR-03**: User can migrate existing `data/*.json` records into the refactored storage format automatically at startup.
+- [ ] **STOR-04**: User can rely on deterministic storage `error_code` diagnostics and repeatable verification checks before release.
+
 ## v2 Requirements
 
 ### Defense in Depth (Deferred)
 
 - **SEC-04**: User can enforce per-integration trust policies (domain allowlist / runtime capability profile) for high-risk steps.
 - **SEC-05**: User can review historical security events and remediation evidence in a dedicated audit trail view.
+- **STOR-05**: User can configure historical retention policy and snapshot pruning for long-term local storage growth control.
 
 ## Out of Scope
 
@@ -42,7 +50,7 @@
 |---------|--------|
 | New scraping/auth capabilities | This milestone is remediation-first; no new platform capability expansion. |
 | Multi-tenant permissions or account system | Product remains local-first personal usage in current milestone scope. |
-| Large storage architecture changes | Not required to resolve current critical audit findings safely. |
+| Cloud-hosted shared storage backend | v1.1 stays local-first and focuses on safe local storage refactor only. |
 
 ## Traceability
 
@@ -60,12 +68,16 @@
 | PH4-03 | Phase 4 | Complete |
 | PH4-04 | Phase 4 | Complete |
 | PH4-05 | Phase 4 | Complete |
+| STOR-01 | Phase 5 | Pending |
+| STOR-02 | Phase 5 | Pending |
+| STOR-03 | Phase 5 | Pending |
+| STOR-04 | Phase 5 | Pending |
 
 **Coverage:**
-- v1 requirements: 12 total
-- Mapped to phases: 12
-- Unmapped: 0 ✓
+- v1 requirements: 16 total
+- Mapped to phases: 16
+- Unmapped: 0 (all covered)
 
 ---
-*Requirements defined: 2026-03-19*
-*Last updated: 2026-03-20 after adding Phase 4 traceability requirements*
+*Requirements defined: 2026-03-20*
+*Last updated: 2026-03-20 after validating Phase 3/4 baseline and Phase 5 storage mapping against ROADMAP.md*

@@ -13,10 +13,10 @@
 
 ---
 
-## v1.1 Security Audit Remediation (Started: 2026-03-19)
+## v1.1 Security and Stability Hardening (Started: 2026-03-19)
 
 **Status:** Active
 **Starting phase:** Phase 3
-**Focus:** Remediate critical security audit findings in core modules.
+**Focus:** Keep completed Phase 3/4 hardening as baseline and deliver Phase 5 storage contract refactor with crash-safe persistence and migration safety.
 
 ---

@@ -82,4 +82,4 @@ Plans:
 |-------|----------------|--------|-----------|
 | 3. Security Audit Remediation Baseline | 5/5 | Complete | 2026-03-19 |
 | 4. WebView Stability and Deterministic Recovery Baseline | 4/6 | Complete | 2026-03-20 |
-| 5. Storage Contract Refactor and Crash-Safe Persistence | 1/3 | In Progress|  |
+| 5. Storage Contract Refactor and Crash-Safe Persistence | 2/3 | In Progress|  |

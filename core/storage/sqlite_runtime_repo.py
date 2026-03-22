@@ -4,7 +4,11 @@ import json
 import sqlite3
 import time
 from threading import RLock
-from typing import Any
+from typing import Any, Callable, TypeVar
+
+from core.storage.errors import map_sqlite_error
+
+_T = TypeVar("_T")
 
 
 class SqliteRuntimeRepository:
@@ -22,13 +26,37 @@ class SqliteRuntimeRepository:
         return payload
 
     def _load_latest(self, source_id: str) -> dict[str, Any] | None:
-        row = self._connection.execute(
-            "SELECT payload_json FROM runtime_latest WHERE source_id = ?",
-            (source_id,),
-        ).fetchone()
+        try:
+            row = self._connection.execute(
+                "SELECT payload_json FROM runtime_latest WHERE source_id = ?",
+                (source_id,),
+            ).fetchone()
+        except sqlite3.Error as error:
+            raise map_sqlite_error(error, kind="read", operation="runtime.load_latest") from error
         if row is None:
             return None
         return self._decode_record(row["payload_json"])
+
+    def _write(self, operation: str, action: Callable[[], _T]) -> _T:
+        try:
+            self._connection.execute("BEGIN IMMEDIATE")
+        except sqlite3.Error as error:
+            raise map_sqlite_error(error, kind="write", operation=operation) from error
+
+        try:
+            result = action()
+        except Exception as error:
+            self._connection.rollback()
+            if isinstance(error, sqlite3.Error):
+                raise map_sqlite_error(error, kind="write", operation=operation) from error
+            raise
+
+        try:
+            self._connection.commit()
+        except sqlite3.Error as error:
+            self._connection.rollback()
+            raise map_sqlite_error(error, kind="write", operation=operation) from error
+        return result
 
     def _save_latest(
         self,
@@ -39,8 +67,9 @@ class SqliteRuntimeRepository:
         last_success_at: float | None,
     ) -> None:
         payload_json = json.dumps(record, ensure_ascii=False)
-        with self._connection:
-            self._connection.execute(
+        self._write(
+            "runtime.save_latest",
+            lambda: self._connection.execute(
                 """
                 INSERT INTO runtime_latest(source_id, payload_json, updated_at, last_success_at)
                 VALUES (?, ?, ?, ?)
@@ -50,7 +79,8 @@ class SqliteRuntimeRepository:
                     last_success_at = excluded.last_success_at
                 """,
                 (source_id, payload_json, updated_at, last_success_at),
-            )
+            ),
+        )
 
     def upsert(self, source_id: str, data: dict[str, Any]) -> None:
         now = time.time()
@@ -153,9 +183,16 @@ class SqliteRuntimeRepository:
 
     def get_all_latest(self) -> list[dict[str, Any]]:
         with self._lock:
-            rows = self._connection.execute(
-                "SELECT payload_json FROM runtime_latest ORDER BY source_id"
-            ).fetchall()
+            try:
+                rows = self._connection.execute(
+                    "SELECT payload_json FROM runtime_latest ORDER BY source_id"
+                ).fetchall()
+            except sqlite3.Error as error:
+                raise map_sqlite_error(
+                    error,
+                    kind="read",
+                    operation="runtime.get_all_latest",
+                ) from error
         records: list[dict[str, Any]] = []
         for row in rows:
             record = self._decode_record(row["payload_json"])
@@ -166,16 +203,23 @@ class SqliteRuntimeRepository:
     def get_history(self, source_id: str, limit: int = 100) -> list[dict[str, Any]]:
         safe_limit = 0 if limit < 0 else limit
         with self._lock:
-            rows = self._connection.execute(
-                """
-                SELECT timestamp, payload_json
-                FROM runtime_history
-                WHERE source_id = ?
-                ORDER BY timestamp DESC
-                LIMIT ?
-                """,
-                (source_id, safe_limit),
-            ).fetchall()
+            try:
+                rows = self._connection.execute(
+                    """
+                    SELECT timestamp, payload_json
+                    FROM runtime_history
+                    WHERE source_id = ?
+                    ORDER BY timestamp DESC
+                    LIMIT ?
+                    """,
+                    (source_id, safe_limit),
+                ).fetchall()
+            except sqlite3.Error as error:
+                raise map_sqlite_error(
+                    error,
+                    kind="read",
+                    operation="runtime.get_history",
+                ) from error
         records: list[dict[str, Any]] = []
         for row in rows:
             payload = self._decode_record(row["payload_json"])
@@ -187,6 +231,17 @@ class SqliteRuntimeRepository:
         return records
 
     def clear_source(self, source_id: str) -> None:
-        with self._lock, self._connection:
-            self._connection.execute("DELETE FROM runtime_latest WHERE source_id = ?", (source_id,))
-            self._connection.execute("DELETE FROM runtime_history WHERE source_id = ?", (source_id,))
+        with self._lock:
+            self._write(
+                "runtime.clear_source",
+                lambda: (
+                    self._connection.execute(
+                        "DELETE FROM runtime_latest WHERE source_id = ?",
+                        (source_id,),
+                    ),
+                    self._connection.execute(
+                        "DELETE FROM runtime_history WHERE source_id = ?",
+                        (source_id,),
+                    ),
+                ),
+            )

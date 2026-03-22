@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import sqlite3
 from typing import Any
 
 from core.data_controller import DataController
+from core.storage.errors import StorageContractError
 
 
 class _StubRuntimeStore:
@@ -57,6 +59,43 @@ class _StubRuntimeStore:
         self.latest_by_source.pop(source_id, None)
 
 
+class _FailingRuntimeStore:
+    def upsert(self, source_id: str, data: dict[str, Any]) -> None:
+        raise sqlite3.OperationalError("write exploded")
+
+    def set_error(self, source_id: str, error: str) -> None:
+        raise sqlite3.OperationalError("write exploded")
+
+    def set_state(
+        self,
+        source_id: str,
+        status: str,
+        message: str | None = None,
+        interaction: dict[str, Any] | None = None,
+        error: str | None = None,
+        error_code: str | None = None,
+    ) -> None:
+        raise sqlite3.OperationalError("write exploded")
+
+    def set_retry_metadata(self, source_id: str, metadata: dict[str, Any] | None) -> None:
+        raise sqlite3.OperationalError("write exploded")
+
+    def clear_retry_metadata(self, source_id: str) -> None:
+        raise sqlite3.OperationalError("write exploded")
+
+    def get_latest(self, source_id: str) -> dict[str, Any] | None:
+        raise sqlite3.OperationalError("read exploded")
+
+    def get_all_latest(self) -> list[dict[str, Any]]:
+        raise sqlite3.OperationalError("read exploded")
+
+    def get_history(self, source_id: str, limit: int = 100) -> list[dict[str, Any]]:
+        raise sqlite3.OperationalError("read exploded")
+
+    def clear_source(self, source_id: str) -> None:
+        raise sqlite3.OperationalError("write exploded")
+
+
 def test_data_controller_delegates_runtime_operations():
     runtime_store = _StubRuntimeStore()
     controller = DataController(runtime_store=runtime_store)
@@ -87,3 +126,25 @@ def test_data_controller_preserves_retry_metadata_methods():
         ("source-alpha", {"attempt": 2}),
         ("source-alpha", None),
     ]
+
+
+def test_data_controller_maps_sqlite_write_errors_to_storage_contract_errors():
+    controller = DataController(runtime_store=_FailingRuntimeStore())
+
+    try:
+        controller.upsert("source-alpha", {"value": 1})
+    except StorageContractError as error:
+        assert error.error_code == "storage.write_failed"
+    else:
+        raise AssertionError("expected StorageContractError")
+
+
+def test_data_controller_maps_sqlite_read_errors_to_storage_contract_errors():
+    controller = DataController(runtime_store=_FailingRuntimeStore())
+
+    try:
+        controller.get_latest("source-alpha")
+    except StorageContractError as error:
+        assert error.error_code == "storage.read_failed"
+    else:
+        raise AssertionError("expected StorageContractError")

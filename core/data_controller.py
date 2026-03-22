@@ -6,16 +6,19 @@ from __future__ import annotations
 
 import logging
 import os
+import sqlite3
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, TypeVar
 
 from core.storage.contract import RuntimeStore, StorageContract
+from core.storage.errors import StorageContractError, map_sqlite_error
 from core.storage.sqlite_connection import create_sqlite_connection
 from core.storage.sqlite_runtime_repo import SqliteRuntimeRepository
 
 logger = logging.getLogger(__name__)
 
 _DATA_DIR = Path(os.getenv("GLANCEUS_DATA_DIR", ".")) / "data"
+_T = TypeVar("_T")
 
 
 class DataController:
@@ -42,11 +45,33 @@ class DataController:
             self._runtime_store = SqliteRuntimeRepository(connection)
             logger.info("SQLite runtime store opened: %s", resolved_path)
 
+    def _with_storage_call(
+        self,
+        *,
+        kind: str,
+        operation: str,
+        action: Callable[[], _T],
+    ) -> _T:
+        try:
+            return action()
+        except StorageContractError:
+            raise
+        except sqlite3.Error as error:
+            raise map_sqlite_error(error, kind=kind, operation=operation) from error
+
     def upsert(self, source_id: str, data: dict[str, Any]) -> None:
-        self._runtime_store.upsert(source_id, data)
+        self._with_storage_call(
+            kind="write",
+            operation="data_controller.upsert",
+            action=lambda: self._runtime_store.upsert(source_id, data),
+        )
 
     def set_error(self, source_id: str, error: str) -> None:
-        self._runtime_store.set_error(source_id, error)
+        self._with_storage_call(
+            kind="write",
+            operation="data_controller.set_error",
+            action=lambda: self._runtime_store.set_error(source_id, error),
+        )
 
     def set_state(
         self,
@@ -57,32 +82,60 @@ class DataController:
         error: str | None = None,
         error_code: str | None = None,
     ) -> None:
-        self._runtime_store.set_state(
-            source_id=source_id,
-            status=status,
-            message=message,
-            interaction=interaction,
-            error=error,
-            error_code=error_code,
+        self._with_storage_call(
+            kind="write",
+            operation="data_controller.set_state",
+            action=lambda: self._runtime_store.set_state(
+                source_id=source_id,
+                status=status,
+                message=message,
+                interaction=interaction,
+                error=error,
+                error_code=error_code,
+            ),
         )
 
     def set_retry_metadata(self, source_id: str, metadata: dict[str, Any] | None) -> None:
-        self._runtime_store.set_retry_metadata(source_id, metadata)
+        self._with_storage_call(
+            kind="write",
+            operation="data_controller.set_retry_metadata",
+            action=lambda: self._runtime_store.set_retry_metadata(source_id, metadata),
+        )
 
     def clear_retry_metadata(self, source_id: str) -> None:
-        self._runtime_store.clear_retry_metadata(source_id)
+        self._with_storage_call(
+            kind="write",
+            operation="data_controller.clear_retry_metadata",
+            action=lambda: self._runtime_store.clear_retry_metadata(source_id),
+        )
 
     def get_latest(self, source_id: str) -> dict | None:
-        return self._runtime_store.get_latest(source_id)
+        return self._with_storage_call(
+            kind="read",
+            operation="data_controller.get_latest",
+            action=lambda: self._runtime_store.get_latest(source_id),
+        )
 
     def get_all_latest(self) -> list[dict]:
-        return self._runtime_store.get_all_latest()
+        return self._with_storage_call(
+            kind="read",
+            operation="data_controller.get_all_latest",
+            action=lambda: self._runtime_store.get_all_latest(),
+        )
 
     def get_history(self, source_id: str, limit: int = 100) -> list[dict]:
-        return self._runtime_store.get_history(source_id, limit=limit)
+        return self._with_storage_call(
+            kind="read",
+            operation="data_controller.get_history",
+            action=lambda: self._runtime_store.get_history(source_id, limit=limit),
+        )
 
     def clear_source(self, source_id: str) -> None:
-        self._runtime_store.clear_source(source_id)
+        self._with_storage_call(
+            kind="write",
+            operation="data_controller.clear_source",
+            action=lambda: self._runtime_store.clear_source(source_id),
+        )
 
     def close(self) -> None:
         if self._owned_connection is None:

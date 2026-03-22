@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from types import SimpleNamespace
 
 import main as main_module
@@ -12,6 +13,32 @@ from core.storage.sqlite_connection import create_sqlite_connection
 from core.storage.sqlite_resource_repo import SqliteResourceRepository
 from core.storage.sqlite_runtime_repo import SqliteRuntimeRepository
 from core.settings_manager import SettingsManager, SystemSettings
+
+
+class SqlConnectionSpy:
+    def __init__(self, delegate: sqlite3.Connection):
+        self._delegate = delegate
+        self.sql_statements: list[str] = []
+
+    def execute(self, sql: str, parameters=()):  # type: ignore[no-untyped-def]
+        self.sql_statements.append(" ".join(sql.strip().split()))
+        return self._delegate.execute(sql, parameters)
+
+    def commit(self) -> None:
+        self._delegate.commit()
+
+    def rollback(self) -> None:
+        self._delegate.rollback()
+
+    def cursor(self):  # type: ignore[no-untyped-def]
+        return self._delegate.cursor()
+
+    def __enter__(self):
+        self._delegate.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc, tb):  # type: ignore[no-untyped-def]
+        return self._delegate.__exit__(exc_type, exc, tb)
 
 
 def test_storage_bootstrap_sets_schema_version_and_tables(tmp_path):
@@ -207,3 +234,63 @@ def test_settings_adapter_writes_to_settings_json(tmp_path):
     settings_file = settings_dir / "settings.json"
     payload = json.loads(settings_file.read_text(encoding="utf-8"))
     assert payload["language"] == "zh"
+
+
+def test_runtime_repo_mutations_run_in_begin_immediate_transaction(tmp_path):
+    db_path = tmp_path / "storage.db"
+    connection = create_sqlite_connection(db_path)
+    spy = SqlConnectionSpy(connection)
+    repo = SqliteRuntimeRepository(spy)  # type: ignore[arg-type]
+
+    try:
+        repo.upsert("source-alpha", {"value": 1})
+        repo.set_state("source-alpha", status="running", message="ok")
+        repo.clear_retry_metadata("source-alpha")
+        repo.clear_source("source-alpha")
+    finally:
+        connection.close()
+
+    assert any("BEGIN IMMEDIATE" in sql for sql in spy.sql_statements)
+
+
+def test_resource_repo_mutations_run_in_begin_immediate_transaction(tmp_path):
+    db_path = tmp_path / "storage.db"
+    connection = create_sqlite_connection(db_path)
+    spy = SqlConnectionSpy(connection)
+    repo = SqliteResourceRepository(spy)  # type: ignore[arg-type]
+
+    source = StoredSource(
+        id="source-alpha",
+        integration_id="integration-alpha",
+        name="Alpha Source",
+        config={},
+        vars={},
+    )
+    view = StoredView(
+        id="view-alpha",
+        name="Main View",
+        layout_columns=12,
+        items=[
+            ViewItem(
+                id="item-alpha",
+                x=0,
+                y=0,
+                w=3,
+                h=4,
+                source_id="source-alpha",
+                template_id="tmpl-1",
+                props={},
+            )
+        ],
+    )
+
+    try:
+        repo.save_source(source)
+        repo.save_view(view)
+        repo.remove_source_references_from_views("source-alpha")
+        repo.delete_source("source-alpha")
+        repo.delete_view("view-alpha")
+    finally:
+        connection.close()
+
+    assert any("BEGIN IMMEDIATE" in sql for sql in spy.sql_statements)

@@ -3,8 +3,10 @@ from __future__ import annotations
 import os
 import sqlite3
 from pathlib import Path
+from typing import Callable, Protocol, TypeVar
 
 from .contract import DEFAULT_STORAGE_FILE, STORAGE_SCHEMA_VERSION
+from .errors import map_sqlite_error
 
 _DEFAULT_DATA_DIR = Path(os.getenv("GLANCEUS_DATA_DIR", ".")) / "data"
 
@@ -45,6 +47,16 @@ _SCHEMA_DDL = (
     """,
 )
 
+_T = TypeVar("_T")
+
+
+class _SupportsTransactions(Protocol):
+    def execute(self, sql: str, parameters=()): ...  # type: ignore[no-untyped-def]
+
+    def commit(self) -> None: ...
+
+    def rollback(self) -> None: ...
+
 
 def resolve_default_storage_path() -> Path:
     _DEFAULT_DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -52,10 +64,40 @@ def resolve_default_storage_path() -> Path:
 
 
 def bootstrap_schema(connection: sqlite3.Connection) -> None:
-    with connection:
-        for ddl in _SCHEMA_DDL:
-            connection.execute(ddl)
-        connection.execute(f"PRAGMA user_version = {STORAGE_SCHEMA_VERSION}")
+    try:
+        with connection:
+            for ddl in _SCHEMA_DDL:
+                connection.execute(ddl)
+            connection.execute(f"PRAGMA user_version = {STORAGE_SCHEMA_VERSION}")
+    except sqlite3.Error as error:
+        raise map_sqlite_error(error, kind="schema", operation="bootstrap_schema") from error
+
+
+def execute_write_transaction(
+    connection: _SupportsTransactions,
+    *,
+    operation: str,
+    action: Callable[[], _T],
+) -> _T:
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+    except sqlite3.Error as error:
+        raise map_sqlite_error(error, kind="write", operation=operation) from error
+
+    try:
+        result = action()
+    except Exception as error:
+        connection.rollback()
+        if isinstance(error, sqlite3.Error):
+            raise map_sqlite_error(error, kind="write", operation=operation) from error
+        raise
+
+    try:
+        connection.commit()
+    except sqlite3.Error as error:
+        connection.rollback()
+        raise map_sqlite_error(error, kind="write", operation=operation) from error
+    return result
 
 
 def create_sqlite_connection(db_path: str | Path | None = None) -> sqlite3.Connection:

@@ -241,3 +241,22 @@ def test_list_active_tasks_only_returns_active_statuses_in_created_order(tmp_pat
 
     active = store.list_active_tasks()
     assert [task["task_id"] for task in active] == [second["task_id"]]
+
+
+def test_scraper_task_store_keeps_queue_state_in_memory_only(tmp_path):
+    task_file = tmp_path / "scraper_tasks.json"
+    store = ScraperTaskStore(task_file)
+
+    created = store.upsert_pending_task(
+        source_id="source-memory-only",
+        step_id="webview",
+        url="https://example.com/memory",
+        script="",
+        intercept_api="",
+        secret_key="webview_data",
+    )
+    claimed = store.claim_next_task(worker_id="worker-a", lease_seconds=20)
+    assert claimed is not None
+    assert claimed["task_id"] == created["task_id"]
+
+    assert task_file.exists() is False

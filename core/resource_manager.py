@@ -6,17 +6,20 @@ from __future__ import annotations
 
 import logging
 import os
+import sqlite3
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional, TypeVar
 
 from core.models import StoredSource, StoredView
 from core.storage.contract import ResourceStore, StorageContract
+from core.storage.errors import StorageContractError, map_sqlite_error
 from core.storage.sqlite_connection import create_sqlite_connection
 from core.storage.sqlite_resource_repo import SqliteResourceRepository
 
 logger = logging.getLogger(__name__)
 
 DATA_DIR = Path(os.getenv("GLANCEUS_DATA_DIR", ".")) / "data"
+_T = TypeVar("_T")
 
 
 class ResourceManager:
@@ -48,32 +51,82 @@ class ResourceManager:
             self._resource_store = SqliteResourceRepository(connection)
             logger.info("SQLite resource store opened: %s", db_path)
 
+    def _with_storage_call(
+        self,
+        *,
+        kind: str,
+        operation: str,
+        action: Callable[[], _T],
+    ) -> _T:
+        try:
+            return action()
+        except StorageContractError:
+            raise
+        except sqlite3.Error as error:
+            raise map_sqlite_error(error, kind=kind, operation=operation) from error
+
     def load_sources(self) -> list[StoredSource]:
-        return self._resource_store.load_sources()
+        return self._with_storage_call(
+            kind="read",
+            operation="resource_manager.load_sources",
+            action=self._resource_store.load_sources,
+        )
 
     def save_source(self, source: StoredSource) -> StoredSource:
-        return self._resource_store.save_source(source)
+        return self._with_storage_call(
+            kind="write",
+            operation="resource_manager.save_source",
+            action=lambda: self._resource_store.save_source(source),
+        )
 
     def delete_source(self, source_id: str) -> bool:
-        return self._resource_store.delete_source(source_id)
+        return self._with_storage_call(
+            kind="write",
+            operation="resource_manager.delete_source",
+            action=lambda: self._resource_store.delete_source(source_id),
+        )
 
     def get_source(self, source_id: str) -> Optional[StoredSource]:
-        return self._resource_store.get_source(source_id)
+        return self._with_storage_call(
+            kind="read",
+            operation="resource_manager.get_source",
+            action=lambda: self._resource_store.get_source(source_id),
+        )
 
     def load_views(self) -> list[StoredView]:
-        return self._resource_store.load_views()
+        return self._with_storage_call(
+            kind="read",
+            operation="resource_manager.load_views",
+            action=self._resource_store.load_views,
+        )
 
     def save_view(self, view: StoredView) -> StoredView:
-        return self._resource_store.save_view(view)
+        return self._with_storage_call(
+            kind="write",
+            operation="resource_manager.save_view",
+            action=lambda: self._resource_store.save_view(view),
+        )
 
     def delete_view(self, view_id: str) -> bool:
-        return self._resource_store.delete_view(view_id)
+        return self._with_storage_call(
+            kind="write",
+            operation="resource_manager.delete_view",
+            action=lambda: self._resource_store.delete_view(view_id),
+        )
 
     def get_view(self, view_id: str) -> Optional[StoredView]:
-        return self._resource_store.get_view(view_id)
+        return self._with_storage_call(
+            kind="read",
+            operation="resource_manager.get_view",
+            action=lambda: self._resource_store.get_view(view_id),
+        )
 
     def remove_source_references_from_views(self, source_id: str) -> list[str]:
-        return self._resource_store.remove_source_references_from_views(source_id)
+        return self._with_storage_call(
+            kind="write",
+            operation="resource_manager.remove_source_references_from_views",
+            action=lambda: self._resource_store.remove_source_references_from_views(source_id),
+        )
 
     def close(self) -> None:
         if self._owned_connection is None:

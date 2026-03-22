@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Security and Stability Hardening
-status: active
-stopped_at: Completed 05-storage-contract-refactor-and-crash-safe-persistence-01-PLAN.md
-last_updated: "2026-03-20T13:33:58.918Z"
-last_activity: 2026-03-20 - Completed Phase 05 Plan 01 execution with storage contract baseline
+status: executing
+stopped_at: Completed 05-storage-contract-refactor-and-crash-safe-persistence-02-PLAN.md
+last_updated: "2026-03-20T13:54:54.634Z"
+last_activity: 2026-03-20 - Completed Phase 05 Plan 02 execution with crash-safe storage writes and memory-only scraper queue
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 1
   total_plans: 14
-  completed_plans: 10
-  percent: 71
+  completed_plans: 11
+  percent: 79
 ---
 
 # Project State
@@ -24,11 +24,11 @@ See: .planning/PROJECT.md (Updated 2026-03-20)
 
 ## Current Position
 Phase: 5 (next, phase 3 of 3 in active milestone)
-Plan: 1 of 3 in current phase
-Status: Ready to execute 05-02
-Last activity: 2026-03-20 - Completed Phase 05 Plan 01 execution with storage contract baseline
+Plan: 2 of 3 in current phase
+Status: Ready to execute 05-03
+Last activity: 2026-03-20 - Completed Phase 05 Plan 02 execution with crash-safe storage writes and memory-only scraper queue
 
-Progress: [███████░░░] 71%
+Progress: [████████░░] 79%
 
 ## Performance Metrics
 
@@ -49,6 +49,7 @@ Progress: [███████░░░] 71%
 - Last 5 completed plans: 04-01, 04-02, 04-03, 04-05, 05-01
 - Trend: Stable
 | Phase 05-storage-contract-refactor-and-crash-safe-persistence P01 | 14m | 3 tasks | 12 files |
+| Phase 05-storage-contract-refactor-and-crash-safe-persistence P02 | 11m | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -61,6 +62,9 @@ Progress: [███████░░░] 71%
 - [Phase 05-storage-contract-refactor-and-crash-safe-persistence]: Kept settings/secrets JSON-backed while exposing settings through SettingsAdapter on StorageContract.
 - [Phase 05-storage-contract-refactor-and-crash-safe-persistence]: create_app now builds one shared sqlite storage contract injected into DataController and ResourceManager.
 - [Phase 05-storage-contract-refactor-and-crash-safe-persistence]: Controller method signatures were preserved while persistence moved behind RuntimeStore/ResourceStore delegation.
+- [Phase 05-storage-contract-refactor-and-crash-safe-persistence]: Mapped sqlite failures into StorageContractError subclasses with stable storage.* error codes.
+- [Phase 05-storage-contract-refactor-and-crash-safe-persistence]: Runtime/resource mutations now execute in explicit BEGIN IMMEDIATE transactions with rollback on failure.
+- [Phase 05-storage-contract-refactor-and-crash-safe-persistence]: Scraper task queue state is runtime-memory only while internal scraper endpoint method contracts remain unchanged.
 
 ### Pending Todos
 - 13 pending todo items remain in `.planning/todos/pending/` (use `$gsd-check-todos` to inspect/select).
@@ -69,6 +73,6 @@ Progress: [███████░░░] 71%
 - Storage migration and recovery semantics still need detailed phase planning before execution.
 
 ## Session Continuity
-Last session: 2026-03-20T13:32:48.184Z
-Stopped at: Completed 05-storage-contract-refactor-and-crash-safe-persistence-01-PLAN.md
+Last session: 2026-03-20T13:52:52.883Z
+Stopped at: Completed 05-storage-contract-refactor-and-crash-safe-persistence-02-PLAN.md
 Resume file: None

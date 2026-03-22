@@ -31,7 +31,7 @@
 
 ### Storage Contract Refactor
 
-- [ ] **STOR-01**: User can persist runtime/resources/settings data through a unified storage contract with explicit schema versioning.
+- [x] **STOR-01**: User can persist runtime/resources/settings data through a unified storage contract with explicit schema versioning.
 - [ ] **STOR-02**: User can recover from interrupted writes without corrupting local Integration Data or losing last known-good state.
 - [ ] **STOR-03**: User can migrate existing `data/*.json` records into the refactored storage format automatically at startup.
 - [ ] **STOR-04**: User can rely on deterministic storage `error_code` diagnostics and repeatable verification checks before release.
@@ -68,7 +68,7 @@
 | PH4-03 | Phase 4 | Complete |
 | PH4-04 | Phase 4 | Complete |
 | PH4-05 | Phase 4 | Complete |
-| STOR-01 | Phase 5 | Pending |
+| STOR-01 | Phase 5 | Complete |
 | STOR-02 | Phase 5 | Pending |
 | STOR-03 | Phase 5 | Pending |
 | STOR-04 | Phase 5 | Pending |

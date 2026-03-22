@@ -31,6 +31,11 @@ from core.master_key_provider import MasterKeyProvider
 from core.settings_manager import SettingsManager
 from core.refresh_scheduler import RefreshScheduler
 from core.scraper_task_store import ScraperTaskStore
+from core.storage.contract import StorageContract
+from core.storage.settings_adapter import SettingsAdapter
+from core.storage.sqlite_connection import create_sqlite_connection
+from core.storage.sqlite_resource_repo import SqliteResourceRepository
+from core.storage.sqlite_runtime_repo import SqliteRuntimeRepository
 from core import api
 
 
@@ -153,6 +158,9 @@ async def lifespan(app: FastAPI):
     if refresh_scheduler is not None:
         await refresh_scheduler.stop()
     app.state.data_controller.close()
+    storage_connection = getattr(app.state, "storage_connection", None)
+    if storage_connection is not None:
+        storage_connection.close()
 
 
 def create_app() -> FastAPI:
@@ -181,8 +189,19 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # System settings manager remains JSON-backed.
+    settings_manager = SettingsManager()
+
+    # Shared storage contract for runtime/resources/settings boundary.
+    storage_connection = create_sqlite_connection()
+    storage_contract = StorageContract(
+        runtime=SqliteRuntimeRepository(storage_connection),
+        resources=SqliteResourceRepository(storage_connection),
+        settings=SettingsAdapter(settings_manager),
+    )
+
     # Initialize resource managers (used by first-launch seeding).
-    resource_manager = ResourceManager()
+    resource_manager = ResourceManager(storage=storage_contract)
     integration_manager = IntegrationManager()
     existing_source_ids_before_seed = {source.id for source in resource_manager.load_sources()}
     seeded = seed_first_launch_workspace(integration_manager, resource_manager)
@@ -196,8 +215,8 @@ def create_app() -> FastAPI:
         logger.error("failed to load config; starting with empty config: %s", exc, exc_info=True)
         config = AppConfig()
 
-    # Persistent data store.
-    data_controller = DataController()
+    # Persistent runtime data store.
+    data_controller = DataController(storage=storage_contract)
 
     # Sensitive secret storage.
     secrets_controller = SecretsController()
@@ -205,8 +224,6 @@ def create_app() -> FastAPI:
     # Authentication manager.
     auth_manager = AuthManager(secrets_controller, app_config=config)
 
-    # System settings manager.
-    settings_manager = SettingsManager()
     settings_file = getattr(
         settings_manager,
         "settings_file",
@@ -275,6 +292,8 @@ def create_app() -> FastAPI:
     app.state.executor = executor
     app.state.data_controller = data_controller
     app.state.resource_manager = resource_manager
+    app.state.storage_contract = storage_contract
+    app.state.storage_connection = storage_connection
     app.state.startup_background_tasks = startup_background_tasks
     app.state.refresh_scheduler = refresh_scheduler
 

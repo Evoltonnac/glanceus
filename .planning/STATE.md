@@ -3,13 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Security and Stability Hardening
 status: active
-last_updated: "2026-03-20T09:30:20Z"
-last_activity: 2026-03-20 - Re-scoped v1.1 roadmap to keep Phase 3/4 as completed baseline and schedule Phase 5 storage refactor next
+stopped_at: Completed 05-storage-contract-refactor-and-crash-safe-persistence-01-PLAN.md
+last_updated: "2026-03-20T13:33:58.918Z"
+last_activity: 2026-03-20 - Completed Phase 05 Plan 01 execution with storage contract baseline
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 14
-  completed_plans: 9
+  completed_plans: 10
+  percent: 71
 ---
 
 # Project State
@@ -22,16 +24,16 @@ See: .planning/PROJECT.md (Updated 2026-03-20)
 
 ## Current Position
 Phase: 5 (next, phase 3 of 3 in active milestone)
-Plan: 0 of 3 in current phase
-Status: Ready to plan
-Last activity: 2026-03-20 - Re-scoped roadmap/state for v1.1 with Phase 5 as the next planned phase
+Plan: 1 of 3 in current phase
+Status: Ready to execute 05-02
+Last activity: 2026-03-20 - Completed Phase 05 Plan 01 execution with storage contract baseline
 
-Progress: [######----] 64%
+Progress: [███████░░░] 71%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
+- Total plans completed: 10
 - Average duration: N/A (not tracked in this state reset)
 - Total execution time: N/A (not tracked in this state reset)
 
@@ -41,11 +43,12 @@ Progress: [######----] 64%
 |-------|-------|-------|----------|
 | 3. Security Audit Remediation Baseline | 5 | 5 | N/A |
 | 4. WebView Stability and Deterministic Recovery Baseline | 4 | 6 | N/A |
-| 5. Storage Contract Refactor and Crash-Safe Persistence | 0 | 3 | N/A |
+| 5. Storage Contract Refactor and Crash-Safe Persistence | 1 | 3 | 14m |
 
 **Recent Trend:**
-- Last 5 completed plans: 03-05, 04-01, 04-02, 04-03, 04-05
+- Last 5 completed plans: 04-01, 04-02, 04-03, 04-05, 05-01
 - Trend: Stable
+| Phase 05-storage-contract-refactor-and-crash-safe-persistence P01 | 14m | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -55,6 +58,9 @@ Progress: [######----] 64%
 - [Phase 4]: Automatic WebView fallback no longer steals focus; foreground behavior is explicit user intent only.
 - [Phase 4]: Runtime uncertain failures use bounded retries with deterministic classification and retry budget controls.
 - [Phase 5]: Storage work is the next delivery boundary for v1.1 and must preserve config-first integration behavior.
+- [Phase 05-storage-contract-refactor-and-crash-safe-persistence]: Kept settings/secrets JSON-backed while exposing settings through SettingsAdapter on StorageContract.
+- [Phase 05-storage-contract-refactor-and-crash-safe-persistence]: create_app now builds one shared sqlite storage contract injected into DataController and ResourceManager.
+- [Phase 05-storage-contract-refactor-and-crash-safe-persistence]: Controller method signatures were preserved while persistence moved behind RuntimeStore/ResourceStore delegation.
 
 ### Pending Todos
 - 13 pending todo items remain in `.planning/todos/pending/` (use `$gsd-check-todos` to inspect/select).
@@ -63,6 +69,6 @@ Progress: [######----] 64%
 - Storage migration and recovery semantics still need detailed phase planning before execution.
 
 ## Session Continuity
-Last session: 2026-03-20T09:30:20Z
-Stopped at: Milestone roadmap/state re-scope completed with Phase 5 pending
+Last session: 2026-03-20T13:32:48.184Z
+Stopped at: Completed 05-storage-contract-refactor-and-crash-safe-persistence-01-PLAN.md
 Resume file: None

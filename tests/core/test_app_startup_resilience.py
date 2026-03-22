@@ -63,12 +63,16 @@ def test_create_app_falls_back_to_empty_config_when_load_fails(monkeypatch):
         inject_master_key_provider=lambda _provider: None,
     )
     monkeypatch.setattr(main_module, "load_config", _boom)
-    monkeypatch.setattr(main_module, "DataController", lambda: SimpleNamespace(close=lambda: None))
+    monkeypatch.setattr(main_module, "DataController", lambda **_kwargs: SimpleNamespace(close=lambda: None))
     monkeypatch.setattr(main_module, "SecretsController", lambda: fake_secrets)
     monkeypatch.setattr(main_module, "AuthManager", lambda _secrets, app_config: SimpleNamespace())
     monkeypatch.setattr(main_module, "SettingsManager", lambda: SimpleNamespace())
     monkeypatch.setattr(main_module, "Executor", lambda _dc, _sc, _sm, **_kwargs: SimpleNamespace())
-    monkeypatch.setattr(main_module, "ResourceManager", lambda: SimpleNamespace(load_sources=lambda: []))
+    monkeypatch.setattr(
+        main_module,
+        "ResourceManager",
+        lambda **_kwargs: SimpleNamespace(load_sources=lambda: []),
+    )
     monkeypatch.setattr(main_module, "IntegrationManager", lambda: SimpleNamespace())
     monkeypatch.setattr(main_module.api, "init_api", lambda **_kwargs: None)
 
@@ -107,7 +111,7 @@ def test_create_app_seeds_first_launch_workspace_when_empty(monkeypatch):
             return view
 
     monkeypatch.setattr(main_module, "load_config", lambda: AppConfig())
-    monkeypatch.setattr(main_module, "DataController", lambda: SimpleNamespace(close=lambda: None))
+    monkeypatch.setattr(main_module, "DataController", lambda **_kwargs: SimpleNamespace(close=lambda: None))
     monkeypatch.setattr(
         main_module,
         "SecretsController",
@@ -119,7 +123,7 @@ def test_create_app_seeds_first_launch_workspace_when_empty(monkeypatch):
     monkeypatch.setattr(main_module, "AuthManager", lambda _secrets, app_config: SimpleNamespace())
     monkeypatch.setattr(main_module, "SettingsManager", lambda: SimpleNamespace())
     monkeypatch.setattr(main_module, "Executor", lambda _dc, _sc, _sm, **_kwargs: SimpleNamespace())
-    monkeypatch.setattr(main_module, "ResourceManager", lambda: FakeResourceManager())
+    monkeypatch.setattr(main_module, "ResourceManager", lambda **_kwargs: FakeResourceManager())
     monkeypatch.setattr(main_module, "IntegrationManager", lambda: FakeIntegrationManager())
     monkeypatch.setattr(main_module.api, "init_api", lambda **_kwargs: None)
 
@@ -227,7 +231,7 @@ def test_create_app_bootstrap_sources_use_api_create_flow_for_auto_refresh(monke
         return source
 
     monkeypatch.setattr(main_module, "load_config", lambda: AppConfig())
-    monkeypatch.setattr(main_module, "DataController", lambda: SimpleNamespace(close=lambda: None))
+    monkeypatch.setattr(main_module, "DataController", lambda **_kwargs: SimpleNamespace(close=lambda: None))
     monkeypatch.setattr(
         main_module,
         "SecretsController",
@@ -243,7 +247,7 @@ def test_create_app_bootstrap_sources_use_api_create_flow_for_auto_refresh(monke
         "Executor",
         lambda _dc, _sc, _sm, **_kwargs: SimpleNamespace(fetch_source=lambda _source: None),
     )
-    monkeypatch.setattr(main_module, "ResourceManager", lambda: FakeResourceManager())
+    monkeypatch.setattr(main_module, "ResourceManager", lambda **_kwargs: FakeResourceManager())
     monkeypatch.setattr(main_module, "IntegrationManager", lambda: FakeIntegrationManager())
     monkeypatch.setattr(main_module.api, "create_stored_source_record", _capture_create_stored_source_record)
     monkeypatch.setattr(main_module.api, "init_api", lambda **_kwargs: None)

@@ -819,7 +819,7 @@ def create_stored_view_record(
 @router.post("/refresh/{source_id}")
 async def refresh_source(source_id: str, background_tasks: BackgroundTasks) -> dict:
     """Manually trigger refresh for one source."""
-    # Read source from JSON storage.
+    # Read source from configured resource storage backend.
     stored_sources = _resource_manager.load_sources()
     matched_stored = None
     source = None
@@ -850,7 +850,7 @@ async def refresh_all(background_tasks: BackgroundTasks) -> dict:
     source_ids = []
     skipped_sources = []
 
-    # Refresh sources from JSON storage.
+    # Refresh sources from configured resource storage backend.
     stored_sources = _resource_manager.load_sources()
     for stored in stored_sources:
         resolved = _resolve_stored_source(stored)

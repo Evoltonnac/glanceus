@@ -10,20 +10,19 @@ from core.models import StoredSource, StoredView, ViewItem
 from core.resource_manager import ResourceManager
 
 STARTER_SOURCE_INTEGRATION_IDS = {
-    "devto_opensource",
-    "openrouter_tools",
-    "twitch_media_oauth",
-    "icloud_webscraper",
-    "gold_price_market",
+    "devto_daily_briefing",
+    "dribbble_design_picks",
+    "github_profile_pulse",
+    "gold_spot_pulse",
+    "twitch_live_radar",
 }
 
 STARTER_INTEGRATION_FILES = {
-    "devto_opensource.yaml",
-    "github_device_oauth.yaml",
-    "openrouter_tools.yaml",
-    "twitch_media_oauth.yaml",
-    "icloud_webscraper.yaml",
-    "gold_price_market.yaml",
+    "devto_daily_briefing.yaml",
+    "dribbble_design_picks.yaml",
+    "github_profile_pulse.yaml",
+    "gold_spot_pulse.yaml",
+    "twitch_live_radar.yaml",
 }
 
 
@@ -93,9 +92,9 @@ def test_bootstrap_starter_bundle_seeds_required_presets_on_empty_workspace():
 
 def test_bootstrap_starter_bundle_is_idempotent_for_starter_only_workspace():
     partial_source = StoredSource(
-        id="starter_devto_source",
-        integration_id="devto_opensource",
-        name="DEV.to Open Source",
+        id="starter_devto_daily_briefing_source",
+        integration_id="devto_daily_briefing",
+        name="Open Source Daily Briefing",
         config={},
         vars={},
     )
@@ -110,14 +109,14 @@ def test_bootstrap_starter_bundle_is_idempotent_for_starter_only_workspace():
                 y=0,
                 w=4,
                 h=4,
-                source_id="starter_devto_source",
-                template_id="DEV.to Open Source Snapshot",
+                source_id="starter_devto_daily_briefing_source",
+                template_id="devto_oss_snapshot",
                 props={},
             )
         ],
     )
     integration_manager = FakeIntegrationManager(
-        {"devto_opensource.yaml": "name: partial\n"}
+        {"devto_daily_briefing.yaml": "name: partial\n"}
     )
     resource_manager = FakeResourceManager(
         sources=[partial_source],
@@ -176,7 +175,7 @@ def test_bootstrap_starter_bundle_ignores_hidden_metadata_yaml_files(tmp_path):
     )
 
     # macOS archive extraction can produce AppleDouble sidecar files.
-    (integrations_dir / "._devto_opensource.yaml").write_bytes(
+    (integrations_dir / "._devto_daily_briefing.yaml").write_bytes(
         b"\x00\x05\x16\x07\x00\x02\x00\x00Mac OS X\x00\x00\x00\xa3"
     )
 

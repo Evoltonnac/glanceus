@@ -186,7 +186,7 @@ class Executor:
         error: str | None = None,
         error_code: str | None = None,
     ):
-        """Update state, log it, and persist to data.json."""
+        """Update state, log it, and persist via the runtime data controller."""
         state = self.get_source_state(source_id)
         state.status = status
         state.message = message

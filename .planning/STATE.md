@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Security Audit Remediation
-status: executing
-last_updated: "2026-03-20T05:28:27.526Z"
-last_activity: 2026-03-20 — Completed 04-03 rust no-auto-focus auth fallback and docs contract sync plan with passing tauri/doc gates
+status: completed
+last_updated: "2026-03-20T09:15:00.000Z"
+last_activity: 2026-03-20 — Closed Phase 4 by user decision after committing latest auth-handoff and retry-traceability updates
 progress:
   total_phases: 2
   completed_phases: 2
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 11
+  completed_plans: 9
 ---
 
 # Project State
@@ -18,13 +18,13 @@ progress:
 See: .planning/PROJECT.md (Updated for v1.1)
 
 **Core value:** In a config-first workflow, users can still finish auth -> fetch -> parse -> render without backend hardcoding.
-**Current focus:** Phase 4 completed; all plans through 04-03 are complete and documented.
+**Current focus:** Phase 4 closed; milestone documentation and traceability have been updated.
 
 ## Current Position
-Phase: 4
-Plan: 03 completed (`04-03-PLAN.md`)
-Status: Phase 4 complete; 04-01, 04-02, and 04-03 all completed
-Last activity: 2026-03-20 — Completed 04-03 rust no-auto-focus auth fallback and docs contract sync plan with passing tauri/doc gates
+Phase: 4 (closed)
+Plan: Finalized with latest 04-04 auth-handoff state-stability updates and 04-05 retry metadata summary
+Status: Phase 4 closed by user decision on 2026-03-20; requirements traceability synced in `.planning/REQUIREMENTS.md`
+Last activity: 2026-03-20 — Closed Phase 4 by user decision after committing latest auth-handoff and retry-traceability updates
 
 ## Session Continuity
 - v1.0 has shipped and Phase 1/2 follow-up work is completed and retained in historical context.
@@ -36,6 +36,7 @@ Last activity: 2026-03-20 — Completed 04-03 rust no-auto-focus auth fallback a
 - 2026-03-20T05:04:11Z: Completed Plan 04-01 with deterministic webview manual-vs-retry classification, bounded scheduler retries, and passing targeted/backend regression gates.
 - 2026-03-20T05:19:07Z: Completed Plan 04-02 with deterministic internal fail contracts and explicit foreground-intent scraper controls, passing backend/frontend/typecheck gates.
 - 2026-03-20T05:27:13Z: Completed Plan 04-03 with no-auto-focus Rust auth fallback behavior, synchronized runtime/fallback docs, and passing tauri/doc regression gates.
+- 2026-03-20T07:49:17Z: Completed Plan 04-05 with persisted retry metadata, updated_at-decoupled retry backoff, and passing backend/impacted regression gates.
 
 ## Accumulated Context
 
@@ -55,6 +56,7 @@ Last activity: 2026-03-20 — Completed 04-03 rust no-auto-focus auth fallback a
 - 2026-03-20: Completed Plan 04-01 with explicit manual-vs-retry webview failure contracts and bounded scheduler retry policy.
 - 2026-03-20: Completed Plan 04-02 with deterministic internal fail classification and explicit frontend foreground-intent queue controls.
 - 2026-03-20: Completed Plan 04-03 with Rust no-auto-focus auth-required fallback and synchronized fallback/retry documentation.
+- 2026-03-20: Completed Plan 04-05 with persisted retry metadata and churn-safe bounded retries for runtime.retry_required/runtime.network_timeout.
 
 ### Decisions
 - 2026-03-19: OAuth code exchange now requires single-use server state bound to `source_id` and `redirect_uri`.
@@ -79,6 +81,9 @@ Last activity: 2026-03-20 — Completed 04-03 rust no-auto-focus auth fallback a
 - [Phase 04]: Automatic auth-required fallback is signal-only and does not invoke window focus/foreground operations.
 - [Phase 04]: Explicit manual recovery retains show/focus behavior only through user-triggered foreground commands.
 - [Phase 04]: Phase docs now define manual_only payload semantics without implicit force_foreground and preserve uncertain retry budget at 3 attempts (60/180/600s).
+- [Phase 04]: Persist retry metadata in latest source records to survive generic state updates.
+- [Phase 04]: Track retry signature by retryable runtime error code so error/suspended churn does not reset budget.
+- [Phase 04]: Clear retry metadata only on success after failure or when retry signature changes.
 
 ### Pending Todos
 

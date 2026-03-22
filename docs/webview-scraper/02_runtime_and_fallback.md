@@ -50,10 +50,11 @@ Manual-required payload contract:
 
 ## 5. Retry Policy for Uncertain Failures
 
-1. Uncertain transient failures use deterministic `runtime.retry_required`.
-2. Scheduler retries uncertain failures with a `3`-attempt cap.
-3. Retry backoff sequence is `60s`, `180s`, and `600s`.
-4. Manual-required failures (`auth.manual_webview_required`) remain excluded from automatic retries.
+1. WebView uncertain failures may be classified as retryable runtime failures by backend policy.
+2. Retry scheduling is owned by backend `RefreshScheduler`, not by WebView runtime/frontend logic.
+3. Manual-required auth failures (`auth.manual_webview_required`) stay excluded from automatic retry.
+4. Detailed retry signatures, metadata, backoff windows, and reset rules are defined in:
+   [../flow/05_refresh_scheduler_and_retry.md](../flow/05_refresh_scheduler_and_retry.md)
 
 ## 6. State Observability
 

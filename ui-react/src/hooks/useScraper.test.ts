@@ -483,6 +483,71 @@ describe("useScraper observer mode", () => {
         vi.useRealTimers();
     });
 
+    it("auth-required handoff stops timeout auto-cancel for the same task", async () => {
+        vi.useFakeTimers();
+        const source = buildWebviewSource("source-auth-handoff", "Source Auth Handoff");
+        useStore.setState({
+            sources: [source],
+            activeScraper: null,
+            skippedScrapers: new Set(),
+        });
+
+        let lifecycleListener:
+            | ((event: { payload: any }) => void | Promise<void>)
+            | undefined;
+        let authRequiredListener:
+            | ((event: { payload: any }) => void | Promise<void>)
+            | undefined;
+        mockListen.mockImplementation((eventName: string, callback: any) => {
+            if (eventName === "scraper_lifecycle_log") {
+                lifecycleListener = callback;
+            }
+            if (eventName === "scraper_auth_required") {
+                authRequiredListener = callback;
+            }
+            return Promise.resolve(mockUnlisten);
+        });
+        mockInvoke.mockResolvedValue(undefined);
+
+        renderHook(() => useScraper());
+        await act(async () => {
+            await Promise.resolve();
+        });
+        expect(lifecycleListener).toBeDefined();
+        expect(authRequiredListener).toBeDefined();
+
+        act(() => {
+            lifecycleListener?.({
+                payload: {
+                    source_id: source.id,
+                    task_id: "task-auth-handoff-1",
+                    stage: "task_claimed",
+                    level: "info",
+                    message: "Claimed backend scraper task",
+                    timestamp: 1,
+                },
+            });
+        });
+
+        act(() => {
+            authRequiredListener?.({
+                payload: {
+                    sourceId: source.id,
+                    taskId: "task-auth-handoff-1",
+                    targetUrl: "https://example.com/login",
+                },
+            });
+        });
+
+        await act(async () => {
+            vi.advanceTimersByTime(10_000);
+            await Promise.resolve();
+        });
+
+        expect(mockInvoke).not.toHaveBeenCalledWith("cancel_scraper_task");
+        vi.useRealTimers();
+    });
+
     it("foreground task logs are skipped from timeout tracking", async () => {
         vi.useFakeTimers();
         const source = buildWebviewSource("source-foreground", "Source Foreground");

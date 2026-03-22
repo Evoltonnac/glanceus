@@ -109,6 +109,7 @@ npx tauri signer generate --ci --write-keys src-tauri/gen/updater/tauri-update.k
 
 - Terminology: [`docs/terminology.md`](docs/terminology.md)
 - Flow architecture: [`docs/flow/`](docs/flow/)
+- Refresh scheduler + retry architecture: [`docs/flow/05_refresh_scheduler_and_retry.md`](docs/flow/05_refresh_scheduler_and_retry.md)
 - SDUI architecture: [`docs/sdui/`](docs/sdui/)
 - Frontend engineering guide: [`docs/frontend/01_engineering_guide.md`](docs/frontend/01_engineering_guide.md)
 - WebView scraper docs: [`docs/webview-scraper/`](docs/webview-scraper/)

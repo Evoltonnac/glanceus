@@ -14,6 +14,7 @@ const TERMINAL_STAGES = new Set([
     "task_complete",
     "task_cancelled",
     "task_killed_log_burst",
+    "task_handoff_auth_required",
 ]);
 
 export interface ScraperLifecycleLog {
@@ -485,10 +486,23 @@ export function useScraper() {
                     `Manual auth required for source ${event.payload.sourceId}`,
                 );
                 const { sourceId, taskId, targetUrl } = event.payload;
+                if (
+                    taskId &&
+                    activeTaskIdRef.current &&
+                    activeTaskIdRef.current !== taskId
+                ) {
+                    console.warn(
+                        `[Scraper] Ignore stale auth-required event for ${sourceId}: ${taskId} != ${activeTaskIdRef.current}`,
+                    );
+                    return;
+                }
                 if (taskId) {
                     activeTaskIdRef.current = taskId;
+                    activeTaskSourceIdRef.current = sourceId;
                 }
-                useStore.getState().setActiveScraper(sourceId);
+                // Auth-required handoff ends backend-owned execution; stop timeout tracking.
+                setActiveTaskToken(null);
+                useStore.getState().setActiveScraper(null);
 
                 const currentSources = useStore.getState().sources;
                 useStore.getState().setSources(

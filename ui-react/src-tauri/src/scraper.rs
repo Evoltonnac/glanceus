@@ -1612,6 +1612,29 @@ pub async fn handle_scraper_auth(
                     ),
                 );
             }
+
+            emit_lifecycle_log(
+                &app,
+                ScraperLifecycleLog::new(
+                    source_id.clone(),
+                    resolved_task_id.clone(),
+                    "task_handoff_auth_required",
+                    "info",
+                    "Backend task handed off to manual auth recovery".to_string(),
+                ),
+            );
+
+            if let Some(win) = app.get_webview_window(WINDOW_SCRAPER_WORKER) {
+                let _ = win.close();
+            }
+            clear_active_task(&app);
+
+            #[cfg(target_os = "macos")]
+            {
+                let state = app.state::<ScraperState>();
+                let mut guard = state.app_nap_guard.lock().unwrap();
+                *guard = None;
+            }
         }
     }
 
@@ -1940,6 +1963,21 @@ mod tests {
         assert!(
             !body.contains("window.set_focus("),
             "Auth-required fallback must not auto-focus the scraper window"
+        );
+    }
+
+    #[test]
+    fn auth_required_handler_ends_active_task_lifecycle_contract() {
+        let source = include_str!("scraper.rs");
+        let body = extract_function_body(source, "pub async fn handle_scraper_auth");
+
+        assert!(
+            body.contains("task_handoff_auth_required"),
+            "Auth-required fallback should emit an explicit lifecycle handoff stage"
+        );
+        assert!(
+            body.contains("clear_active_task(&app);"),
+            "Auth-required fallback should terminate active task tracking"
         );
     }
 

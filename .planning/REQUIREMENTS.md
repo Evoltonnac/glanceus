@@ -21,6 +21,14 @@
 - [x] **GATE-01**: User can verify that critical auth/fetch/refresh paths still pass targeted regression tests after remediation.
 - [x] **GATE-02**: User can verify milestone readiness through a documented security check gate with repeatable pass/fail criteria.
 
+### Web Scraper Stability and Recovery
+
+- [x] **PH4-01**: User can run WebView fallback flows without automatic foreground/focus stealing in backend/frontend/runtime recovery paths.
+- [x] **PH4-02**: User can rely on bounded automatic retries for uncertain runtime failures with deterministic cap and backoff behavior.
+- [x] **PH4-03**: User can rely on deterministic internal scraper fail classification that keeps manual-required auth walls separate from retryable uncertain failures.
+- [x] **PH4-04**: User can trigger explicit foreground/manual recovery actions without implicit fallback metadata forcing focus behavior.
+- [x] **PH4-05**: User can reference synchronized runtime/fallback contracts and regression inputs for manual-only fallback and retry behavior.
+
 ## v2 Requirements
 
 ### Defense in Depth (Deferred)
@@ -47,12 +55,17 @@
 | INT-02 | Phase 3 | Complete |
 | GATE-01 | Phase 3 | Complete |
 | GATE-02 | Phase 3 | Complete |
+| PH4-01 | Phase 4 | Complete |
+| PH4-02 | Phase 4 | Complete |
+| PH4-03 | Phase 4 | Complete |
+| PH4-04 | Phase 4 | Complete |
+| PH4-05 | Phase 4 | Complete |
 
 **Coverage:**
-- v1 requirements: 7 total
-- Mapped to phases: 7
+- v1 requirements: 12 total
+- Mapped to phases: 12
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-19*
-*Last updated: 2026-03-19 after roadmap creation for milestone v1.1*
+*Last updated: 2026-03-20 after adding Phase 4 traceability requirements*

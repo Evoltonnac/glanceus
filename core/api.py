@@ -218,6 +218,46 @@ def _classify_scraper_fail_reason(reason: str) -> str:
     return "retry_required"
 
 
+def _is_manual_webview_state_for_task(source_id: str, task_id: str) -> bool:
+    if _executor is None or not hasattr(_executor, "get_source_state"):
+        return False
+    try:
+        runtime_state = _executor.get_source_state(source_id)
+    except Exception:
+        return False
+    if runtime_state is None:
+        return False
+
+    status = getattr(runtime_state, "status", None)
+    if isinstance(status, SourceStatus):
+        normalized_status = status.value
+    else:
+        normalized_status = str(status or "")
+    if normalized_status != SourceStatus.SUSPENDED.value:
+        return False
+
+    interaction = getattr(runtime_state, "interaction", None)
+    if interaction is None:
+        return False
+
+    interaction_type = getattr(interaction, "type", None)
+    interaction_data = getattr(interaction, "data", None)
+    if isinstance(interaction, dict):
+        interaction_type = interaction.get("type")
+        interaction_data = interaction.get("data")
+
+    if isinstance(interaction_type, InteractionType):
+        normalized_type = interaction_type.value
+    else:
+        normalized_type = str(interaction_type or "")
+    if normalized_type != InteractionType.WEBVIEW_SCRAPE.value:
+        return False
+
+    if not isinstance(interaction_data, dict):
+        return False
+    return str(interaction_data.get("task_id") or "") == task_id
+
+
 def _apply_runtime_log_level(debug_enabled: bool) -> None:
     level = logging.DEBUG if debug_enabled else logging.INFO
     logging.getLogger().setLevel(level)
@@ -960,6 +1000,12 @@ async def internal_fail_scraper_task(
             payload.error,
             interaction=interaction,
             error_code="auth.manual_webview_required",
+        )
+    elif _is_manual_webview_state_for_task(payload.source_id, payload.task_id):
+        logger.info(
+            "[%s] Skip retry_required overwrite for task %s because source is already manual-required",
+            payload.source_id,
+            payload.task_id,
         )
     else:
         _executor._update_state(

@@ -79,3 +79,4 @@ This model applies to `api_key`, `form`, `oauth`, `curl`, and `webview`.
 
 - Flow produces data and runtime state; SDUI renders it: [../sdui/01_architecture_and_guidelines.md](../sdui/01_architecture_and_guidelines.md)
 - WebView step capabilities come from the Scraper subsystem: [../webview-scraper/01_architecture_and_dataflow.md](../webview-scraper/01_architecture_and_dataflow.md)
+- Refresh scheduler and retry policy are backend runtime concerns: [05_refresh_scheduler_and_retry.md](05_refresh_scheduler_and_retry.md)

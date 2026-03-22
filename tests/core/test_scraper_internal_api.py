@@ -235,6 +235,48 @@ def test_internal_fail_uncertain_marks_retryable_runtime_error(tmp_path):
     assert "interaction" not in call_args.kwargs
 
 
+def test_internal_fail_cancel_does_not_overwrite_existing_manual_required_state(tmp_path):
+    client, store, executor, _secrets = _build_client(tmp_path)
+    task = store.upsert_pending_task(
+        source_id="source-1",
+        step_id="webview-step",
+        url="https://example.com/login",
+        script="",
+        intercept_api="/api",
+        secret_key="session_capture",
+    )
+    claimed = store.claim_next_task(worker_id="daemon-1", lease_seconds=10)
+    assert claimed is not None
+
+    manual_required_state = SimpleNamespace(
+        status=SourceStatus.SUSPENDED,
+        interaction=SimpleNamespace(
+            type=InteractionType.WEBVIEW_SCRAPE,
+            data={
+                "task_id": task["task_id"],
+                "manual_only": True,
+            },
+        ),
+    )
+    executor.get_source_state = MagicMock(return_value=manual_required_state)
+
+    failed = client.post(
+        "/api/internal/scraper/fail",
+        headers=_internal_headers(),
+        json={
+            "worker_id": "daemon-1",
+            "source_id": "source-1",
+            "task_id": task["task_id"],
+            "attempt": claimed["attempt_count"],
+            "error": "Scraper task cancelled by user",
+        },
+    )
+    assert failed.status_code == 200
+    assert failed.json()["accepted"] is True
+    assert failed.json()["idempotent"] is False
+    executor._update_state.assert_not_called()
+
+
 def test_internal_fail_is_idempotent_for_repeated_attempts(tmp_path):
     client, store, executor, _secrets = _build_client(tmp_path)
     task = store.upsert_pending_task(

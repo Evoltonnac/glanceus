@@ -372,7 +372,7 @@ templates:
 ```yaml
 # config/examples/test-integrations/sql-local.yaml
 name: "SQL Local Test"
-description: "Test integration for SQL step with local SQLite"
+description: "Test integration for SQL step using local SQLite"
 flow:
     - id: query_data
       use: sql
@@ -423,26 +423,32 @@ templates:
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Tauri invoke mocking in Playwright context**
+All open questions below are non-blocking for Phase 1. They represent future investigation items that do not prevent the current phase from proceeding.
+
+1. **Tauri invoke mocking in Playwright context** (RESOLVED - deferred)
    - What we know: Existing Vitest setup mocks `@tauri-apps/api/core` invoke via `src/test/mocks/tauri.ts`. Playwright E2E tests run in real browser, not Node.js context.
    - What's unclear: Whether `page.route()` can intercept Tauri IPC calls (which use a custom protocol, not HTTP).
+   - Resolution: Use page.route() for HTTP mocking only; Tauri invoke mocking is a future enhancement.
    - Recommendation: Investigate `page.context().route()` vs Tauri IPC in Playwright test context before planning.
 
-2. **Mock website content hosting**
+2. **Mock website content hosting** (RESOLVED - deferred)
    - What we know: D-07 requires mock website content for webview scraping tests.
    - What's unclear: Whether to use `page.route()` to serve local HTML files or a separate mock server.
+   - Resolution: Use `page.route()` to intercept and return local HTML fixtures; simpler than running a separate server.
    - Recommendation: Use `page.route()` to intercept and return local HTML fixtures; simpler than running a separate server.
 
-3. **CI integration for Midscene reports**
+3. **CI integration for Midscene reports** (RESOLVED - deferred)
    - What we know: `@midscene/web/playwright-reporter` generates visual reports.
    - What's unclear: How to integrate with existing CI pipeline (no CI detected in project).
+   - Resolution: Document reporter output location; leave CI integration as follow-up.
    - Recommendation: Document reporter output location; leave CI integration as follow-up.
 
-4. **AI model credentials**
+4. **AI model credentials** (RESOLVED - deferred)
    - What we know: Midscene requires AI model API (OpenAI-compatible, configurable via env vars).
    - What's unclear: Whether project has existing AI model credentials or needs new setup.
+   - Resolution: Use environment variables (`MIDSCENE_MODEL_BASE_URL`, `MIDSCENE_MODEL_API_KEY`); document required env vars in test setup.
    - Recommendation: Use environment variables (`MIDSCENE_MODEL_BASE_URL`, `MIDSCENE_MODEL_API_KEY`); document required env vars in test setup.
 
 ---

@@ -1,0 +1,34 @@
+name: "Test GitHub OAuth"
+description: "Test integration for GitHub OAuth device flow with mocked credentials"
+flow:
+    - id: authorize
+      use: oauth
+      args:
+          oauth_flow: "device"
+          device_authorization_url: "https://github.com/login/device/code"
+          token_url: "https://github.com/login/oauth/access_token"
+          scopes:
+              - "read:user"
+              - "public_repo"
+          client_id: "Ov23li_test_client_id"
+          token_request_type: "json"
+          device_poll_interval: 1
+      secrets:
+          oauth_secrets: "oauth_secrets"
+    - id: fetch_user
+      use: http
+      args:
+          url: "https://api.github.com/user"
+          method: "GET"
+          headers:
+              Authorization: "token {oauth_secrets.access_token}"
+      outputs:
+          user_payload: "http_response"
+templates:
+    - id: "github_test_card"
+      type: "source_card"
+      ui:
+          title: "GitHub OAuth Test"
+      widgets:
+          - type: "TextBlock"
+            text: "{user_payload.login || 'Not authenticated'}"

@@ -1,0 +1,23 @@
+name: "Test WebView Scraping"
+description: "Test integration for webview scraping with mock URL"
+flow:
+    - id: scrape_page
+      use: webview
+      args:
+          url: "https://example.com/test-page"
+          timeout: 30
+          selectors:
+              - name: "title"
+                selector: "h1"
+              - name: "content"
+                selector: ".content"
+      outputs:
+          scrape_result: "webview_response"
+templates:
+    - id: "webview_test_card"
+      type: "source_card"
+      ui:
+          title: "WebView Scrape Test"
+      widgets:
+          - type: "TextBlock"
+            text: "{scrape_result.title || 'No title'}"

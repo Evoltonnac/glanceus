@@ -1,0 +1,19 @@
+name: "Test SQL Local SQLite"
+description: "Test integration for SQL step using local SQLite file"
+flow:
+    - id: query_sources
+      use: sql
+      args:
+          connector: "sqlite"
+          connection: "data/sources.json"
+          query: "SELECT id, name, status FROM sources LIMIT 10"
+      outputs:
+          query_result: "sql_response"
+templates:
+    - id: "sql_test_card"
+      type: "source_card"
+      ui:
+          title: "SQL Local Test"
+      widgets:
+          - type: "TextBlock"
+            text: "{query_result}"

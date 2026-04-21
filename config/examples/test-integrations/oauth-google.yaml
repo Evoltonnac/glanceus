@@ -1,0 +1,34 @@
+name: "Test Google OAuth"
+description: "Test integration for Google OAuth authorization code flow"
+flow:
+    - id: authorize
+      use: oauth
+      args:
+          oauth_flow: "authorization_code"
+          authorization_url: "https://accounts.google.com/o/oauth2/v2/auth"
+          token_url: "https://oauth2.googleapis.com/token"
+          scopes:
+              - "https://www.googleapis.com/auth/userinfo.email"
+              - "https://www.googleapis.com/auth/userinfo.profile"
+          client_id: "test-google-client-id.apps.googleusercontent.com"
+          redirect_uri: "http://localhost:4173/oauth/callback"
+          token_request_type: "json"
+      secrets:
+          oauth_secrets: "oauth_secrets"
+    - id: fetch_userinfo
+      use: http
+      args:
+          url: "https://www.googleapis.com/oauth2/v2/userinfo"
+          method: "GET"
+          headers:
+              Authorization: "Bearer {oauth_secrets.access_token}"
+      outputs:
+          user_payload: "http_response"
+templates:
+    - id: "google_test_card"
+      type: "source_card"
+      ui:
+          title: "Google OAuth Test"
+      widgets:
+          - type: "TextBlock"
+            text: "{user_payload.email || 'Not authenticated'}"

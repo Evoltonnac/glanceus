@@ -20,7 +20,7 @@
 Plans:
 - [x] 01-01-PLAN.md — Foundation: install SDK, create fixture, update Playwright config (Completed: 2026-04-21)
 - [x] 01-02-PLAN.md — D-01 critical path E2E test (Completed: 2026-04-21)
-- [ ] 01-03-PLAN.md — D-02 additional feature interaction tests (dashboard CRUD, source CRUD, step failure)
+- [x] 01-03-PLAN.md — D-02 additional feature interaction tests (dashboard CRUD, source CRUD, step failure) (Completed: 2026-04-21)
 - [x] 01-04-PLAN.md — D-08/D-09/D-10 predefined test integration YAML configs (Completed: 2026-04-21)
 
 ---

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-04-21T10:19:42.043Z"
-last_activity: 2026-04-21 — Phase 01-01 plan completed
+stopped_at: Completed 01-04-PLAN.md
+last_updated: "2026-04-21T10:22:08Z"
+last_activity: 2026-04-21 — Phase 01-04 plan completed
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
-  percent: 25
+  completed_plans: 2
+  percent: 50
 ---
 
 # Project State
@@ -31,7 +31,7 @@ Plan: 1 of --name
 Status: Executing Phase --phase
 Last activity: 2026-04-21 -- Phase --phase execution started
 
-Progress: [███░░░░░░░] 25%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -70,6 +70,9 @@ Progress: [███░░░░░░░] 25%
 **Phase 01 Midscene AI Harness:**
 
 - Plan 01 completed: Midscene SDK installed, Playwright fixture created, config updated for 90s AI timeout
+
+| Phase 01 P01 | 1 min | 3 tasks | 4 files |
+| Phase 01 P04 | 1 min | 5 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -114,6 +117,7 @@ Progress: [███░░░░░░░] 25%
 ### Roadmap Evolution
 
 - Phase 01 added: Midscene AI 自动化测试集成 - 建立项目 harness 测试边界 (Midscene AI test integration for main-path E2E coverage with mocks and human-in-the-loop simulation)
+- Phase 01 P04 completed: Created test integration YAML configs (OAuth GitHub, OAuth Google, SQL local, webview scrape) and mock OAuth server for E2E testing
 - Phase 7 added: Risk-Operation Trust Authorization, Rule Storage, and HTTP Step Refactor (inserted as v1.2 first phase; previous phases shifted by +1)
 - Phase 7 executed: `07-01` and `07-02` completed on 2026-03-24
 - Phase 8 completed: `08-01`, `08-02`, and `08-03` executed on 2026-03-24
@@ -148,9 +152,9 @@ None currently.
 
 ## Session Continuity
 
-Last session: --stopped-at
-Stopped at: Completed 01-01-PLAN.md
+Last session: Completed 01-04-PLAN.md
+Stopped at: Completed 01-04-PLAN.md
 Resume file: --resume-file
 
 **Planned Phase:** 01 (midscene-ai-harness) — 4 plans — 2026-04-21T09:24:04.058Z
-**Last activity:** 2026-04-21 — Phase 01-01 plan completed
+**Last activity:** 2026-04-21 — Phase 01-04 plan completed

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: milestone
 status: completed
-stopped_at: Completed checkpoint for v1.2 all-current-phases handoff
-last_updated: "2026-03-29T11:16:10Z"
-last_activity: "2026-03-29 - Completed checkpoint handoff commit after passing make test-impacted"
+stopped_at: Phase 01 context gathered
+last_updated: "2026-04-21T08:51:53.581Z"
+last_activity: 2026-03-29 - Completed checkpoint handoff commit after passing make test-impacted
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 11
-  completed_plans: 11
+  total_phases: 1
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
   percent: 100
 ---
 
@@ -107,6 +107,7 @@ Progress: [██████████] 11/11 plans (100%)
 
 ### Roadmap Evolution
 
+- Phase 01 added: Midscene AI 自动化测试集成 - 建立项目 harness 测试边界 (Midscene AI test integration for main-path E2E coverage with mocks and human-in-the-loop simulation)
 - Phase 7 added: Risk-Operation Trust Authorization, Rule Storage, and HTTP Step Refactor (inserted as v1.2 first phase; previous phases shifted by +1)
 - Phase 7 executed: `07-01` and `07-02` completed on 2026-03-24
 - Phase 8 completed: `08-01`, `08-02`, and `08-03` executed on 2026-03-24
@@ -141,6 +142,6 @@ None currently.
 
 ## Session Continuity
 
-Last session: 2026-03-26T14:09:17.907Z
-Stopped at: Completed quick 260326-uas
-Resume file: None
+Last session: --stopped-at
+Stopped at: Phase 01 context gathered
+Resume file: --resume-file

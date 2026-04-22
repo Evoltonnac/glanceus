@@ -57,6 +57,7 @@
         "zustand": "^5.0.11"
     },
     "devDependencies": {
+        "@midscene/web": "^1.7.5",
         "@tauri-apps/cli": "^2.10.0",
         "@testing-library/jest-dom": "^6.9.1",
         "@testing-library/react": "^16.3.0",
@@ -67,13 +68,13 @@
         "@vitejs/plugin-react": "^4.3.4",
         "autoprefixer": "^10.4.20",
         "concurrently": "^9.2.1",
+        "dotenv": "^17.4.2",
         "jsdom": "^27.1.0",
         "playwright": "^1.58.2",
         "postcss": "^8.4.49",
         "tailwindcss": "^3.4.17",
         "typescript": "^5.7.3",
         "vite": "^6.0.11",
-        "vitest": "^4.0.0",
-        "@midscene/web": "^1.7.5"
+        "vitest": "^4.0.0"
     }
 }

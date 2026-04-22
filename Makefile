@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: help dev dev-tauri build-backend build-mac build-win build-desktop test test-backend test-frontend test-typecheck test-impacted gen-schemas clean-artifacts
+.PHONY: help dev dev-tauri build-backend build-mac build-win build-desktop test test-backend test-frontend test-typecheck test-impacted test-midscene gen-schemas clean-artifacts
 
 help:
 	@echo "Available targets:"
@@ -14,6 +14,7 @@ help:
 	@echo "  make test-frontend          # Run frontend core tests"
 	@echo "  make test-typecheck         # Run frontend tests with typecheck"
 	@echo "  make test-impacted          # Run impacted-only gate by changed files"
+	@echo "  make test-midscene          # Run Midscene AI E2E tests (requires .env with MIDSCENE_*)"
 	@echo "  make gen-schemas            # Generate integration schema artifacts"
 	@echo "  make clean-artifacts        # Remove generated build artifacts"
 
@@ -47,6 +48,9 @@ test-typecheck:
 
 test-impacted:
 	bash scripts/test_impacted.sh
+
+test-midscene:
+	cd ui-react && pnpm exec playwright test tests/e2e/midscene/
 
 gen-schemas:
 	python scripts/generate_schemas.py

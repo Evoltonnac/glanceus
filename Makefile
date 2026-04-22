@@ -50,7 +50,7 @@ test-impacted:
 	bash scripts/test_impacted.sh
 
 test-midscene:
-	cd ui-react && pnpm exec playwright test tests/e2e/midscene/
+	cd ui-react && pnpm exec dotenv -e ../.env -- playwright test tests/e2e/midscene/
 
 gen-schemas:
 	python scripts/generate_schemas.py

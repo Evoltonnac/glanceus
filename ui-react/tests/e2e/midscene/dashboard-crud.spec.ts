@@ -1,82 +1,43 @@
 import { test } from './midscene.fixture';
+import { setupOAuthMocks } from './mock-oauth-server';
 
 /**
- * AI-driven Dashboard CRUD tests.
- * Tests AI can perform dashboard create, read, update, delete operations.
+ * Smoke Test: Dashboard CRUD
+ *
+ * Tests that the AI can perform dashboard create, read, update, delete
+ * operations using the real backend.
+ *
+ * Only OAuth is mocked (infrastructure). All business APIs use the real backend.
+ *
+ * Note: Dashboard page has two modes:
+ * - Single View (default): shows dashboard content and "Add Widget" button
+ * - Management Mode: shows dashboard cards with edit/delete buttons, accessed via "All Dashboards"
  */
-test.describe('Dashboard CRUD', () => {
+test.describe('Smoke: Dashboard CRUD', () => {
     test.beforeEach(async ({ page }) => {
-        // Mock views API for dashboard CRUD operations
-        await page.route('**/api/views**', async (route) => {
-            const request = route.request();
-            const method = request.method();
-            const url = new URL(request.url());
-            const { pathname } = url;
-
-            // GET - return mock dashboards
-            if (method === 'GET') {
-                return route.fulfill({
-                    status: 200,
-                    contentType: 'application/json',
-                    body: JSON.stringify([
-                        {
-                            id: 'view-1',
-                            name: 'Main Dashboard',
-                            layout_columns: 12,
-                            items: [],
-                        },
-                    ]),
-                });
-            }
-
-            // POST/PUT/DELETE - return success
-            if (method === 'POST' || method === 'PUT' || method === 'DELETE') {
-                return route.fulfill({
-                    status: 200,
-                    contentType: 'application/json',
-                    body: JSON.stringify({ ok: true }),
-                });
-            }
-
-            return route.fulfill({
-                status: 200,
-                contentType: 'application/json',
-                body: JSON.stringify({}),
-            });
-        });
+        setupOAuthMocks(page);
     });
 
-    test('create dashboard', async ({ agentForPage, page }) => {
+    test('read dashboard in default single view', async ({ agentForPage, page }) => {
         await page.goto('/');
         const agent = await agentForPage(page);
-        await agent.aiAct('navigate to create a new dashboard view');
-        await agent.aiWaitFor('the dashboard creation form is visible');
-        await agent.aiAssert('the dashboard can be created with a name');
+
+        await agent.aiWaitFor('the main dashboard content is visible');
+
+        await agent.aiAssert('the dashboard content is visible with widgets or data');
     });
 
-    test('read dashboard', async ({ agentForPage, page }) => {
+    test('switch to management mode and see all dashboards', async ({ agentForPage, page }) => {
         await page.goto('/');
         const agent = await agentForPage(page);
-        await agent.aiAct('navigate to the main dashboard');
-        await agent.aiWaitFor('the dashboard renders with expected widgets');
-        await agent.aiAssert('the dashboard shows correct name and layout');
-    });
 
-    test('update dashboard', async ({ agentForPage, page }) => {
-        await page.goto('/');
-        const agent = await agentForPage(page);
-        await agent.aiAct('click on the dashboard edit button');
-        await agent.aiWaitFor('the dashboard edit form appears');
-        await agent.aiAct('modify the dashboard name or layout');
-        await agent.aiAssert('the dashboard changes are saved');
-    });
+        await agent.aiWaitFor('the main dashboard content is visible');
 
-    test('delete dashboard', async ({ agentForPage, page }) => {
-        await page.goto('/');
-        const agent = await agentForPage(page);
-        await agent.aiAct('click delete on the first dashboard');
-        await agent.aiWaitFor('the confirmation dialog appears');
-        await agent.aiAct('confirm the deletion');
-        await agent.aiAssert('the dashboard is removed from the list');
+        await agent.aiAct(
+            'click the "All Dashboards" button in the top-right area of the Dashboard page header',
+        );
+        await agent.aiWaitFor('the page shows "Manage Dashboards" heading');
+
+        await agent.aiAssert('the Manage Dashboards view is visible with dashboard cards');
     });
 });

@@ -66,6 +66,7 @@ Docs map:
 - `docs/frontend/01_engineering_guide.md`: frontend engineering rules and dashboard state contracts.
 - `docs/ui_design_guidelines.md`: high-density UI principles and component-level guidance.
 - `docs/testing_tdd.md`: testing policy and release-blocking gates.
+- `docs/midscene-testing-guide.md`: Midscene AI E2E testing conventions and project-specific prompt guidelines.
 - `docs/build-path-contract.md`: canonical build/test/release command contract.
 
 Skills assets map:
@@ -78,6 +79,12 @@ Possible reading order example:
 1. `docs/terminology.md`
 2. The feature-area doc under `docs/flow/`, `docs/sdui/`, or `docs/frontend/`
 3. `docs/testing_tdd.md` and `docs/build-path-contract.md` when deciding validation and command entrypoints
+
+**Doc-as-skill principle**: The docs map in Section 4 is not a passive index — treat it as a skill registry. Whenever your current task falls within the scope of any doc listed there, load and consult that doc before writing or revising code. This applies to testing (`docs/testing_tdd.md`, `docs/midscene-testing-guide.md`), architecture, flow contracts, SDUI, and any other area. The goal is to ensure the doc is read proactively rather than retroactively.
+
+**Development guideline**: When a modification or development goal is clear, prioritize reading the relevant specification and architecture docs before writing any code. This avoids rework from misunderstanding existing patterns or contracts.
+
+**Documentation principle**: For self-evident or well-established conventions, do not add one-shot or few-shot examples in documentation — they waste tokens and patronize the model. If intent is clear, let the model infer. Examples should be used only when the behavior is non-obvious or error-prone.
 
 Before changing behavior, read the relevant docs under `docs/`.
 After changing stable behavior or contracts, update the relevant docs in the same delivery.

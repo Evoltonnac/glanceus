@@ -8,6 +8,10 @@
         "dev": "vite",
         "dev:backend": "python ../scripts/dev_server.py",
         "dev:all": "concurrently -n backend,frontend -c blue,green \"pnpm run dev:backend\" \"pnpm run dev\"",
+        "dev:e2e": "bash ../scripts/dev_server_for_e2e_with_mocks.sh",
+        "dev:e2e:clean": "bash ../scripts/dev_server_for_e2e_with_mocks.sh --clean",
+        "dev:e2e:app": "bash ../scripts/dev_server_for_e2e.sh",
+        "dev:e2e:mocks": "node ../scripts/e2e_mock_oauth_openapi.mjs",
         "tauri": "tauri",
         "tauri:dev": "tauri dev",
         "tauri:dev:all": "concurrently -n backend,tauri -c blue,yellow \"pnpm run dev:backend\" \"pnpm run tauri:dev\"",
@@ -19,7 +23,10 @@
         "test": "vitest",
         "audit:high": "pnpm audit --audit-level=high",
         "test:core": "vitest run src/api/client.test.ts src/store/index.test.ts src/components/widgets/WidgetRenderer.test.tsx src/components/ui/MetricCard.test.tsx src/components/ui/BentoWidget.test.tsx src/pages/Integrations.test.tsx src/pages/dashboardLayout.test.ts",
-        "typecheck": "tsc --noEmit -p tsconfig.app.json"
+        "typecheck": "tsc --noEmit -p tsconfig.app.json",
+        "test:midscene": "dotenv -e ../.env -- playwright test tests/e2e/midscene --reporter=list",
+        "test:midscene:critical": "dotenv -e ../.env -- playwright test tests/e2e/midscene/critical-path.spec.ts --reporter=list",
+        "test:midscene:clean": "rm -rf tests-e2e-temp && pnpm run test:midscene"
     },
     "dependencies": {
         "@dnd-kit/core": "^6.3.1",
@@ -72,7 +79,7 @@
         "dotenv": "^17.4.2",
         "dotenv-cli": "^11.0.0",
         "jsdom": "^27.1.0",
-        "playwright": "^1.58.2",
+        "playwright": "^1.59.1",
         "postcss": "^8.4.49",
         "tailwindcss": "^3.4.17",
         "typescript": "^5.7.3",

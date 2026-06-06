@@ -46,6 +46,8 @@ ui-react/src-tauri/target/
 ui-react/src-tauri/gen/
 ui-react/dist/
 ui-react/node_modules/
+ui-react/midscene_run/
+ui-react/tests-e2e-temp/
 ui-react/test-results/
 ui-react/.tmp-schema-test/
 

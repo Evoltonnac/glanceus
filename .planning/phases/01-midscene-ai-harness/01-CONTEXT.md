@@ -37,10 +37,16 @@
 - **D-09:** 测试用 Integration YAML 预先定义，测试时由 AI 复制到应用中自主创建
 - **D-10:** 预置多个 YAML 配置覆盖不同场景（OAuth 类、SQL 类、webview 抓取类）
 
-### Claude's Discretion
-- Midscene AI 驱动时的超时策略和重试配置
-- 具体 Mock 网站内容的实现细节
-- 测试报告格式与现有 CI 的集成方式
+### Self-Analysis Iteration Workflow
+- **D-11:** Midscene 用例调优前先建立可复用的“测试尝试 → 报告分析 → 归因 → 用例修复/人工介入 → 迭代收敛”流程；具体调优 `critical-path`、CRUD、failure 等用例必须在流程文档完成后进行。
+- **D-12:** 自动修复采用保守边界：AI 只能自动修改测试提示词、等待策略、断言措辞、测试拆分/去重；涉及产品代码、mock 业务语义、真实流程期望变化时必须请求人工确认。
+- **D-13:** 同一个 Midscene 用例最多自动修复 2 轮；仍失败时必须停止自动循环，输出归因和人工介入请求。
+- **D-14:** 失败归因采用证据优先顺序：先判断环境/启动问题，再判断产品行为或 mock 语义，再判断提示词/用例描述问题。只有截图或 trace 显示 UI 符合预期但 AI 点错、等错、断言错时，才归为纯提示词问题。
+- **D-15:** 产品疑似 bug、mock 语义问题、以及“部分按钮或交互无法靠单纯功能文字描述清楚驱动 AI 测试”的情况必须升级为人工介入或单独 debug，不继续盲目自动改提示词。
+- **D-16:** 用例保留策略为一条完整功能冒烟路径，加少量主流程覆盖不到的重要分支或边界情况；重复 CRUD 步骤、重复导航步骤、只验证同一风险的用例应瘦身、合并或删除。
+- **D-17:** `smoke-navigation.spec.ts` 的清晰视觉描述风格作为其他 Midscene 用例优化基准，尤其是 icon-only 控件、相似按钮、固定位置 UI、确认弹窗和卡片操作。
+- **D-18:** 可复用流程主要落在 `docs/midscene-testing-guide.md`；Phase CONTEXT 只记录决策约束，避免日常测试指南入口分散。
+
 
 </decisions>
 
@@ -62,6 +68,11 @@
 ### Existing Test Fixtures
 - `tests/conftest.py` — 现有测试 fixtures（InMemoryResourceManager, FakeExecutor, FakeAuthManager 等）
 - `tests/smoke/test_phase13_e2e.py` — 现有 E2E smoke test 模式
+
+### Midscene Iteration Workflow
+- `docs/midscene-testing-guide.md` — 项目级 Midscene 测试指南；包含自分析迭代流程、失败分类、提示词模板和后续用例调优顺序
+- `ui-react/tests/e2e/midscene/smoke-navigation.spec.ts` — 当前通过且描述较完善的 smoke 用例，作为视觉描述和路径组织基准
+- `ui-react/tests/e2e/midscene/midscene.fixture.ts` — Midscene Playwright fixture 与成本/超时控制入口
 
 ### Project Facts
 - `docs/terminology.md` — 项目术语定义

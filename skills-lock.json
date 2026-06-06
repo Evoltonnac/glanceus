@@ -1,10 +1,40 @@
 {
   "version": 1,
   "skills": {
+    "android-device-automation": {
+      "source": "web-infra-dev/midscene-skills",
+      "sourceType": "github",
+      "computedHash": "5d57b0ddca4554793fc01d2f984118705e9146038c039b4aa954112a6278a32b"
+    },
+    "browser-automation": {
+      "source": "web-infra-dev/midscene-skills",
+      "sourceType": "github",
+      "computedHash": "db9c2a3b0b9780b4e5f554f115ea1b0c9e1b49e3f076f698e656382672a04063"
+    },
+    "desktop-computer-automation": {
+      "source": "web-infra-dev/midscene-skills",
+      "sourceType": "github",
+      "computedHash": "0bb955c616a26f8ebb6206adc6449487a79554f49e67012a16e08e89358f63e3"
+    },
+    "harmonyos-device-automation": {
+      "source": "web-infra-dev/midscene-skills",
+      "sourceType": "github",
+      "computedHash": "ffccbbe66da4e4ad5d572be83a140ca4e7bbd2ccfd1c54b33aa53df11de548e0"
+    },
+    "ios-device-automation": {
+      "source": "web-infra-dev/midscene-skills",
+      "sourceType": "github",
+      "computedHash": "196df8364bb713cf64d5e0d164c75b710905249c3a51845edac4173fc01699d2"
+    },
     "vercel-react-best-practices": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
       "computedHash": "4365be772fd3b41994a72ad478472c6d680678e7f3859860ab010e9c46e48ee0"
+    },
+    "vitest-midscene-e2e": {
+      "source": "web-infra-dev/midscene-skills",
+      "sourceType": "github",
+      "computedHash": "7f0f394621b4df765b772a6e20e352aeba2d31ff7712cfd35f914bb471d52f71"
     },
     "web-design-guidelines": {
       "source": "vercel-labs/agent-skills",

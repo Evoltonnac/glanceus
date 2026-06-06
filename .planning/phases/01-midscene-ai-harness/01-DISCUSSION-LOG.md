@@ -5,7 +5,7 @@
 
 **Date:** 2026-04-21
 **Phase:** 01-midscene-ai-harness
-**Areas discussed:** Test Coverage Scope, Harness Architecture, Mock Strategy, YAML Config Strategy
+**Areas discussed:** Test Coverage Scope, Harness Architecture, Mock Strategy, YAML Config Strategy, Self-Analysis Iteration Workflow, Failure Attribution, Test Retention Strategy, Process Artifact Format
 
 ---
 
@@ -65,6 +65,62 @@
 | 混合策略 | 简单场景预定义，复杂场景动态生成 | |
 
 **User's choice:** 预先定义 + AI 复制
+
+---
+
+## Self-Analysis Iteration Workflow
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| 保守自动修 | 只允许自动改测试提示词、等待策略、断言措辞、测试拆分/去重；产品代码、mock 业务语义、真实流程期望变化请求人工确认 | ✓ |
+| 测试内全自动 | 允许自动修测试和 mock，只要不改产品代码；速度快但可能掩盖真实产品问题 | |
+| 只诊断不修 | 每次失败只产出诊断建议，不自动改文件；最安全但迭代效率最低 | |
+
+**User's choice:** 保守自动修
+
+**Notes:** 同一个 Midscene 用例最多自动修复 2 轮；仍失败时停止自动循环，输出归因并请求人工介入。
+
+---
+
+## Failure Attribution
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| 证据优先 | 先看环境/启动，再看产品行为，再看 AI 描述；只有截图显示 UI 符合预期但 AI 点错/等错时，才归为提示词问题 | ✓ |
+| 先修提示词 | 优先把失败当作用例描述问题修复，重复失败后再升级 | |
+| 先查产品 | 优先把失败当作产品/环境问题排查，提示词最后考虑 | |
+
+**User's choice:** 证据优先
+
+**Notes:** 产品疑似 bug、mock 语义问题，以及部分按钮或交互无法靠单纯功能文字描述清楚驱动 AI 测试时，必须人工进行精确说明或进入单独 debug。
+
+---
+
+## Test Retention Strategy
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| 路径/风险保留 | 以 smoke-navigation 的结构为模板；每个保留用例必须覆盖独立用户路径或独立风险 | ✓ |
+| 页面保留 | Dashboard、Integration、Source、Failure 各自完整覆盖 CRUD，即使步骤有重复 | |
+| 稳定优先 | 先只保留稳定通过的 smoke 和少数关键路径，不稳定用例暂时删除 | |
+
+**User's choice:** 一条完整功能的冒烟路径，以及部分难以从主流程覆盖到的重要分支或边界情况。
+
+**Notes:** 其他重复路径应瘦身、合并或删除。
+
+---
+
+## Process Artifact Format
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| 更新现有指南 | 补充 `docs/midscene-testing-guide.md`，增加自分析迭代流程和失败分类表；CONTEXT.md 只记录 phase 决策 | ✓ |
+| 新增流程文档 | 新增独立流程文档，例如 `docs/midscene-test-iteration.md` | |
+| 只写上下文 | 只写入 `.planning/phases/01-midscene-ai-harness/01-CONTEXT.md` | |
+
+**User's choice:** 更新现有指南
+
+**Notes:** 指南必须包含迭代记录、失败分类表、提示词模板延展入口和后续调优顺序。
 
 ---
 

@@ -1,61 +1,35 @@
-// Mock OAuth server for E2E testing
-// Provides: token, auth, refresh, get data endpoints
-// All operations are in-memory mock - no real OAuth provider calls
-
 import { Page } from '@playwright/test';
+import {
+  buildMockOAuthOpenApiContentTemplate,
+  createMockOAuthDataFlowState,
+  handleMockOAuthOpenApiRequest,
+  MOCK_OAUTH_ACCOUNT_NAME,
+  MOCK_OAUTH_INTEGRATION_ID,
+  MOCK_OAUTH_PRESET_ID,
+  MOCK_OAUTH_REVENUE_TITLE,
+  MOCK_OAUTH_REVENUE_VALUE,
+  MOCK_OAUTH_SOURCE_ID,
+  type MockOAuthDataFlowSnapshot,
+} from './mock-oauth-openapi';
 
-export interface MockOAuthConfig {
-  clientId: string;
-  clientSecret?: string;
-  tokenEndpoint: string;
-  authorizationEndpoint: string;
-}
-
-export interface MockUser {
-  id: string;
-  login: string;
-  email: string;
-  name: string;
-}
-
-const mockUsers: Map<string, MockUser> = new Map([
-  ['test-token-gh', { id: '1', login: 'testuser', email: 'test@example.com', name: 'Test User' }],
-  ['test-token-google', { id: '2', login: 'googleuser', email: 'google@example.com', name: 'Google User' }],
-]);
-
-const mockTokens: Map<string, { userId: string; expiresAt: number; refreshToken?: string }> = new Map();
-
-// In-memory mock server using Node.js http module
-// For use with page.route() interception in Playwright tests
-
-export interface MockServerEndpoints {
-  deviceCode: string;
-  accessToken: string;
-  userInfo: string;
-  data: string;
-}
-
-const DEFAULT_PORTS = {
-  github: 3001,
-  google: 3002,
+export {
+  MOCK_OAUTH_ACCOUNT_NAME,
+  MOCK_OAUTH_INTEGRATION_ID,
+  MOCK_OAUTH_REVENUE_TITLE,
+  MOCK_OAUTH_REVENUE_VALUE,
+  MOCK_OAUTH_SOURCE_ID,
+  type MockOAuthDataFlowSnapshot,
 };
 
-// Start mock OAuth server on a specific port
-// Returns cleanup function
-export function startMockOAuthServer(port: number = DEFAULT_PORTS.github): { close: () => void } {
-  // This is a placeholder - actual server implementation uses page.route() interception
-  // See setupOAuthMocks() for the actual mocking approach
-  return {
-    close: () => {
-      // cleanup handled by Playwright
-    },
-  };
+export interface MockOAuthDataFlowController {
+  baseUrl: string;
+  port: number;
+  presetId: string;
+  snapshot: () => MockOAuthDataFlowSnapshot;
+  close: () => Promise<void>;
 }
 
-// Setup OAuth mocks for a Playwright page
-// Intercepts OAuth calls and routes to mock responses
-export function setupOAuthMocks(page: Page, baseUrl: string = 'http://localhost:3001') {
-  // Mock GitHub device flow endpoints
+export function setupOAuthMocks(page: Page) {
   page.route('https://github.com/login/device/code', async (route) => {
     await route.fulfill({
       status: 200,
@@ -205,40 +179,58 @@ export function setupOAuthMocks(page: Page, baseUrl: string = 'http://localhost:
   });
 }
 
-// Token management helpers for mock server state
-export function createMockToken(userId: string, expiresInSeconds: number = 3600): string {
-  const token = `mock-token-${Date.now()}`;
-  mockTokens.set(token, {
-    userId,
-    expiresAt: Date.now() + expiresInSeconds * 1000,
-    refreshToken: `mock-refresh-${token}`,
+export async function setupOAuthOpenApiDataFlowMocks(
+  page: Page,
+  integrationId = MOCK_OAUTH_INTEGRATION_ID,
+  port = 0,
+): Promise<MockOAuthDataFlowController> {
+  const { createServer } = await import('node:http');
+  const routeTarget = page.context();
+  const state = createMockOAuthDataFlowState();
+
+  const server = createServer((req, res) => {
+    handleMockOAuthOpenApiRequest(req, res, state);
   });
-  return token;
-}
 
-export function validateMockToken(token: string): boolean {
-  const tokenData = mockTokens.get(token);
-  if (!tokenData) return false;
-  return tokenData.expiresAt > Date.now();
-}
+  await new Promise<void>((resolve) => {
+    server.listen(port, '127.0.0.1', resolve);
+  });
 
-export function refreshMockToken(refreshToken: string): string | null {
-  for (const [token, data] of mockTokens.entries()) {
-    if (data.refreshToken === refreshToken) {
-      const newToken = createMockToken(data.userId);
-      mockTokens.delete(token);
-      return newToken;
-    }
+  const address = server.address();
+  if (!address || typeof address === 'string') {
+    throw new Error('Failed to start mock OAuth/OpenAPI server');
   }
-  return null;
-}
 
-export function getMockUserByToken(token: string): MockUser | undefined {
-  const userId = mockTokens.get(token)?.userId;
-  if (!userId) return undefined;
+  const baseUrl = `http://127.0.0.1:${address.port}`;
+  const presetId = MOCK_OAUTH_PRESET_ID;
+  const contentTemplate = buildMockOAuthOpenApiContentTemplate(baseUrl);
 
-  for (const user of mockUsers.values()) {
-    if (user.id === userId) return user;
-  }
-  return undefined;
+  await routeTarget.route('**/api/integrations/presets', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          id: presetId,
+          label: 'OAuth Mock OpenAPI',
+          description: 'OAuth authorization-code flow backed by a local mock provider and OpenAPI endpoint.',
+          filename_hint: integrationId,
+          content_template: contentTemplate,
+        },
+      ]),
+    });
+  });
+
+  return {
+    baseUrl,
+    port: address.port,
+    presetId,
+    snapshot: () => ({ ...state }),
+    close: () => new Promise<void>((resolve, reject) => {
+      server.close((error) => {
+        if (error) reject(error);
+        else resolve();
+      });
+    }),
+  };
 }
